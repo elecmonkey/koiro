@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Koiro logo">
+  <defs>
+    <linearGradient id="koiroGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2d6b5f" />
+      <stop offset="100%" stop-color="#8b5b3b" />
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="108" height="108" rx="12" fill="#fdfaf6" />
+  <path
+    d="M509 1020C625 1020 725 1007 780 988C823 972 835 959 835 927C835 885 774 863 737 863C709 863 630 907 477 907C279 907 238 828 228 687L208 688C153 881 217 1020 509 1020ZM347 515L356 530C445 491 534 456 594 441C631 431 669 425 701 419C737 412 753 397 753 369C753 331 676 300 628 300C580 300 554 326 422 326C342 326 302 317 244 278L233 288C272 393 358 406 461 410C473 411 474 414 466 421C437 445 386 486 347 515Z"
+    fill="url(#koiroGradient)"
+    transform="translate(8 -8) scale(0.108)"
+  />
+</svg>

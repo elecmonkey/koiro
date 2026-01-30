@@ -1,0 +1,225 @@
+import {
+  Box,
+  Button,
+  Card,
+  Chip,
+  Container,
+  Divider,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import LogoMark from "./components/LogoMark";
+import { playlists, songs } from "./lib/sample-data";
+
+export default function Home() {
+  const featuredPlaylists = playlists.slice(0, 3);
+  const featuredSongs = songs.slice(0, 3);
+
+  return (
+    <Box component="main" sx={{ pb: 10 }}>
+      <Container sx={{ pt: 4 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack direction="row" spacing={2} alignItems="center">
+            <LogoMark size={40} />
+            <Stack spacing={0.2}>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 800,
+                  fontSize: { xs: 26, sm: 28 },
+                  fontFamily: "var(--font-display)",
+                }}
+              >
+                Koiro こいろ
+              </Typography>
+            </Stack>
+          </Stack>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Button variant="text">搜索</Button>
+            <Button variant="outlined">登录</Button>
+            <Button variant="contained">上传</Button>
+          </Stack>
+        </Stack>
+      </Container>
+
+      <Container sx={{ pt: 4 }}>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
+          <Card className="float-in" variant="outlined" sx={{ flex: 1 }}>
+            <Box sx={{ p: 4 }}>
+              <Stack spacing={3}>
+                <Stack spacing={1.2}>
+                  <Typography variant="h2" sx={{ fontSize: { xs: 32, md: 44 } }}>
+                    以「声の色」整理你的音乐收藏
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    Koiro 是一个为个人收藏而生的音乐集合站点，支持多版本、歌词 AST 与流式试听。
+                  </Typography>
+                </Stack>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+                  <TextField
+                    fullWidth
+                    placeholder="搜索歌曲、歌词或 Staff"
+                    size="medium"
+                  />
+                  <Button variant="contained" size="large">
+                    搜索
+                  </Button>
+                </Stack>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  <Chip label="随机推荐" color="primary" />
+                  <Chip label="最近上传" variant="outlined" />
+                  <Chip label="默认版本" variant="outlined" />
+                  <Chip label="可下载" variant="outlined" />
+                </Stack>
+              </Stack>
+            </Box>
+          </Card>
+          <Card className="float-in stagger-1" variant="outlined" sx={{ width: { md: 320 } }}>
+            <Box sx={{ p: 3 }}>
+              <Stack spacing={2}>
+                <Stack spacing={0.5}>
+                  <Typography variant="subtitle1">正在播放</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    默认版本 · 在线试听
+                  </Typography>
+                </Stack>
+                <Box sx={{ height: 110, background: featuredSongs[0].cover }} />
+                <Typography variant="h6">{featuredSongs[0].title}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {featuredSongs[0].description}
+                </Typography>
+                <Divider />
+                <Stack spacing={1}>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="caption" color="text.secondary">
+                      转码队列
+                    </Typography>
+                    <Typography variant="caption">等待中 · 2</Typography>
+                  </Stack>
+                  <Stack direction="row" spacing={1}>
+                    <Button size="small" variant="outlined">
+                      播放
+                    </Button>
+                    <Button size="small">详情</Button>
+                  </Stack>
+                </Stack>
+              </Stack>
+            </Box>
+          </Card>
+        </Stack>
+      </Container>
+
+      <Container sx={{ pt: 5 }}>
+        <Stack spacing={2}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography variant="h6">播放列表</Typography>
+            <Button size="small">管理</Button>
+          </Stack>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(4, 1fr)",
+              },
+              gap: 2,
+            }}
+          >
+            {playlists.map((list) => (
+              <Box key={list.id}>
+                <Card className="float-in stagger-1" variant="outlined">
+                  <Box sx={{ p: 2.5 }}>
+                    <Stack spacing={2}>
+                      <Box sx={{ height: 120, background: list.cover }} />
+                      <Stack spacing={0.5}>
+                        <Typography variant="subtitle1">{list.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {list.songCount} 首 · {list.description}
+                        </Typography>
+                      </Stack>
+                      <Button size="small" variant="outlined">
+                        打开
+                      </Button>
+                    </Stack>
+                  </Box>
+                </Card>
+              </Box>
+            ))}
+          </Box>
+        </Stack>
+      </Container>
+
+      <Container sx={{ pt: 5 }}>
+        <Card className="float-in stagger-2" variant="outlined">
+          <Box sx={{ p: 3 }}>
+            <Stack spacing={2}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Stack spacing={0.3}>
+                  <Typography variant="h6">当前播放列表 · 晨雾拾音</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    第 1 / 3 页 · 共 8 首
+                  </Typography>
+                </Stack>
+                <Stack direction="row" spacing={1}>
+                  <Button size="small" variant="outlined">
+                    上一页
+                  </Button>
+                  <Button size="small" variant="contained">
+                    下一页
+                  </Button>
+                </Stack>
+              </Stack>
+              <Divider />
+              {featuredSongs.map((song) => (
+                <Box key={song.id}>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        sm: "120px 1fr",
+                        md: "120px 1fr 180px",
+                      },
+                      gap: 2,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Box sx={{ height: 72, background: song.cover }} />
+                    <Stack spacing={0.6}>
+                      <Typography variant="subtitle1">{song.title}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {song.description}
+                      </Typography>
+                      <Stack direction="row" spacing={1} flexWrap="wrap">
+                        {Object.entries(song.staff).map(([role, name]) => (
+                          <Chip key={role} label={`${role} · ${name}`} size="small" />
+                        ))}
+                      </Stack>
+                    </Stack>
+                    <Stack
+                      spacing={1}
+                      alignItems={{ xs: "flex-start", sm: "flex-end" }}
+                    >
+                      <Typography variant="caption" color="text.secondary">
+                        {song.duration} · {Object.keys(song.versions).length} 版本
+                      </Typography>
+                      <Stack direction="row" spacing={1}>
+                        <Button size="small" variant="outlined">
+                          播放
+                        </Button>
+                        <Button size="small">详情</Button>
+                      </Stack>
+                    </Stack>
+                  </Box>
+                  <Divider sx={{ my: 2 }} />
+                </Box>
+              ))}
+            </Stack>
+          </Box>
+        </Card>
+      </Container>
+    </Box>
+  );
+}
