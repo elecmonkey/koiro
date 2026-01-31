@@ -139,9 +139,6 @@ export default function UploadForm() {
       <Container sx={{ pt: 6 }}>
         <Stack spacing={1}>
           <Typography variant="h4">上传歌曲</Typography>
-          <Typography variant="body2" color="text.secondary">
-            支持上传音频后自动转码为 HLS 流
-          </Typography>
         </Stack>
       </Container>
 
@@ -285,9 +282,6 @@ export default function UploadForm() {
                       </Stack>
                     ))}
                   </Stack>
-                  <Typography variant="caption" color="text.secondary">
-                    预览：{staffPreview}
-                  </Typography>
                 </Stack>
                 <Divider />
                 <Stack spacing={1.5}>
@@ -327,9 +321,6 @@ export default function UploadForm() {
                       </Stack>
                     ))}
                   </Stack>
-                  <Typography variant="caption" color="text.secondary">
-                    预览：{versionPreview}
-                  </Typography>
                 </Stack>
                 <Divider />
                 <Stack spacing={1.5}>
