@@ -5,17 +5,24 @@ import {
   Box,
   Button,
   Card,
+  CardActionArea,
+  CardContent,
+  CardMedia,
   Chip,
   Container,
   Divider,
+  IconButton,
   InputAdornment,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PauseIcon from "@mui/icons-material/Pause";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { usePlayer, type Track } from "@/app/player";
 
 type SongCard = {
   id: string;
@@ -36,6 +43,7 @@ type PlaylistCard = {
 
 export default function HomeClient() {
   const router = useRouter();
+  const { play, pause, resume, track: currentTrack, isPlaying, isLoading } = usePlayer();
   const [inputValue, setInputValue] = useState("");
   const [featuredSongs, setFeaturedSongs] = useState<SongCard[]>([]);
   const [featuredPlaylists, setFeaturedPlaylists] = useState<PlaylistCard[]>([]);
@@ -252,29 +260,46 @@ export default function HomeClient() {
                 >
                   {featuredPlaylists.map((playlist) => (
                     <Link key={playlist.id} href={`/playlists/${playlist.id}`} style={{ textDecoration: "none" }}>
-                      <Card variant="outlined" sx={{ height: "100%", "&:hover": { bgcolor: "action.hover" } }}>
-                        <Box
-                          sx={{
-                            width: "100%",
-                            aspectRatio: "1",
-                            borderRadius: "inherit",
-                            borderBottomLeftRadius: 0,
-                            borderBottomRightRadius: 0,
-                            background: playlist.coverUrl
-                              ? `url(${playlist.coverUrl}) center/cover no-repeat`
-                              : "linear-gradient(135deg, #f3efe7, #e8dfd1)",
-                          }}
-                        />
-                        <Box sx={{ p: 1.5 }}>
-                          <Stack spacing={0.3}>
-                            <Typography variant="subtitle2" noWrap>
+                      <Card
+                        variant="outlined"
+                        sx={{
+                          height: "100%",
+                          transition: "border-color 0.2s",
+                          "&:hover": { borderColor: "primary.main" },
+                        }}
+                      >
+                        <CardActionArea sx={{ height: "100%" }}>
+                          {playlist.coverUrl ? (
+                            <CardMedia
+                              component="img"
+                              image={playlist.coverUrl}
+                              alt={playlist.name}
+                              sx={{ aspectRatio: "1", objectFit: "cover" }}
+                            />
+                          ) : (
+                            <Box
+                              sx={{
+                                aspectRatio: "1",
+                                bgcolor: "action.hover",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <Typography variant="h4" color="text.disabled">
+                                ♪
+                              </Typography>
+                            </Box>
+                          )}
+                          <CardContent sx={{ p: 1.5 }}>
+                            <Typography variant="subtitle2" noWrap title={playlist.name}>
                               {playlist.name}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {playlist.songCount} 首
                             </Typography>
-                          </Stack>
-                        </Box>
+                          </CardContent>
+                        </CardActionArea>
                       </Card>
                     </Link>
                   ))}
@@ -323,66 +348,138 @@ export default function HomeClient() {
                   暂无歌曲
                 </Typography>
               ) : (
-                featuredSongs.map((song) => (
-                  <Box key={song.id}>
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: {
-                          xs: "1fr",
-                          sm: "120px 1fr",
-                          md: "120px 1fr 180px",
-                        },
-                        gap: 2,
-                        alignItems: "center",
-                      }}
-                    >
-                      <Box
+                <Stack spacing={2}>
+                  {featuredSongs.map((song) => {
+                    // 获取默认音频版本
+                    const audioVersions = song.audioVersions ?? {};
+                    const versionNames = Object.keys(audioVersions);
+                    const defaultAudioObjectId = versionNames.length > 0 ? audioVersions[versionNames[0]] : null;
+                    const artist = (song.staff ?? []).map((s) => s.name).join("、");
+
+                    const track: Track | null = defaultAudioObjectId
+                      ? {
+                          id: song.id,
+                          title: song.title,
+                          artist,
+                          coverUrl: song.coverUrl,
+                          audioObjectId: defaultAudioObjectId,
+                        }
+                      : null;
+
+                    const isCurrentSong = currentTrack?.id === song.id;
+
+                    const handlePlayClick = (e: React.MouseEvent) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!track) return;
+                      if (isCurrentSong) {
+                        if (isPlaying) {
+                          pause();
+                        } else {
+                          resume();
+                        }
+                      } else {
+                        play(track);
+                      }
+                    };
+
+                    return (
+                      <Card
+                        key={song.id}
+                        variant="outlined"
                         sx={{
-                          width: "100%",
-                          height: 72,
-                          borderRadius: 1,
-                          background: song.coverUrl
-                            ? `url(${song.coverUrl}) center/cover no-repeat`
-                            : "linear-gradient(135deg, #f3efe7, #e8dfd1)",
+                          position: "relative",
+                          transition: "border-color 0.2s",
+                          "&:hover": {
+                            borderColor: "primary.main",
+                          },
                         }}
-                      />
-                      <Stack spacing={0.6} sx={{ minWidth: 0 }}>
-                        <Typography variant="subtitle1" noWrap>{song.title}</Typography>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          noWrap
-                        >
-                          {song.description}
-                        </Typography>
-                        <Stack direction="row" spacing={1} flexWrap="wrap">
-                          {(song.staff ?? []).map((item) => (
-                            <Chip
-                              key={`${item.role}-${item.name}`}
-                              label={`${item.role} · ${item.name}`}
-                              size="small"
-                            />
-                          ))}
-                        </Stack>
-                      </Stack>
-                      <Stack
-                        spacing={1}
-                        alignItems={{ xs: "flex-start", sm: "flex-end" }}
                       >
-                        <Typography variant="caption" color="text.secondary">
-                          {Object.keys(song.audioVersions ?? {}).length} 版本
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                          <Link href={`/songs/${song.id}`}>
-                            <Button size="small">详情</Button>
-                          </Link>
-                        </Stack>
-                      </Stack>
-                    </Box>
-                    <Divider sx={{ my: 2 }} />
-                  </Box>
-                ))
+                        <CardActionArea
+                          component={Link}
+                          href={`/songs/${song.id}`}
+                          sx={{ height: 72 }}
+                        >
+                          <CardContent sx={{ py: 0, height: "100%", display: "flex", alignItems: "center" }}>
+                            <Stack direction="row" spacing={2} alignItems="center" sx={{ width: "100%", pr: track ? 6 : 0 }}>
+                              {/* 封面 */}
+                              <Box
+                                sx={{
+                                  width: 48,
+                                  height: 48,
+                                  borderRadius: 1,
+                                  flexShrink: 0,
+                                  background: song.coverUrl
+                                    ? `url(${song.coverUrl}) center/cover no-repeat`
+                                    : "linear-gradient(135deg, #f3efe7, #e8dfd1)",
+                                }}
+                              />
+
+                              {/* 歌曲信息 */}
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography variant="subtitle1" noWrap color="text.primary">
+                                  {song.title}
+                                  </Typography>
+                                  {song.staff && song.staff.length > 0 && (
+                                    <Stack
+                                      direction="row"
+                                      spacing={0.5}
+                                      sx={{ mt: 0.5 }}
+                                      flexWrap="wrap"
+                                      useFlexGap
+                                    >
+                                      {song.staff.slice(0, 3).map((s, idx) => (
+                                        <Chip
+                                          key={idx}
+                                          label={`${s.role || "Staff"} · ${s.name || ""}`}
+                                          size="small"
+                                          variant="outlined"
+                                        />
+                                      ))}
+                                      {song.staff.length > 3 && (
+                                        <Chip
+                                          label={`+${song.staff.length - 3}`}
+                                          size="small"
+                                          variant="outlined"
+                                        />
+                                      )}
+                                    </Stack>
+                                  )}
+                              </Box>
+                            </Stack>
+                          </CardContent>
+                        </CardActionArea>
+
+                        {/* 播放按钮 - 放在 CardActionArea 外部避免 button 嵌套 */}
+                        {track && (
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={handlePlayClick}
+                            disabled={isLoading && isCurrentSong}
+                            sx={{
+                              position: "absolute",
+                              right: 16,
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              bgcolor: "primary.main",
+                              color: "primary.contrastText",
+                              width: 36,
+                              height: 36,
+                              "&:hover": { bgcolor: "primary.dark" },
+                            }}
+                          >
+                            {isCurrentSong && isPlaying ? (
+                              <PauseIcon fontSize="small" />
+                            ) : (
+                              <PlayArrowIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        )}
+                      </Card>
+                    );
+                  })}
+                </Stack>
               )}
             </Stack>
           </Box>

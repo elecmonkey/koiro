@@ -11,11 +11,15 @@ import {
   Chip,
   CircularProgress,
   Container,
+  IconButton,
   Pagination,
   Stack,
   Typography,
 } from "@mui/material";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PauseIcon from "@mui/icons-material/Pause";
 import Link from "next/link";
+import { usePlayer, type Track } from "@/app/player";
 
 type Song = {
   id: string;
@@ -23,6 +27,7 @@ type Song = {
   description: string | null;
   staff: { role: string; name: string }[];
   coverUrl: string | null;
+  audioVersions: Record<string, string> | null;
   order: number;
 };
 
@@ -47,6 +52,7 @@ type Props = {
 };
 
 export default function PlaylistDetailClient({ playlistId }: Props) {
+  const { play, pause, resume, track: currentTrack, isPlaying, isLoading } = usePlayer();
   const [playlist, setPlaylist] = useState<PlaylistInfo | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,45 +181,71 @@ export default function PlaylistDetailClient({ playlistId }: Props) {
           </Typography>
         ) : (
           <Stack spacing={2}>
-            {songs.map((song, index) => (
-              <Link
-                key={song.id}
-                href={`/songs/${song.id}`}
-                style={{ textDecoration: "none" }}
-              >
+            {songs.map((song, index) => {
+              // 获取默认音频版本
+              const audioVersions = song.audioVersions ?? {};
+              const versionNames = Object.keys(audioVersions);
+              const defaultAudioObjectId = versionNames.length > 0 ? audioVersions[versionNames[0]] : null;
+              const artist = (song.staff ?? []).map((s) => s.name).join("、");
+
+              const track: Track | null = defaultAudioObjectId
+                ? {
+                    id: song.id,
+                    title: song.title,
+                    artist,
+                    coverUrl: song.coverUrl,
+                    audioObjectId: defaultAudioObjectId,
+                  }
+                : null;
+
+              const isCurrentSong = currentTrack?.id === song.id;
+
+              const handlePlayClick = (e: React.MouseEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!track) return;
+                if (isCurrentSong) {
+                  if (isPlaying) {
+                    pause();
+                  } else {
+                    resume();
+                  }
+                } else {
+                  play(track);
+                }
+              };
+
+              return (
                 <Card
+                  key={song.id}
                   variant="outlined"
                   sx={{
+                    position: "relative",
                     transition: "border-color 0.2s",
                     "&:hover": {
                       borderColor: "primary.main",
                     },
                   }}
                 >
-                  <CardActionArea>
-                    <CardContent sx={{ py: 1.5 }}>
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        {/* 序号 */}
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ width: 32, textAlign: "center", flexShrink: 0 }}
-                        >
-                          {(page - 1) * 10 + index + 1}
-                        </Typography>
-
+                  <CardActionArea
+                    component={Link}
+                    href={`/songs/${song.id}`}
+                    sx={{ height: 72 }}
+                  >
+                    <CardContent sx={{ py: 0, height: "100%", display: "flex", alignItems: "center" }}>
+                      <Stack direction="row" spacing={2} alignItems="center" sx={{ width: "100%", pr: track ? 6 : 0 }}>
                         {/* 封面 */}
                         <Avatar
                           variant="rounded"
                           src={song.coverUrl || undefined}
-                          sx={{ width: 48, height: 48, bgcolor: "action.hover" }}
+                          sx={{ width: 48, height: 48, bgcolor: "action.hover", flexShrink: 0 }}
                         >
                           ♪
                         </Avatar>
 
                         {/* 歌曲信息 */}
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography variant="subtitle1" noWrap>
+                          <Typography variant="subtitle1" noWrap color="text.primary">
                             {song.title}
                           </Typography>
                           {song.staff && song.staff.length > 0 && (
@@ -245,9 +277,36 @@ export default function PlaylistDetailClient({ playlistId }: Props) {
                       </Stack>
                     </CardContent>
                   </CardActionArea>
+
+                  {/* 播放按钮 - 放在 CardActionArea 外部避免 button 嵌套 */}
+                  {track && (
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={handlePlayClick}
+                      disabled={isLoading && isCurrentSong}
+                      sx={{
+                        position: "absolute",
+                        right: 16,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                        width: 36,
+                        height: 36,
+                        "&:hover": { bgcolor: "primary.dark" },
+                      }}
+                    >
+                      {isCurrentSong && isPlaying ? (
+                        <PauseIcon fontSize="small" />
+                      ) : (
+                        <PlayArrowIcon fontSize="small" />
+                      )}
+                    </IconButton>
+                  )}
                 </Card>
-              </Link>
-            ))}
+              );
+            })}
 
             {pagination && pagination.totalPages > 1 && (
               <Box sx={{ display: "flex", justifyContent: "center", pt: 2 }}>

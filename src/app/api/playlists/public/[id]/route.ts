@@ -83,6 +83,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         description: sp.song.description,
         staff: sp.song.staff as { role: string; name: string }[],
         coverUrl: songCoverUrl,
+        audioVersions: sp.song.audioVersions as Record<string, string> | null,
         order: sp.order,
       };
     })
