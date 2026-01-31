@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import { requireAuth } from "@/lib/auth-guard";
 import { PERMISSIONS } from "@/lib/permissions";
+import EditorShell from "../editor/EditorShell";
 
 export default async function UploadPage() {
   await requireAuth({ permission: PERMISSIONS.UPLOAD });
@@ -88,13 +89,7 @@ export default async function UploadPage() {
             <CardContent>
               <Stack spacing={2}>
                 <Typography variant="h6">歌词与预览</Typography>
-                <TextField
-                  label="歌词 AST"
-                  placeholder="KOIRO_AST_V1 JSON"
-                  fullWidth
-                  multiline
-                  minRows={6}
-                />
+                <EditorShell />
                 <Divider />
                 <Stack direction="row" spacing={1}>
                   <Button variant="outlined">校验 AST</Button>
