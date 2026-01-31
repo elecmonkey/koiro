@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
 import { auth } from "@/auth";
-import { PERMISSIONS, hasPermission } from "@/lib/permissions";
+import { PERMISSIONS, checkApiPermission } from "@/lib/permissions";
 
 const bucket = process.env.S3_BUCKET;
 const endpoint = process.env.S3_ENDPOINT;
@@ -20,8 +20,8 @@ type Body = {
 
 export async function POST(request: Request) {
   const session = await auth();
-  const permissions = session?.user?.permissions ?? 0;
-  if (!session?.user || !hasPermission(permissions, PERMISSIONS.VIEW)) {
+  const permissions = session?.user?.permissions;
+  if (!checkApiPermission(permissions, PERMISSIONS.VIEW, true)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

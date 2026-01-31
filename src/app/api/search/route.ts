@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { PERMISSIONS, hasPermission } from "@/lib/permissions";
+import { PERMISSIONS, checkApiPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 // 搜索权重配置
@@ -24,8 +24,8 @@ type SearchResult = {
 // GET - 搜索歌曲
 export async function GET(request: NextRequest) {
   const session = await auth();
-  const permissions = session?.user?.permissions ?? 0;
-  if (!hasPermission(permissions, PERMISSIONS.VIEW)) {
+  const permissions = session?.user?.permissions;
+  if (!checkApiPermission(permissions, PERMISSIONS.VIEW, true)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

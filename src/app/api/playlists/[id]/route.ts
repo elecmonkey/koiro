@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { PERMISSIONS, hasPermission } from "@/lib/permissions";
+import { PERMISSIONS, hasPermission, checkApiPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 type RouteParams = {
@@ -11,8 +11,8 @@ type RouteParams = {
 export async function GET(_request: Request, { params }: RouteParams) {
   const { id } = await params;
   const session = await auth();
-  const permissions = session?.user?.permissions ?? 0;
-  if (!session?.user || !hasPermission(permissions, PERMISSIONS.VIEW)) {
+  const permissions = session?.user?.permissions;
+  if (!checkApiPermission(permissions, PERMISSIONS.VIEW, true)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
