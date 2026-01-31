@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Alert,
   Box,
@@ -15,12 +15,15 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  Pagination,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
 import Link from "next/link";
 import ImageUploadField from "../components/ImageUploadField";
+
+const PAGE_SIZE = 10;
 
 // 类型定义
 interface Playlist {
@@ -57,11 +60,13 @@ export default function AdminShell() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [playlistsLoading, setPlaylistsLoading] = useState(true);
   const [playlistsError, setPlaylistsError] = useState<string | null>(null);
+  const [playlistsPage, setPlaylistsPage] = useState(1);
   
   // 歌曲状态
   const [songs, setSongs] = useState<Song[]>([]);
   const [songsLoading, setSongsLoading] = useState(true);
   const [songsError, setSongsError] = useState<string | null>(null);
+  const [songsPage, setSongsPage] = useState(1);
   
   // 对话框状态
   const [createPlaylistOpen, setCreatePlaylistOpen] = useState(false);
@@ -212,6 +217,19 @@ export default function AdminShell() {
     return new Date(dateStr).toLocaleDateString("zh-CN");
   };
 
+  // 分页计算
+  const playlistsTotalPages = Math.ceil(playlists.length / PAGE_SIZE);
+  const paginatedPlaylists = useMemo(() => {
+    const start = (playlistsPage - 1) * PAGE_SIZE;
+    return playlists.slice(start, start + PAGE_SIZE);
+  }, [playlists, playlistsPage]);
+
+  const songsTotalPages = Math.ceil(songs.length / PAGE_SIZE);
+  const paginatedSongs = useMemo(() => {
+    const start = (songsPage - 1) * PAGE_SIZE;
+    return songs.slice(start, start + PAGE_SIZE);
+  }, [songs, songsPage]);
+
   return (
     <Box component="main" sx={{ pb: 8 }}>
       <Container sx={{ pt: 6 }}>
@@ -300,44 +318,56 @@ export default function AdminShell() {
                       暂无播放列表
                     </Typography>
                   ) : (
-                    playlists.map((list) => (
-                      <Box key={list.id}>
-                        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                          <Box flex={1}>
-                            <Typography variant="subtitle1">{list.name}</Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {list.songCount} 首 · 更新于 {formatDate(list.updatedAt)}
-                            </Typography>
-                            {list.description && (
-                              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                {list.description}
+                    <>
+                      {paginatedPlaylists.map((list) => (
+                        <Box key={list.id}>
+                          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                            <Box flex={1}>
+                              <Typography variant="subtitle1">{list.name}</Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {list.songCount} 首 · 更新于 {formatDate(list.updatedAt)}
                               </Typography>
-                            )}
-                          </Box>
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Button size="small" variant="outlined" onClick={() => openEditPlaylist(list)}>
-                              编辑
-                            </Button>
-                            <Link href={`/admin/playlists/${list.id}`}>
-                              <Button size="small" variant="text">
-                                管理
+                              {list.description && (
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                  {list.description}
+                                </Typography>
+                              )}
+                            </Box>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Button size="small" variant="outlined" onClick={() => openEditPlaylist(list)}>
+                                编辑
                               </Button>
-                            </Link>
-                            <Button
-                              size="small"
-                              color="error"
-                              onClick={() => {
-                                setDeleteTarget({ type: "playlist", id: list.id, name: list.name });
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              删除
-                            </Button>
+                              <Link href={`/admin/playlists/${list.id}`}>
+                                <Button size="small" variant="text">
+                                  管理
+                                </Button>
+                              </Link>
+                              <Button
+                                size="small"
+                                color="error"
+                                onClick={() => {
+                                  setDeleteTarget({ type: "playlist", id: list.id, name: list.name });
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                删除
+                              </Button>
+                            </Stack>
                           </Stack>
-                        </Stack>
-                        <Divider sx={{ my: 2 }} />
-                      </Box>
-                    ))
+                          <Divider sx={{ my: 2 }} />
+                        </Box>
+                      ))}
+                      {playlistsTotalPages > 1 && (
+                        <Box sx={{ display: "flex", justifyContent: "center", pt: 1 }}>
+                          <Pagination
+                            count={playlistsTotalPages}
+                            page={playlistsPage}
+                            onChange={(_e, v) => setPlaylistsPage(v)}
+                            color="primary"
+                          />
+                        </Box>
+                      )}
+                    </>
                   )}
                 </Stack>
               </CardContent>
@@ -374,66 +404,78 @@ export default function AdminShell() {
                       暂无歌曲
                     </Typography>
                   ) : (
-                    songs.map((song) => (
-                      <Box key={song.id}>
-                        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                          <Box flex={1}>
-                            <Stack direction="row" spacing={1} alignItems="center">
-                              <Typography variant="subtitle1">{song.title}</Typography>
-                              {song.audioDefaultName && (
-                                <Chip label={song.audioDefaultName} size="small" />
-                              )}
-                            </Stack>
-                            <Stack direction="row" spacing={1} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
-                              <Typography variant="caption" color="text.secondary">
-                                {Object.keys(song.audioVersions || {}).length} 个音频版本
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                · {song.lyricsCount} 份歌词
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                · 更新于 {formatDate(song.updatedAt)}
-                              </Typography>
-                            </Stack>
-                            {Array.isArray(song.staff) && song.staff.length > 0 && (
-                              <Stack direction="row" spacing={0.5} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
-                                {song.staff.map((s, idx) => (
-                                  <Chip
-                                    key={idx}
-                                    label={`${s.role || "Staff"} · ${s.name || ""}`}
-                                    size="small"
-                                    variant="outlined"
-                                  />
-                                ))}
+                    <>
+                      {paginatedSongs.map((song) => (
+                        <Box key={song.id}>
+                          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                            <Box flex={1}>
+                              <Stack direction="row" spacing={1} alignItems="center">
+                                <Typography variant="subtitle1">{song.title}</Typography>
+                                {song.audioDefaultName && (
+                                  <Chip label={song.audioDefaultName} size="small" />
+                                )}
                               </Stack>
-                            )}
-                          </Box>
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Link href={`/songs/${song.id}/edit`}>
-                              <Button size="small" variant="outlined">
-                                编辑
+                              <Stack direction="row" spacing={1} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
+                                <Typography variant="caption" color="text.secondary">
+                                  {Object.keys(song.audioVersions || {}).length} 个音频版本
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  · {song.lyricsCount} 份歌词
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  · 更新于 {formatDate(song.updatedAt)}
+                                </Typography>
+                              </Stack>
+                              {Array.isArray(song.staff) && song.staff.length > 0 && (
+                                <Stack direction="row" spacing={0.5} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
+                                  {song.staff.map((s, idx) => (
+                                    <Chip
+                                      key={idx}
+                                      label={`${s.role || "Staff"} · ${s.name || ""}`}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  ))}
+                                </Stack>
+                              )}
+                            </Box>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                              <Link href={`/songs/${song.id}/edit`}>
+                                <Button size="small" variant="outlined">
+                                  编辑
+                                </Button>
+                              </Link>
+                              <Link href={`/songs/${song.id}`}>
+                                <Button size="small" variant="text">
+                                  查看
+                                </Button>
+                              </Link>
+                              <Button
+                                size="small"
+                                color="error"
+                                onClick={() => {
+                                  setDeleteTarget({ type: "song", id: song.id, name: song.title });
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                删除
                               </Button>
-                            </Link>
-                            <Link href={`/songs/${song.id}`}>
-                              <Button size="small" variant="text">
-                                查看
-                              </Button>
-                            </Link>
-                            <Button
-                              size="small"
-                              color="error"
-                              onClick={() => {
-                                setDeleteTarget({ type: "song", id: song.id, name: song.title });
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              删除
-                            </Button>
+                            </Stack>
                           </Stack>
-                        </Stack>
-                        <Divider sx={{ my: 2 }} />
-                      </Box>
-                    ))
+                          <Divider sx={{ my: 2 }} />
+                        </Box>
+                      ))}
+                      {songsTotalPages > 1 && (
+                        <Box sx={{ display: "flex", justifyContent: "center", pt: 1 }}>
+                          <Pagination
+                            count={songsTotalPages}
+                            page={songsPage}
+                            onChange={(_e, v) => setSongsPage(v)}
+                            color="primary"
+                          />
+                        </Box>
+                      )}
+                    </>
                   )}
                 </Stack>
               </CardContent>

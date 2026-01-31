@@ -14,6 +14,11 @@ export default function NavLinks({ permissions = 0 }: NavLinksProps) {
           搜索
         </Button>
       </Link>
+      <Link href="/playlists" style={{ textDecoration: "none" }}>
+        <Button variant="text" size="small">
+          列表
+        </Button>
+      </Link>
       {hasPermission(permissions, PERMISSIONS.UPLOAD) ? (
         <Link href="/upload" style={{ textDecoration: "none" }}>
           <Button variant="text" size="small">
