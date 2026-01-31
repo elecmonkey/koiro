@@ -3,6 +3,7 @@ import { Shippori_Mincho_B1, Zen_Kaku_Gothic_New } from "next/font/google";
 import EmotionRegistry from "./emotion-registry";
 import { Providers } from "./providers";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import "./globals.css";
 
 const bodyFont = Zen_Kaku_Gothic_New({
@@ -33,7 +34,10 @@ export default function RootLayout({
         <EmotionRegistry>
           <Providers>
             <Navbar />
-            {children}
+            <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+              <div style={{ flex: 1 }}>{children}</div>
+              <Footer />
+            </div>
           </Providers>
         </EmotionRegistry>
       </body>
