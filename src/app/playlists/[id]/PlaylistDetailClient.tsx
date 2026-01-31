@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Alert,
-  Avatar,
   Box,
   Card,
   CardActionArea,
@@ -235,16 +234,26 @@ export default function PlaylistDetailClient({ playlistId }: Props) {
                     href={`/songs/${song.id}`}
                     sx={{ height: 72 }}
                   >
-                    <CardContent sx={{ py: 0, height: "100%", display: "flex", alignItems: "center" }}>
+                    <CardContent sx={{ py: 0, pl: 0, height: "100%", display: "flex", alignItems: "center" }}>
                       <Stack direction="row" spacing={2} alignItems="center" sx={{ width: "100%", pr: track ? 6 : 0 }}>
                         {/* 封面 */}
-                        <Avatar
-                          variant="rounded"
-                          src={song.coverUrl || undefined}
-                          sx={{ width: 48, height: 48, bgcolor: "action.hover", flexShrink: 0 }}
+                        <Box
+                          sx={{
+                            width: 72,
+                            height: 72,
+                            flexShrink: 0,
+                            background: song.coverUrl
+                              ? `url(${song.coverUrl}) center/cover no-repeat`
+                              : "linear-gradient(135deg, #f3efe7, #e8dfd1)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "text.disabled",
+                            fontSize: 24,
+                          }}
                         >
-                          ♪
-                        </Avatar>
+                          {!song.coverUrl && "♪"}
+                        </Box>
 
                         {/* 歌曲信息 */}
                         <Box sx={{ flex: 1, minWidth: 0 }}>

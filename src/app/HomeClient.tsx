@@ -403,14 +403,13 @@ export default function HomeClient() {
                           href={`/songs/${song.id}`}
                           sx={{ height: 72 }}
                         >
-                          <CardContent sx={{ py: 0, height: "100%", display: "flex", alignItems: "center" }}>
+                          <CardContent sx={{ py: 0, pl: 0, height: "100%", display: "flex", alignItems: "center" }}>
                             <Stack direction="row" spacing={2} alignItems="center" sx={{ width: "100%", pr: track ? 6 : 0 }}>
                               {/* 封面 */}
                               <Box
                                 sx={{
-                                  width: 48,
-                                  height: 48,
-                                  borderRadius: 1,
+                                  width: 72,
+                                  height: 72,
                                   flexShrink: 0,
                                   background: song.coverUrl
                                     ? `url(${song.coverUrl}) center/cover no-repeat`
