@@ -175,9 +175,6 @@ export default function PlaylistSongsClient({ playlist, availableSongs }: Props)
                       <Stack direction="row" spacing={2} alignItems="center">
                         <Box flex={1}>
                           <Typography variant="subtitle1">{song.title}</Typography>
-                          <Typography variant="body2" color="text.secondary" noWrap>
-                            {song.description || "无描述"}
-                          </Typography>
                         </Box>
                         <Stack direction="row" spacing={1}>
                           <Link href={`/songs/${song.id}`}>
@@ -219,12 +216,7 @@ export default function PlaylistSongsClient({ playlist, availableSongs }: Props)
               )}
               renderOption={(props, option) => (
                 <Box component="li" {...props} key={option.id}>
-                  <Stack>
-                    <Typography variant="body1">{option.title}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {option.description || "无描述"}
-                    </Typography>
-                  </Stack>
+                  <Typography variant="body1">{option.title}</Typography>
                 </Box>
               )}
               noOptionsText="没有可添加的歌曲"
