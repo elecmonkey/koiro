@@ -68,7 +68,7 @@ export default async function SongDetailPage({ params }: PageProps) {
   }
 
   const staff = Array.isArray(song.staff)
-    ? (song.staff as { role?: string; name?: string }[]).filter(
+    ? (song.staff as { role?: string; name?: string | string[] }[]).filter(
         (item) => item && typeof item === "object"
       )
     : [];
@@ -94,8 +94,8 @@ export default async function SongDetailPage({ params }: PageProps) {
   // 构建艺术家信息（从 staff 中提取）
   const artistInfo = staff
     .filter((s) => s.role?.toLowerCase().includes("vocal") || s.role?.toLowerCase().includes("歌"))
-    .map((s) => s.name)
-    .join(", ") || staff[0]?.name;
+    .map((s) => Array.isArray(s.name) ? s.name.join("、") : s.name)
+    .join(", ") || (Array.isArray(staff[0]?.name) ? staff[0].name.join("、") : staff[0]?.name);
 
   return (
     <Box component="main" sx={{ pb: 8 }}>
@@ -113,8 +113,8 @@ export default async function SongDetailPage({ params }: PageProps) {
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 {staff.map((item, index) => (
                   <Chip
-                    key={`${item.role ?? "role"}-${item.name ?? "name"}-${index}`}
-                    label={`${item.role ?? "Staff"} · ${item.name ?? ""}`}
+                    key={`${item.role ?? "role"}-${index}`}
+                    label={`${item.role ?? "Staff"} · ${Array.isArray(item.name) ? item.name.join("、") : (item.name ?? "")}`}
                   />
                 ))}
               </Stack>

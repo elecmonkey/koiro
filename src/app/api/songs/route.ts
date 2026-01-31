@@ -44,7 +44,7 @@ type Body = {
   coverObjectId: string | null;
   audioDefaultName: string | null;
   versions: { key: string; objectId: string; isDefault: boolean }[];
-  staff: { id: string; role: string; name: string }[];
+  staff: { id: string; role: string; name: string | string[] }[];
   lyricsVersions: {
     id: string;
     key: string;
@@ -90,9 +90,11 @@ export async function POST(request: Request) {
   const staff = (body.staff ?? [])
     .map((item) => ({
       role: item.role?.trim(),
-      name: item.name?.trim(),
+      name: Array.isArray(item.name) 
+        ? item.name.map((n) => n.trim()).filter(Boolean)
+        : item.name?.trim(),
     }))
-    .filter((item) => item.role || item.name);
+    .filter((item) => item.role || (Array.isArray(item.name) ? item.name.length > 0 : item.name));
 
   try {
     const song = await prisma.song.create({

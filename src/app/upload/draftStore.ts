@@ -3,7 +3,7 @@
 export type UploadDraft = {
   title: string;
   description: string;
-  staff: { id: string; role: string; name: string }[];
+  staff: { id: string; role: string; name: string | string[] }[];
   versions: { id: string; key: string; objectId: string; isDefault: boolean }[];
   audioDefaultName: string | null;
   lyricsVersions: {

@@ -64,7 +64,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 type UpdateSongBody = {
   title?: string;
   description?: string;
-  staff?: { id?: string; role: string; name: string }[];
+  staff?: { id?: string; role: string; name: string | string[] }[];
   coverObjectId?: string | null;
   coverFilename?: string | null;
   audioDefaultName?: string | null;
@@ -109,14 +109,16 @@ export async function PUT(request: Request, { params }: RouteParams) {
   }
 
   // 处理 staff
-  let staffData: { role: string; name: string }[] | undefined;
+  let staffData: { role: string; name: string | string[] }[] | undefined;
   if (body.staff !== undefined) {
     staffData = body.staff
       .map((item) => ({
         role: item.role?.trim() ?? "",
-        name: item.name?.trim() ?? "",
+        name: Array.isArray(item.name)
+          ? item.name.map((n) => n.trim()).filter(Boolean)
+          : item.name?.trim() ?? "",
       }))
-      .filter((item) => item.role || item.name);
+      .filter((item) => item.role || (Array.isArray(item.name) ? item.name.length > 0 : item.name));
   }
 
   // 更新歌曲主体

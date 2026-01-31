@@ -14,7 +14,7 @@ type SearchResult = {
   id: string;
   title: string;
   description: string | null;
-  staff: { role: string; name: string }[];
+  staff: { role: string; name: string | string[] }[];
   coverObjectId: string | null;
   score: number;
   matchType: ("title" | "staff" | "lyrics")[];
@@ -74,22 +74,26 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Staff 值匹配（只匹配 name，不匹配 role 键）
-    const staffArray = song.staff as { role: string; name: string }[] | null;
+    const staffArray = song.staff as { role: string; name: string | string[] }[] | null;
     if (staffArray && Array.isArray(staffArray)) {
       for (const item of staffArray) {
-        const nameLower = (item.name || "").toLowerCase();
-        if (nameLower.includes(keyword)) {
-          score += WEIGHTS.staff;
-          // 完全匹配额外加分
-          if (nameLower === keyword) {
-            score += WEIGHTS.staff * 0.5;
+        const names = Array.isArray(item.name) ? item.name : [item.name || ""];
+        for (const name of names) {
+          const nameLower = name.toLowerCase();
+          if (nameLower.includes(keyword)) {
+            score += WEIGHTS.staff;
+            // 完全匹配额外加分
+            if (nameLower === keyword) {
+              score += WEIGHTS.staff * 0.5;
+            }
+            matchType.push("staff");
+            if (!matchSnippet) {
+              matchSnippet = `${item.role}: ${name}`;
+            }
+            break; // 每首歌只计算一次 staff 匹配
           }
-          matchType.push("staff");
-          if (!matchSnippet) {
-            matchSnippet = `${item.role}: ${item.name}`;
-          }
-          break; // 每首歌只计算一次 staff 匹配
         }
+        if (matchType.includes("staff")) break;
       }
     }
 
@@ -119,7 +123,7 @@ export async function GET(request: NextRequest) {
         id: song.id,
         title: song.title,
         description: song.description,
-        staff: (staffArray || []) as { role: string; name: string }[],
+        staff: (staffArray || []) as { role: string; name: string | string[] }[],
         coverObjectId: song.coverObjectId,
         score,
         matchType,

@@ -29,7 +29,7 @@ type SongCard = {
   id: string;
   title: string;
   description: string;
-  staff: { role: string; name: string }[];
+  staff: { role: string; name: string | string[] }[];
   audioVersions: Record<string, string>;
   coverUrl: string | null;
   lyrics: LyricsDocument | null;
@@ -468,7 +468,7 @@ export default function HomeClient() {
                                     {song.staff.slice(0, 3).map((s, idx) => (
                                       <Chip
                                         key={idx}
-                                        label={`${s.role || "Staff"} · ${s.name || ""}`}
+                                        label={`${s.role || "Staff"} · ${Array.isArray(s.name) ? s.name.join("、") : (s.name || "")}`}
                                         size="small"
                                         variant="outlined"
                                         sx={{

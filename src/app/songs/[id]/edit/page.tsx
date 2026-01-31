@@ -54,7 +54,7 @@ export default async function EditSongPage({ params }: PageProps) {
   }));
 
   const staff = Array.isArray(song.staff)
-    ? (song.staff as { role?: string; name?: string }[]).map((s, index) => ({
+    ? (song.staff as { role?: string; name?: string | string[] }[]).map((s, index) => ({
         id: `staff_${index}`,
         role: s.role ?? "",
         name: s.name ?? "",

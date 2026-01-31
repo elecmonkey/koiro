@@ -22,13 +22,14 @@ import { useRouter } from "next/navigation";
 import EditorShell from "../editor/EditorShell";
 import { clearDraft, loadDraft, saveDraft } from "./draftStore";
 import VersionRow from "./VersionRow";
+import StaffRow from "./StaffRow";
 import ImageUploadField from "../components/ImageUploadField";
 import type { LineDraft } from "../editor/state/useLyricsEditor";
 
 type StaffItem = {
   id: string;
   role: string;
-  name: string;
+  name: string | string[];
 };
 
 type VersionItem = {
@@ -493,27 +494,12 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
                     </Stack>
                     <Stack spacing={1.5}>
                       {staff.map((item) => (
-                        <Stack key={item.id} direction={{ xs: "column", md: "row" }} spacing={1}>
-                          <TextField
-                            label="职责"
-                            value={item.role}
-                            onChange={(event) =>
-                              updateStaff(item.id, { role: event.target.value })
-                            }
-                            fullWidth
-                          />
-                          <TextField
-                            label="姓名"
-                            value={item.name}
-                            onChange={(event) =>
-                              updateStaff(item.id, { name: event.target.value })
-                            }
-                            fullWidth
-                          />
-                          <Button color="error" onClick={() => removeStaff(item.id)}>
-                            删除
-                          </Button>
-                        </Stack>
+                        <StaffRow
+                          key={item.id}
+                          item={item}
+                          onChange={(updates) => updateStaff(item.id, updates)}
+                          onRemove={() => removeStaff(item.id)}
+                        />
                       ))}
                     </Stack>
                   </Stack>

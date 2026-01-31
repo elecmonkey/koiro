@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       id: song.id,
       title: song.title,
       description: song.description ?? "",
-      staff: (song.staff as { role: string; name: string }[]) ?? [],
+      staff: (song.staff as { role: string; name: string | string[] }[]) ?? [],
       audioVersions: (song.audioVersions as Record<string, string>) ?? {},
       coverUrl: song.coverObjectId ? await signObjectUrl(song.coverObjectId) : null,
       lyrics: song.lyrics[0]?.content ?? null,
