@@ -18,7 +18,7 @@ const displayFont = Shippori_Mincho_B1({
 });
 
 export const metadata: Metadata = {
-  title: "Koiro (こいろ)",
+  title: "Koiro",
   description: "个人音乐集合 — Koiro",
 };
 

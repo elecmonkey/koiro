@@ -46,7 +46,7 @@ export default async function Navbar() {
                 fontSize: { xs: 26, sm: 28 },
               }}
             >
-              Koiro こいろ
+              Koiro
             </Typography>
           </Stack>
           <Stack direction="row" spacing={2} alignItems="center">

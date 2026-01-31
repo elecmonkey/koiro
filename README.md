@@ -1,4 +1,4 @@
-# Koiro (こいろ)
+# Koiro
 
 Koiro 是一个个人音乐库管理系统，使用 Next.js + MUI 构建前端界面。
 
