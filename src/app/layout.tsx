@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Shippori_Mincho_B1, Zen_Kaku_Gothic_New } from "next/font/google";
+import EmotionRegistry from "./emotion-registry";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -28,7 +29,9 @@ export default function RootLayout({
   return (
     <html lang="zh-Hans">
       <body className={`${bodyFont.variable} ${displayFont.variable}`}>
-        <Providers>{children}</Providers>
+        <EmotionRegistry>
+          <Providers>{children}</Providers>
+        </EmotionRegistry>
       </body>
     </html>
   );
