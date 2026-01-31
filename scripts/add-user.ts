@@ -2,7 +2,16 @@ import "dotenv/config";
 import crypto from "node:crypto";
 import { stdin as input, stdout as output } from "node:process";
 import { createInterface } from "node:readline/promises";
-import { prisma } from "@koiro/db";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../packages/db/src/generated/prisma/client";
+
+// 初始化 Prisma 客户端
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error("DATABASE_URL is not set");
+}
+const adapter = new PrismaPg({ connectionString });
+const prisma = new PrismaClient({ adapter });
 
 const PERMISSIONS = {
   VIEW: 1,
@@ -39,20 +48,48 @@ async function promptPermissions(rl: ReturnType<typeof createInterface>) {
   return mask;
 }
 
-async function prompt() {
-  const rl = createInterface({ input, output });
-  const rlAny = rl as typeof rl & {
-    stdoutMuted?: boolean;
-    _writeToOutput?: (str: string) => void;
-  };
-  const originalWrite = rlAny._writeToOutput?.bind(rl);
-  if (originalWrite) {
-    rlAny._writeToOutput = (str: string) => {
-      if (!rlAny.stdoutMuted) {
-        originalWrite(str);
+async function promptPassword(prompt: string): Promise<string> {
+  return new Promise((resolve) => {
+    process.stdout.write(prompt);
+    
+    const chars: string[] = [];
+    
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.setEncoding("utf8");
+    
+    const onData = (char: string) => {
+      const code = char.charCodeAt(0);
+      
+      if (code === 13 || code === 10) {
+        // Enter
+        process.stdin.setRawMode(false);
+        process.stdin.pause();
+        process.stdin.removeListener("data", onData);
+        process.stdout.write("\n");
+        resolve(chars.join(""));
+      } else if (code === 127 || code === 8) {
+        // Backspace
+        if (chars.length > 0) {
+          chars.pop();
+          process.stdout.write("\b \b");
+        }
+      } else if (code === 3) {
+        // Ctrl+C
+        process.exit(1);
+      } else if (code >= 32) {
+        // Printable character
+        chars.push(char);
+        process.stdout.write("*");
       }
     };
-  }
+    
+    process.stdin.on("data", onData);
+  });
+}
+
+async function prompt() {
+  const rl = createInterface({ input, output });
 
   try {
     const email = (await rl.question("邮箱: ")).trim();
@@ -60,19 +97,21 @@ async function prompt() {
       throw new Error("邮箱不能为空");
     }
 
-    rlAny.stdoutMuted = true;
-    const password = await rl.question("密码: ");
-    rlAny.stdoutMuted = false;
+    rl.close();
+    const password = await promptPassword("密码: ");
     if (!password) {
       throw new Error("密码不能为空");
     }
 
-    const permissions = await promptPermissions(rl);
+    const rl2 = createInterface({ input, output });
+    const permissions = await promptPermissions(rl2);
+    rl2.close();
 
     const answers: Answers = { email, password, permissions };
     return answers;
-  } finally {
+  } catch (e) {
     rl.close();
+    throw e;
   }
 }
 
