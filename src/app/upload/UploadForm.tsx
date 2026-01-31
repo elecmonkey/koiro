@@ -8,6 +8,7 @@ import {
   CardContent,
   Container,
   Divider,
+  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -81,6 +82,8 @@ export default function UploadForm() {
     initialDraft?.lyricsVersions?.[0]?.id ?? "lyr_1"
   );
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [lrcText, setLrcText] = useState("");
   const [lrcError, setLrcError] = useState<string | null>(null);
   const [lyricsEditorKey, setLyricsEditorKey] = useState(0);
@@ -249,7 +252,54 @@ export default function UploadForm() {
     const error = validateBeforeSubmit();
     setSubmitError(error);
     if (error) return;
-    // TODO: 调用后端提交接口，成功后再 clearDraft
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    const payload = {
+      title,
+      description,
+      staff,
+      coverObjectId,
+      coverFilename,
+      audioDefaultName,
+      versions,
+      lyricsVersions,
+    };
+    fetch("/api/songs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = (await res.json()) as { error?: string };
+          throw new Error(body?.error ?? "提交失败");
+        }
+        setSubmitSuccess(true);
+        skipNextSaveRef.current = true;
+        clearDraft();
+        setTitle("");
+        setDescription("");
+        setStaff(STAFF_TEMPLATE);
+        setVersions(VERSION_TEMPLATE);
+        setAudioDefaultName(VERSION_TEMPLATE[0].key);
+        setLyricsVersions([
+          { id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES },
+        ]);
+        setActiveLyricsId("lyr_1");
+        setLyricsEditorKey((prev) => prev + 1);
+        setCoverObjectId(null);
+        setCoverFilename(null);
+        setSubmitError(null);
+        setLrcText("");
+        setLrcError(null);
+      })
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "提交失败";
+        setSubmitError(message);
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   const handleImportLrc = (content: string) => {
@@ -330,259 +380,273 @@ export default function UploadForm() {
   }
 
   return (
-    <Box component="main" sx={{ pb: 8 }}>
-      <Container sx={{ pt: 6 }}>
-        <Stack spacing={1}>
-          <Typography variant="h4">上传歌曲</Typography>
-        </Stack>
-      </Container>
+    <>
+      <Box component="main" sx={{ pb: 8 }}>
+        <Container sx={{ pt: 6 }}>
+          <Stack spacing={1}>
+            <Typography variant="h4">上传歌曲</Typography>
+          </Stack>
+        </Container>
 
-      <Container sx={{ pt: 4 }}>
-        <Stack spacing={3}>
-          <Card className="float-in">
-            <CardContent>
-              <Stack spacing={2.5}>
-                <Typography variant="h6">歌曲信息</Typography>
-                <Stack spacing={2}>
-                  <TextField
-                    label="歌曲名"
-                    placeholder="例如：玻璃海"
-                    fullWidth
-                    value={title}
-                    onChange={(event) => {
-                      const next = event.target.value;
-                      setTitle(next);
-                    }}
-                  />
-                  <TextField
-                    label="简介"
-                    placeholder="描述这首歌的氛围、来源..."
-                    fullWidth
-                    multiline
-                    minRows={3}
-                    value={description}
-                    onChange={(event) => {
-                      const next = event.target.value;
-                      setDescription(next);
-                    }}
-                  />
-                </Stack>
-                <Divider />
-                <Stack spacing={1.5}>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography variant="subtitle1">Staff</Typography>
-                    <Button size="small" variant="outlined" onClick={addStaff}>
-                      添加 Staff
-                    </Button>
-                  </Stack>
-                  <Stack spacing={1.5}>
-                    {staff.map((item) => (
-                      <Stack key={item.id} direction={{ xs: "column", md: "row" }} spacing={1}>
-                        <TextField
-                          label="职责"
-                          value={item.role}
-                          onChange={(event) => updateStaff(item.id, { role: event.target.value })}
-                          fullWidth
-                        />
-                        <TextField
-                          label="姓名"
-                          value={item.name}
-                          onChange={(event) => updateStaff(item.id, { name: event.target.value })}
-                          fullWidth
-                        />
-                        <Button color="error" onClick={() => removeStaff(item.id)}>
-                          删除
-                        </Button>
-                      </Stack>
-                    ))}
-                  </Stack>
-                </Stack>
-                <Divider />
-                <Stack spacing={1.5}>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography variant="subtitle1">音频版本</Typography>
-                    <Button size="small" variant="outlined" onClick={addVersion}>
-                      添加版本
-                    </Button>
-                  </Stack>
+        <Container sx={{ pt: 4 }}>
+          <Stack spacing={3}>
+            <Card className="float-in">
+              <CardContent>
+                <Stack spacing={2.5}>
+                  <Typography variant="h6">歌曲信息</Typography>
                   <Stack spacing={2}>
-                    {versions.map((item) => (
-                      <VersionRow
-                        key={item.id}
-                        item={item}
-                        onChange={updateVersion}
-                        onRemove={removeVersion}
-                        onSetDefault={setDefaultVersion}
-                      />
-                    ))}
-                  </Stack>
-                </Stack>
-                <Divider />
-                <ImageUploadField
-                  label="封面"
-                  objectId={coverObjectId}
-                  onObjectIdChange={(value) => {
-                    setCoverObjectId(value);
-                  }}
-                  onFilenameChange={(value) => {
-                    setCoverFilename(value);
-                  }}
-                />
-              </Stack>
-            </CardContent>
-          </Card>
-
-          <Card className="float-in stagger-2" sx={{ overflow: "visible" }}>
-            <CardContent sx={{ overflow: "visible" }}>
-              <Stack spacing={2}>
-                <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                  <Stack spacing={1} flex={1}>
-                    <Typography variant="h6">歌词版本</Typography>
-                    <Stack direction="row" spacing={1} flexWrap="wrap">
-                      {lyricsVersions.map((item) => (
-                        <Button
-                          key={item.id}
-                          variant={item.id === activeLyricsId ? "contained" : "outlined"}
-                          size="small"
-                          onClick={() => setActiveLyricsId(item.id)}
-                        >
-                          {item.key || "未命名"}
-                        </Button>
-                      ))}
-                      <Button size="small" variant="text" onClick={addLyricsVersion}>
-                        添加歌词版本
-                      </Button>
-                    </Stack>
-                  </Stack>
-                </Stack>
-                <Divider />
-                {activeLyrics ? (
-                  <Stack spacing={2}>
-                    <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                      <TextField
-                        label="版本名称"
-                        value={activeLyrics.key}
-                        onChange={(event) => updateLyricsKey(activeLyrics.id, event.target.value)}
-                        fullWidth
-                      />
-                      <Button
-                        variant={activeLyrics.isDefault ? "contained" : "outlined"}
-                        onClick={() => setDefaultLyrics(activeLyrics.id)}
-                        sx={{ height: 56, minWidth: 120 }}
-                      >
-                        {activeLyrics.isDefault ? "默认版本" : "设为默认"}
-                      </Button>
-                      {lyricsVersions.length > 0 ? (
-                        <Button
-                          color="error"
-                          onClick={() => removeLyricsVersion(activeLyrics.id)}
-                          sx={{ height: 56 }}
-                        >
-                          删除
-                        </Button>
-                      ) : null}
-                    </Stack>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Stack spacing={1.5}>
-                          <Typography variant="subtitle1">导入 LRC</Typography>
-                          <TextField
-                            label="粘贴 LRC 内容"
-                            value={lrcText}
-                            onChange={(event) => setLrcText(event.target.value)}
-                            multiline
-                            minRows={6}
-                            maxRows={6}
-                            fullWidth
-                            sx={{
-                              "& .MuiInputBase-root": {
-                                alignItems: "flex-start",
-                                overflow: "auto",
-                              },
-                            }}
-                          />
-                          <Stack direction="row" spacing={1.5} flexWrap="wrap">
-                            <Button variant="outlined" onClick={() => handleImportLrc(lrcText)}>
-                              从粘贴内容导入
-                            </Button>
-                            <Button variant="outlined" component="label">
-                              选择 LRC 文件
-                              <input
-                                hidden
-                                type="file"
-                                accept=".lrc,text/plain"
-                                onChange={(event) => {
-                                  const file = event.target.files?.[0];
-                                  if (!file) return;
-                                  const reader = new FileReader();
-                                  reader.onload = () => {
-                                    const content = String(reader.result ?? "");
-                                    setLrcText(content);
-                                    handleImportLrc(content);
-                                  };
-                                  reader.readAsText(file);
-                                }}
-                              />
-                            </Button>
-                          </Stack>
-                          {lrcError ? (
-                            <Typography variant="caption" color="error">
-                              {lrcError}
-                            </Typography>
-                          ) : null}
-                          <Typography variant="caption" color="text.secondary">
-                            导入会覆盖当前版本的歌词内容。
-                          </Typography>
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                    <EditorShell
-                      key={`${activeLyrics.id}-${lyricsEditorKey}`}
-                      initialLines={activeLyrics.lines}
-                      onLinesChange={(lines) => updateLyricsLines(activeLyrics.id, lines)}
+                    <TextField
+                      label="歌曲名"
+                      placeholder="例如：玻璃海"
+                      fullWidth
+                      value={title}
+                      onChange={(event) => {
+                        const next = event.target.value;
+                        setTitle(next);
+                      }}
+                    />
+                    <TextField
+                      label="简介"
+                      placeholder="描述这首歌的氛围、来源..."
+                      fullWidth
+                      multiline
+                      minRows={3}
+                      value={description}
+                      onChange={(event) => {
+                        const next = event.target.value;
+                        setDescription(next);
+                      }}
                     />
                   </Stack>
-                ) : null}
-                <Divider />
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Button variant="contained" onClick={handleSubmit}>
-                    提交上传
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={() => {
-                      skipNextSaveRef.current = true;
-                      clearDraft();
-                      setTitle("");
-                      setDescription("");
-                      setStaff(STAFF_TEMPLATE);
-                      setVersions(VERSION_TEMPLATE);
-                      setAudioDefaultName(VERSION_TEMPLATE[0].key);
-                      setLyricsVersions([
-                        { id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES },
-                      ]);
-                      setActiveLyricsId("lyr_1");
-                      setLyricsEditorKey((prev) => prev + 1);
-                      setCoverObjectId(null);
-                      setCoverFilename(null);
-                      setSubmitError(null);
-                      setLrcText("");
-                      setLrcError(null);
+                  <Divider />
+                  <Stack spacing={1.5}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between">
+                      <Typography variant="subtitle1">Staff</Typography>
+                      <Button size="small" variant="outlined" onClick={addStaff}>
+                        添加 Staff
+                      </Button>
+                    </Stack>
+                    <Stack spacing={1.5}>
+                      {staff.map((item) => (
+                        <Stack key={item.id} direction={{ xs: "column", md: "row" }} spacing={1}>
+                          <TextField
+                            label="职责"
+                            value={item.role}
+                            onChange={(event) =>
+                              updateStaff(item.id, { role: event.target.value })
+                            }
+                            fullWidth
+                          />
+                          <TextField
+                            label="姓名"
+                            value={item.name}
+                            onChange={(event) =>
+                              updateStaff(item.id, { name: event.target.value })
+                            }
+                            fullWidth
+                          />
+                          <Button color="error" onClick={() => removeStaff(item.id)}>
+                            删除
+                          </Button>
+                        </Stack>
+                      ))}
+                    </Stack>
+                  </Stack>
+                  <Divider />
+                  <Stack spacing={1.5}>
+                    <Stack direction="row" alignItems="center" justifyContent="space-between">
+                      <Typography variant="subtitle1">音频版本</Typography>
+                      <Button size="small" variant="outlined" onClick={addVersion}>
+                        添加版本
+                      </Button>
+                    </Stack>
+                    <Stack spacing={2}>
+                      {versions.map((item) => (
+                        <VersionRow
+                          key={item.id}
+                          item={item}
+                          onChange={updateVersion}
+                          onRemove={removeVersion}
+                          onSetDefault={setDefaultVersion}
+                        />
+                      ))}
+                    </Stack>
+                  </Stack>
+                  <Divider />
+                  <ImageUploadField
+                    label="封面"
+                    objectId={coverObjectId}
+                    onObjectIdChange={(value) => {
+                      setCoverObjectId(value);
                     }}
-                  >
-                    清空草稿
-                  </Button>
-                  {submitError ? (
-                    <Typography variant="caption" color="error">
-                      {submitError}
-                    </Typography>
-                  ) : null}
+                    onFilenameChange={(value) => {
+                      setCoverFilename(value);
+                    }}
+                  />
                 </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Stack>
-      </Container>
-    </Box>
+              </CardContent>
+            </Card>
+
+            <Card className="float-in stagger-2" sx={{ overflow: "visible" }}>
+              <CardContent sx={{ overflow: "visible" }}>
+                <Stack spacing={2}>
+                  <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                    <Stack spacing={1} flex={1}>
+                      <Typography variant="h6">歌词版本</Typography>
+                      <Stack direction="row" spacing={1} flexWrap="wrap">
+                        {lyricsVersions.map((item) => (
+                          <Button
+                            key={item.id}
+                            variant={item.id === activeLyricsId ? "contained" : "outlined"}
+                            size="small"
+                            onClick={() => setActiveLyricsId(item.id)}
+                          >
+                            {item.key || "未命名"}
+                          </Button>
+                        ))}
+                        <Button size="small" variant="text" onClick={addLyricsVersion}>
+                          添加歌词版本
+                        </Button>
+                      </Stack>
+                    </Stack>
+                  </Stack>
+                  <Divider />
+                  {activeLyrics ? (
+                    <Stack spacing={2}>
+                      <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                        <TextField
+                          label="版本名称"
+                          value={activeLyrics.key}
+                          onChange={(event) =>
+                            updateLyricsKey(activeLyrics.id, event.target.value)
+                          }
+                          fullWidth
+                        />
+                        <Button
+                          variant={activeLyrics.isDefault ? "contained" : "outlined"}
+                          onClick={() => setDefaultLyrics(activeLyrics.id)}
+                          sx={{ height: 56, minWidth: 120 }}
+                        >
+                          {activeLyrics.isDefault ? "默认版本" : "设为默认"}
+                        </Button>
+                        {lyricsVersions.length > 0 ? (
+                          <Button
+                            color="error"
+                            onClick={() => removeLyricsVersion(activeLyrics.id)}
+                            sx={{ height: 56 }}
+                          >
+                            删除
+                          </Button>
+                        ) : null}
+                      </Stack>
+                      <Card variant="outlined">
+                        <CardContent>
+                          <Stack spacing={1.5}>
+                            <Typography variant="subtitle1">导入 LRC</Typography>
+                            <TextField
+                              label="粘贴 LRC 内容"
+                              value={lrcText}
+                              onChange={(event) => setLrcText(event.target.value)}
+                              multiline
+                              minRows={6}
+                              maxRows={6}
+                              fullWidth
+                              sx={{
+                                "& .MuiInputBase-root": {
+                                  alignItems: "flex-start",
+                                  overflow: "auto",
+                                },
+                              }}
+                            />
+                            <Stack direction="row" spacing={1.5} flexWrap="wrap">
+                              <Button variant="outlined" onClick={() => handleImportLrc(lrcText)}>
+                                从粘贴内容导入
+                              </Button>
+                              <Button variant="outlined" component="label">
+                                选择 LRC 文件
+                                <input
+                                  hidden
+                                  type="file"
+                                  accept=".lrc,text/plain"
+                                  onChange={(event) => {
+                                    const file = event.target.files?.[0];
+                                    if (!file) return;
+                                    const reader = new FileReader();
+                                    reader.onload = () => {
+                                      const content = String(reader.result ?? "");
+                                      setLrcText(content);
+                                      handleImportLrc(content);
+                                    };
+                                    reader.readAsText(file);
+                                  }}
+                                />
+                              </Button>
+                            </Stack>
+                            {lrcError ? (
+                              <Typography variant="caption" color="error">
+                                {lrcError}
+                              </Typography>
+                            ) : null}
+                            <Typography variant="caption" color="text.secondary">
+                              导入会覆盖当前版本的歌词内容。
+                            </Typography>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                      <EditorShell
+                        key={`${activeLyrics.id}-${lyricsEditorKey}`}
+                        initialLines={activeLyrics.lines}
+                        onLinesChange={(lines) => updateLyricsLines(activeLyrics.id, lines)}
+                      />
+                    </Stack>
+                  ) : null}
+                  <Divider />
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Button variant="contained" onClick={handleSubmit}>
+                      {isSubmitting ? "提交中..." : "提交上传"}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => {
+                        skipNextSaveRef.current = true;
+                        clearDraft();
+                        setTitle("");
+                        setDescription("");
+                        setStaff(STAFF_TEMPLATE);
+                        setVersions(VERSION_TEMPLATE);
+                        setAudioDefaultName(VERSION_TEMPLATE[0].key);
+                        setLyricsVersions([
+                          { id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES },
+                        ]);
+                        setActiveLyricsId("lyr_1");
+                        setLyricsEditorKey((prev) => prev + 1);
+                        setCoverObjectId(null);
+                        setCoverFilename(null);
+                        setSubmitError(null);
+                        setLrcText("");
+                        setLrcError(null);
+                      }}
+                    >
+                      清空草稿
+                    </Button>
+                    {submitError ? (
+                      <Typography variant="caption" color="error">
+                        {submitError}
+                      </Typography>
+                    ) : null}
+                  </Stack>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Stack>
+        </Container>
+      </Box>
+      <Snackbar
+        open={submitSuccess}
+        autoHideDuration={2200}
+        message="提交成功"
+        onClose={() => setSubmitSuccess(false)}
+      />
+    </>
   );
 }
