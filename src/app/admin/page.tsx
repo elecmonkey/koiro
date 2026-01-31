@@ -1,8 +1,14 @@
 import { requireAuth } from "@/lib/auth-guard";
 import { PERMISSIONS } from "@/lib/permissions";
-import AdminShell from "./AdminShell";
+import PlaylistsManager from "./PlaylistsManager";
+import AdminLayout from "./AdminLayout";
 
 export default async function AdminPage() {
   await requireAuth({ permission: PERMISSIONS.ADMIN });
-  return <AdminShell />;
+
+  return (
+    <AdminLayout activeTab="playlists">
+      <PlaylistsManager />
+    </AdminLayout>
+  );
 }
