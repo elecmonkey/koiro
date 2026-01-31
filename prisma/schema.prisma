@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+////////////////////
+// 用户 & 权限
+////////////////////
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  permissions  Int
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+////////////////////
+// 歌曲
+////////////////////
+
+model Song {
+  id            String   @id @default(uuid())
+  title         String
+  staff         Json
+  description   String
+  coverObjectId String?
+  audioVersions Json
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  playlists     SongPlaylist[]
+  lyrics        LyricsDocument[]
+}
+
+////////////////////
+// 播放列表
+////////////////////
+
+model Playlist {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  coverObjectId String
+  coverSongId   String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  songs         SongPlaylist[]
+}
+
+////////////////////
+// Song <-> Playlist 多对多
+////////////////////
+
+model SongPlaylist {
+  songId     String
+  playlistId String
+  order      Int?
+
+  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  @@id([songId, playlistId])
+}
+
+////////////////////
+// 歌词文档
+////////////////////
+
+model LyricsDocument {
+  id         String   @id @default(uuid())
+  songId     String
+  versionKey String
+  isDefault  Boolean  @default(false)
+
+  format     String
+  content    Json
+  plainText  String
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@unique([songId, versionKey])
+}
+
+////////////////////
+// 异步任务（转码队列）
+////////////////////
+
+model Job {
+  id         String   @id @default(uuid())
+  type       String
+  payload    Json
+  status     String
+
+  attempts   Int      @default(0)
+  runAt      DateTime @default(now())
+  lockedAt   DateTime?
+  lockedBy   String?
+
+  lastError  String?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([status, runAt])
+}
