@@ -50,7 +50,7 @@ function BlockView({ block }: { block: Block }) {
   return (
     <Stack direction="row" spacing={2} alignItems="baseline">
       <Typography variant="caption" color="text.secondary" sx={{ minWidth: 72 }}>
-        {block.time.startMs}ms
+        {block.time?.startMs ?? 0}ms
       </Typography>
       <Typography variant="body1">{renderInline(block.children)}</Typography>
     </Stack>

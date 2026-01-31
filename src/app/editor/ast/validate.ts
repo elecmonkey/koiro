@@ -13,6 +13,10 @@ export function validateBlocks(blocks: Block[]): ValidationResult {
     if (block.type !== "line") {
       return;
     }
+    if (!block.time) {
+      errors.push(`第 ${index + 1} 行缺少时间信息`);
+      return;
+    }
     if (block.time.startMs < 0) {
       errors.push(`第 ${index + 1} 行 startMs 不能为负数`);
     }
