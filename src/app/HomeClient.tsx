@@ -213,14 +213,21 @@ export default function HomeClient() {
                     {featuredPlaylists.length} 个
                   </Typography>
                 </Stack>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={fetchRandomPlaylists}
-                  disabled={loadingPlaylists}
-                >
-                  换一批
-                </Button>
+                <Stack direction="row" spacing={1}>
+                  <Link href="/playlists" style={{ textDecoration: "none" }}>
+                    <Button size="small" variant="text">
+                      全部歌单
+                    </Button>
+                  </Link>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={fetchRandomPlaylists}
+                    disabled={loadingPlaylists}
+                  >
+                    换一批
+                  </Button>
+                </Stack>
               </Stack>
               <Divider />
               {loadingPlaylists ? (
@@ -246,26 +253,26 @@ export default function HomeClient() {
                   {featuredPlaylists.map((playlist) => (
                     <Link key={playlist.id} href={`/playlists/${playlist.id}`} style={{ textDecoration: "none" }}>
                       <Card variant="outlined" sx={{ height: "100%", "&:hover": { bgcolor: "action.hover" } }}>
-                        <Box sx={{ p: 2 }}>
-                          <Stack spacing={1.5}>
-                            <Box
-                              sx={{
-                                width: "100%",
-                                aspectRatio: "1",
-                                borderRadius: 1,
-                                background: playlist.coverUrl
-                                  ? `url(${playlist.coverUrl}) center/cover no-repeat`
-                                  : "linear-gradient(135deg, #f3efe7, #e8dfd1)",
-                              }}
-                            />
-                            <Stack spacing={0.3}>
-                              <Typography variant="subtitle2" noWrap>
-                                {playlist.name}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {playlist.songCount} 首
-                              </Typography>
-                            </Stack>
+                        <Box
+                          sx={{
+                            width: "100%",
+                            aspectRatio: "1",
+                            borderRadius: "inherit",
+                            borderBottomLeftRadius: 0,
+                            borderBottomRightRadius: 0,
+                            background: playlist.coverUrl
+                              ? `url(${playlist.coverUrl}) center/cover no-repeat`
+                              : "linear-gradient(135deg, #f3efe7, #e8dfd1)",
+                          }}
+                        />
+                        <Box sx={{ p: 1.5 }}>
+                          <Stack spacing={0.3}>
+                            <Typography variant="subtitle2" noWrap>
+                              {playlist.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {playlist.songCount} 首
+                            </Typography>
                           </Stack>
                         </Box>
                       </Card>
@@ -290,14 +297,21 @@ export default function HomeClient() {
                     {featuredSongs.length} 首
                   </Typography>
                 </Stack>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={fetchRandomSongs}
-                  disabled={loadingSongs}
-                >
-                  换一批
-                </Button>
+                <Stack direction="row" spacing={1}>
+                  <Link href="/songs" style={{ textDecoration: "none" }}>
+                    <Button size="small" variant="text">
+                      全部歌曲
+                    </Button>
+                  </Link>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={fetchRandomSongs}
+                    disabled={loadingSongs}
+                  >
+                    换一批
+                  </Button>
+                </Stack>
               </Stack>
               <Divider />
               {loadingSongs ? (
