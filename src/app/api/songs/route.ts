@@ -5,6 +5,39 @@ import { prisma } from "@/lib/prisma";
 import type { Block } from "@/app/editor/ast/types";
 import { buildPlainText } from "@/app/editor/ast/plainText";
 
+// GET - 获取所有歌曲列表
+export async function GET() {
+  const session = await auth();
+  const permissions = session?.user?.permissions ?? 0;
+  if (!session?.user || !hasPermission(permissions, PERMISSIONS.ADMIN)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const songs = await prisma.song.findMany({
+    orderBy: { updatedAt: "desc" },
+    include: {
+      _count: {
+        select: { lyrics: true },
+      },
+    },
+  });
+
+  return NextResponse.json({
+    songs: songs.map((s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      staff: s.staff,
+      coverObjectId: s.coverObjectId,
+      audioVersions: s.audioVersions,
+      audioDefaultName: s.audioDefaultName,
+      lyricsCount: s._count.lyrics,
+      createdAt: s.createdAt.toISOString(),
+      updatedAt: s.updatedAt.toISOString(),
+    })),
+  });
+}
+
 type Body = {
   title: string;
   description: string;
