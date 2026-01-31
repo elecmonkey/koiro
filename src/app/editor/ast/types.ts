@@ -10,7 +10,7 @@ export type Block = LineBlock | ParagraphBlock;
 
 export type LineBlock = {
   type: "line";
-  time: {
+  time?: {
     startMs: number;
     endMs?: number;
   };

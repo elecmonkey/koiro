@@ -9,6 +9,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import type { LyricsDocument } from "@/app/editor/ast/types";
 
 export interface Track {
   id: string;
@@ -16,6 +17,7 @@ export interface Track {
   artist?: string;
   coverUrl?: string | null;
   audioObjectId: string;
+  lyrics?: LyricsDocument | null;
 }
 
 interface PlayerState {

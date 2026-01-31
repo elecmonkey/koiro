@@ -20,6 +20,7 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
 import Link from "next/link";
 import { usePlayer, type Track } from "@/app/player";
+import type { LyricsDocument } from "@/app/editor/ast/types";
 
 type Song = {
   id: string;
@@ -29,6 +30,7 @@ type Song = {
   coverUrl: string | null;
   audioVersions: Record<string, string> | null;
   order: number;
+  lyrics: LyricsDocument | null;
 };
 
 type PlaylistInfo = {
@@ -195,6 +197,7 @@ export default function PlaylistDetailClient({ playlistId }: Props) {
                     artist,
                     coverUrl: song.coverUrl,
                     audioObjectId: defaultAudioObjectId,
+                    lyrics: song.lyrics,
                   }
                 : null;
 

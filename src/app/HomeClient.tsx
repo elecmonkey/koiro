@@ -23,6 +23,7 @@ import PauseIcon from "@mui/icons-material/Pause";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePlayer, type Track } from "@/app/player";
+import type { LyricsDocument } from "@/app/editor/ast/types";
 
 type SongCard = {
   id: string;
@@ -31,6 +32,7 @@ type SongCard = {
   staff: { role: string; name: string }[];
   audioVersions: Record<string, string>;
   coverUrl: string | null;
+  lyrics: LyricsDocument | null;
 };
 
 type PlaylistCard = {
@@ -363,6 +365,7 @@ export default function HomeClient() {
                           artist,
                           coverUrl: song.coverUrl,
                           audioObjectId: defaultAudioObjectId,
+                          lyrics: song.lyrics,
                         }
                       : null;
 

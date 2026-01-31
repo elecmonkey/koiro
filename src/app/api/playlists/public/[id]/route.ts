@@ -58,7 +58,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
     include: {
-      song: true,
+      song: {
+        include: {
+          lyrics: {
+            where: { isDefault: true },
+            take: 1,
+          },
+        },
+      },
     },
   });
 
@@ -77,6 +84,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           // ignore
         }
       }
+      // 获取默认歌词
+      const defaultLyrics = sp.song.lyrics?.[0]?.content ?? null;
+      
       return {
         id: sp.song.id,
         title: sp.song.title,
@@ -85,6 +95,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         coverUrl: songCoverUrl,
         audioVersions: sp.song.audioVersions as Record<string, string> | null,
         order: sp.order,
+        lyrics: defaultLyrics,
       };
     })
   );

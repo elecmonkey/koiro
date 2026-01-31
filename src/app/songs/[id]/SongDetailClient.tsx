@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import { PlayButton } from "@/app/components/PlayButton";
 import { Download } from "@mui/icons-material";
+import type { LyricsDocument, Block, Inline } from "@/app/editor/ast/types";
 
 export interface AudioVersion {
   key: string;
@@ -28,9 +29,10 @@ export interface SongDetailClientProps {
   };
   audioVersions: AudioVersion[];
   canDownload: boolean;
+  defaultLyrics?: LyricsDocument | null;
 }
 
-export function AudioControls({ song, audioVersions, canDownload }: SongDetailClientProps) {
+export function AudioControls({ song, audioVersions, canDownload, defaultLyrics }: SongDetailClientProps) {
   const [selectedVersion, setSelectedVersion] = useState(() => {
     const defaultIdx = audioVersions.findIndex((v) => v.isDefault);
     return defaultIdx >= 0 ? defaultIdx : 0;
@@ -50,7 +52,6 @@ export function AudioControls({ song, audioVersions, canDownload }: SongDetailCl
       if (!res.ok) throw new Error("获取下载链接失败");
       const { url } = await res.json();
       
-      // 创建临时链接并触发下载
       const a = document.createElement("a");
       a.href = url;
       a.download = `${song.title} - ${currentVersion.key}.mp3`;
@@ -72,7 +73,6 @@ export function AudioControls({ song, audioVersions, canDownload }: SongDetailCl
 
   return (
     <Stack spacing={2}>
-      {/* 版本切换 Tabs（只在有多个版本时显示） */}
       {audioVersions.length > 1 && (
         <Tabs
           value={selectedVersion}
@@ -90,7 +90,6 @@ export function AudioControls({ song, audioVersions, canDownload }: SongDetailCl
         </Tabs>
       )}
 
-      {/* 播放和下载按钮 */}
       <Stack direction="row" spacing={1.5}>
         {currentVersion && (
           <PlayButton
@@ -100,6 +99,7 @@ export function AudioControls({ song, audioVersions, canDownload }: SongDetailCl
               artist: song.artist,
               coverUrl: song.coverUrl,
               audioObjectId: currentVersion.objectId,
+              lyrics: defaultLyrics,
             }}
           />
         )}
@@ -116,32 +116,11 @@ export function AudioControls({ song, audioVersions, canDownload }: SongDetailCl
   );
 }
 
-// 歌词相关类型
-type LyricsContent = {
-  type: "doc";
-  blocks: Array<
-    | {
-        type: "line";
-        time?: { startMs: number; endMs?: number };
-        children: InlineNode[];
-      }
-    | { type: "p"; children: InlineNode[] }
-  >;
-};
-
-type InlineNode =
-  | { type: "text"; text: string }
-  | { type: "ruby"; base: string; ruby: string }
-  | { type: "em"; children: InlineNode[] }
-  | { type: "strong"; children: InlineNode[] }
-  | { type: "annotation"; text: string; note: string }
-  | { type: "br" };
-
 export interface LyricsVersion {
   id: string;
   versionKey: string;
   isDefault: boolean;
-  content: LyricsContent;
+  content: LyricsDocument;
 }
 
 interface LyricsDisplayProps {
@@ -170,7 +149,6 @@ export function LyricsDisplay({ lyrics }: LyricsDisplayProps) {
             </Typography>
           ) : (
             <>
-              {/* 歌词版本切换 Tabs（只在有多个版本时显示） */}
               {lyrics.length > 1 && (
                 <Tabs
                   value={selectedLyrics}
@@ -188,7 +166,6 @@ export function LyricsDisplay({ lyrics }: LyricsDisplayProps) {
                 </Tabs>
               )}
 
-              {/* 歌词内容 */}
               {currentLyrics && (
                 <Stack spacing={1}>
                   {renderLyricsBlocks(currentLyrics.content)}
@@ -202,7 +179,7 @@ export function LyricsDisplay({ lyrics }: LyricsDisplayProps) {
   );
 }
 
-function renderLyricsBlocks(content: LyricsContent) {
+function renderLyricsBlocks(content: LyricsDocument) {
   if (!content || content.type !== "doc" || !Array.isArray(content.blocks)) {
     return (
       <Typography variant="body2" color="text.secondary">
@@ -210,61 +187,68 @@ function renderLyricsBlocks(content: LyricsContent) {
       </Typography>
     );
   }
-  return content.blocks.map((block, index) => {
-    if (block.type === "line") {
-      return (
-        <Typography key={`line-${index}`} variant="body1" sx={{ lineHeight: 1.9 }}>
-          {block.children.map((node, idx) => renderInline(node, `line-${index}-${idx}`))}
-        </Typography>
-      );
-    }
-    if (block.type === "p") {
-      return (
-        <Typography
-          key={`p-${index}`}
-          variant="body2"
-          color="text.secondary"
-          sx={{ lineHeight: 1.9 }}
-        >
-          {block.children.map((node, idx) => renderInline(node, `p-${index}-${idx}`))}
-        </Typography>
-      );
-    }
-    return null;
-  });
+  return content.blocks.map((block, index) => (
+    <BlockView key={index} block={block} />
+  ));
 }
 
-function renderInline(node: InlineNode, key: string): React.ReactNode {
+function BlockView({ block }: { block: Block }) {
+  if (block.type === "line") {
+    return (
+      <Typography variant="body1" sx={{ lineHeight: 1.9 }}>
+        {block.children.map((node, idx) => (
+          <InlineView key={idx} node={node} />
+        ))}
+      </Typography>
+    );
+  }
+  if (block.type === "p") {
+    return (
+      <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.9 }}>
+        {block.children.map((node, idx) => (
+          <InlineView key={idx} node={node} />
+        ))}
+      </Typography>
+    );
+  }
+  return null;
+}
+
+function InlineView({ node }: { node: Inline }): React.ReactNode {
   switch (node.type) {
     case "text":
-      return <span key={key}>{node.text}</span>;
+      return <span>{node.text}</span>;
     case "ruby":
       return (
-        <ruby key={key}>
+        <ruby>
           {node.base}
           <rt>{node.ruby}</rt>
         </ruby>
       );
     case "em":
       return (
-        <em key={key}>
-          {node.children.map((child, idx) => renderInline(child, `${key}-${idx}`))}
+        <em>
+          {node.children.map((child, idx) => (
+            <InlineView key={idx} node={child} />
+          ))}
         </em>
       );
     case "strong":
       return (
-        <strong key={key}>
-          {node.children.map((child, idx) => renderInline(child, `${key}-${idx}`))}
+        <strong>
+          {node.children.map((child, idx) => (
+            <InlineView key={idx} node={child} />
+          ))}
         </strong>
       );
     case "annotation":
       return (
-        <span key={key} title={node.note} style={{ textDecoration: "underline dotted" }}>
+        <span title={node.note} style={{ textDecoration: "underline dotted" }}>
           {node.text}
         </span>
       );
     case "br":
-      return <br key={key} />;
+      return <br />;
     default:
       return null;
   }

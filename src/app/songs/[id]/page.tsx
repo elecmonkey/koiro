@@ -129,6 +129,7 @@ export default async function SongDetailPage({ params }: PageProps) {
                 }}
                 audioVersions={audioVersions}
                 canDownload={canDownload}
+                defaultLyrics={lyricsVersions.find((l) => l.isDefault)?.content ?? lyricsVersions[0]?.content}
               />
             </Stack>
           </Stack>

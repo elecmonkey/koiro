@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, IconButton, Paper, Slider, Stack, Typography, Collapse } from "@mui/material";
+import { Box, Divider, IconButton, Paper, Slider, Stack, Typography } from "@mui/material";
 import {
   PlayArrow,
   Pause,
@@ -12,6 +12,8 @@ import {
 } from "@mui/icons-material";
 import Link from "next/link";
 import { usePlayer } from "./PlayerContext";
+import { useLyricsSync } from "./useLyricsSync";
+import { LyricsDisplay } from "./LyricsDisplay";
 
 function formatTime(seconds: number): string {
   if (!isFinite(seconds) || seconds < 0) return "0:00";
@@ -34,6 +36,9 @@ export function FloatingPlayer() {
     seek,
     toggleMinimize,
   } = usePlayer();
+
+  // 歌词同步
+  const { prevLine, currentLine, nextLine, isPreview } = useLyricsSync(track?.lyrics, currentTime);
 
   // 没有曲目时不显示
   if (!track) return null;
@@ -136,6 +141,16 @@ export function FloatingPlayer() {
               </IconButton>
             </Stack>
           </Stack>
+
+          {/* 歌词显示区域 */}
+          <Divider />
+          <LyricsDisplay
+            prevLine={prevLine}
+            currentLine={currentLine}
+            nextLine={nextLine}
+            isPreview={isPreview}
+          />
+          <Divider />
 
           {/* 进度条和时间 */}
           <Box sx={{ px: 1.5, pb: 0.5 }}>
