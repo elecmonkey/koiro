@@ -9,14 +9,21 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { playlists, songs } from "./lib/sample-data";
+import { playlists } from "./lib/sample-data";
 import { requireAuth } from "@/lib/auth-guard";
 import { PERMISSIONS } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { s3Client } from "@/lib/s3";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function Home() {
   await requireAuth({ permission: PERMISSIONS.VIEW, allowAnonymous: true });
-  const featuredPlaylists = playlists.slice(0, 3);
-  const featuredSongs = songs.slice(0, 3);
+  const featuredSongs = await fetchRandomSongs(3);
+  const nowPlaying = featuredSongs[0] ?? null;
 
   return (
     <Box component="main" sx={{ pb: 10 }}>
@@ -61,11 +68,26 @@ export default async function Home() {
                     默认版本 · 在线试听
                   </Typography>
                 </Stack>
-                <Box sx={{ height: 110, background: featuredSongs[0].cover }} />
-                <Typography variant="h6">{featuredSongs[0].title}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {featuredSongs[0].description}
-                </Typography>
+                {nowPlaying ? (
+                  <>
+                    <Box
+                      sx={{
+                        height: 110,
+                        background: nowPlaying.coverUrl
+                          ? `url(${nowPlaying.coverUrl}) center/cover no-repeat`
+                          : "linear-gradient(135deg, #f3efe7, #e8dfd1)",
+                      }}
+                    />
+                    <Typography variant="h6">{nowPlaying.title}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {nowPlaying.description}
+                    </Typography>
+                  </>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    暂无可播放歌曲
+                  </Typography>
+                )}
                 <Divider />
                 <Stack spacing={1}>
                   <Stack direction="row" justifyContent="space-between">
@@ -134,19 +156,14 @@ export default async function Home() {
             <Stack spacing={2}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Stack spacing={0.3}>
-                  <Typography variant="h6">当前播放列表 · 晨雾拾音</Typography>
+                  <Typography variant="h6">随机推荐</Typography>
                   <Typography variant="caption" color="text.secondary">
-                    第 1 / 3 页 · 共 8 首
+                    {featuredSongs.length} 首
                   </Typography>
                 </Stack>
-                <Stack direction="row" spacing={1}>
-                  <Button size="small" variant="outlined">
-                    上一页
-                  </Button>
-                  <Button size="small" variant="contained">
-                    下一页
-                  </Button>
-                </Stack>
+                <Button size="small" variant="outlined" href="/">
+                  刷新推荐
+                </Button>
               </Stack>
               <Divider />
               {featuredSongs.map((song) => (
@@ -163,15 +180,26 @@ export default async function Home() {
                       alignItems: "center",
                     }}
                   >
-                    <Box sx={{ height: 72, background: song.cover }} />
+                    <Box
+                      sx={{
+                        height: 72,
+                        background: song.coverUrl
+                          ? `url(${song.coverUrl}) center/cover no-repeat`
+                          : "linear-gradient(135deg, #f3efe7, #e8dfd1)",
+                      }}
+                    />
                     <Stack spacing={0.6}>
                       <Typography variant="subtitle1">{song.title}</Typography>
                       <Typography variant="caption" color="text.secondary">
                         {song.description}
                       </Typography>
                       <Stack direction="row" spacing={1} flexWrap="wrap">
-                        {Object.entries(song.staff).map(([role, name]) => (
-                          <Chip key={role} label={`${role} · ${name}`} size="small" />
+                        {(song.staff ?? []).map((item) => (
+                          <Chip
+                            key={`${item.role}-${item.name}`}
+                            label={`${item.role} · ${item.name}`}
+                            size="small"
+                          />
                         ))}
                       </Stack>
                     </Stack>
@@ -180,13 +208,15 @@ export default async function Home() {
                       alignItems={{ xs: "flex-start", sm: "flex-end" }}
                     >
                       <Typography variant="caption" color="text.secondary">
-                        {song.duration} · {Object.keys(song.versions).length} 版本
+                        {Object.keys(song.audioVersions ?? {}).length} 版本
                       </Typography>
                       <Stack direction="row" spacing={1}>
                         <Button size="small" variant="outlined">
                           播放
                         </Button>
-                        <Button size="small">详情</Button>
+                        <Button size="small" component="a" href={`/songs/${song.id}`}>
+                          详情
+                        </Button>
                       </Stack>
                     </Stack>
                   </Box>
@@ -199,4 +229,48 @@ export default async function Home() {
       </Container>
     </Box>
   );
+}
+
+type SongCard = {
+  id: string;
+  title: string;
+  description: string;
+  staff: { role: string; name: string }[];
+  audioVersions: Record<string, string>;
+  coverUrl: string | null;
+};
+
+async function fetchRandomSongs(limit: number): Promise<SongCard[]> {
+  const rows = (await prisma.$queryRaw`
+    SELECT id, title, description, staff, "coverObjectId", "audioVersions"
+    FROM "Song"
+    ORDER BY random()
+    LIMIT ${limit}
+  `) as {
+    id: string;
+    title: string;
+    description: string;
+    staff: { role: string; name: string }[] | null;
+    coverObjectId: string | null;
+    audioVersions: Record<string, string> | null;
+  }[];
+
+  return Promise.all(
+    rows.map(async (row) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description ?? "",
+      staff: row.staff ?? [],
+      audioVersions: row.audioVersions ?? {},
+      coverUrl: row.coverObjectId ? await signObjectUrl(row.coverObjectId) : null,
+    }))
+  );
+}
+
+async function signObjectUrl(objectId: string) {
+  const command = new GetObjectCommand({
+    Bucket: process.env.S3_BUCKET_ENDPOINT === "true" ? process.env.S3_ENDPOINT : process.env.S3_BUCKET,
+    Key: objectId,
+  });
+  return getSignedUrl(s3Client, command, { expiresIn: 60 * 5 });
 }
