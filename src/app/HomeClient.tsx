@@ -26,14 +26,24 @@ type SongCard = {
   coverUrl: string | null;
 };
 
+type PlaylistCard = {
+  id: string;
+  name: string;
+  description: string;
+  songCount: number;
+  coverUrl: string | null;
+};
+
 export default function HomeClient() {
   const router = useRouter();
   const [inputValue, setInputValue] = useState("");
   const [featuredSongs, setFeaturedSongs] = useState<SongCard[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [featuredPlaylists, setFeaturedPlaylists] = useState<PlaylistCard[]>([]);
+  const [loadingSongs, setLoadingSongs] = useState(true);
+  const [loadingPlaylists, setLoadingPlaylists] = useState(true);
 
   const fetchRandomSongs = async () => {
-    setLoading(true);
+    setLoadingSongs(true);
     try {
       const res = await fetch("/api/songs/random?limit=3");
       if (res.ok) {
@@ -43,12 +53,28 @@ export default function HomeClient() {
     } catch {
       // ignore
     } finally {
-      setLoading(false);
+      setLoadingSongs(false);
+    }
+  };
+
+  const fetchRandomPlaylists = async () => {
+    setLoadingPlaylists(true);
+    try {
+      const res = await fetch("/api/playlists/random?limit=4");
+      if (res.ok) {
+        const data = await res.json();
+        setFeaturedPlaylists(data.playlists);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingPlaylists(false);
     }
   };
 
   useEffect(() => {
     fetchRandomSongs();
+    fetchRandomPlaylists();
   }, []);
 
   const handleSearch = () => {
@@ -175,14 +201,91 @@ export default function HomeClient() {
         </Stack>
       </Container>
 
-      {/* 随机推荐 */}
+      {/* 随机歌单 */}
       <Container sx={{ pt: 2 }}>
         <Card variant="outlined">
           <Box sx={{ p: 3 }}>
             <Stack spacing={2}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Stack spacing={0.3}>
-                  <Typography variant="h6">随机推荐</Typography>
+                  <Typography variant="h6">随机歌单</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {featuredPlaylists.length} 个
+                  </Typography>
+                </Stack>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={fetchRandomPlaylists}
+                  disabled={loadingPlaylists}
+                >
+                  换一批
+                </Button>
+              </Stack>
+              <Divider />
+              {loadingPlaylists ? (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
+                  加载中...
+                </Typography>
+              ) : featuredPlaylists.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
+                  暂无歌单
+                </Typography>
+              ) : (
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "repeat(2, 1fr)",
+                      sm: "repeat(3, 1fr)",
+                      md: "repeat(4, 1fr)",
+                    },
+                    gap: 2,
+                  }}
+                >
+                  {featuredPlaylists.map((playlist) => (
+                    <Link key={playlist.id} href={`/playlists/${playlist.id}`} style={{ textDecoration: "none" }}>
+                      <Card variant="outlined" sx={{ height: "100%", "&:hover": { bgcolor: "action.hover" } }}>
+                        <Box sx={{ p: 2 }}>
+                          <Stack spacing={1.5}>
+                            <Box
+                              sx={{
+                                width: "100%",
+                                aspectRatio: "1",
+                                borderRadius: 1,
+                                background: playlist.coverUrl
+                                  ? `url(${playlist.coverUrl}) center/cover no-repeat`
+                                  : "linear-gradient(135deg, #f3efe7, #e8dfd1)",
+                              }}
+                            />
+                            <Stack spacing={0.3}>
+                              <Typography variant="subtitle2" noWrap>
+                                {playlist.name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {playlist.songCount} 首
+                              </Typography>
+                            </Stack>
+                          </Stack>
+                        </Box>
+                      </Card>
+                    </Link>
+                  ))}
+                </Box>
+              )}
+            </Stack>
+          </Box>
+        </Card>
+      </Container>
+
+      {/* 随机音乐 */}
+      <Container sx={{ pt: 2 }}>
+        <Card variant="outlined">
+          <Box sx={{ p: 3 }}>
+            <Stack spacing={2}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Stack spacing={0.3}>
+                  <Typography variant="h6">随机音乐</Typography>
                   <Typography variant="caption" color="text.secondary">
                     {featuredSongs.length} 首
                   </Typography>
@@ -191,13 +294,13 @@ export default function HomeClient() {
                   size="small"
                   variant="outlined"
                   onClick={fetchRandomSongs}
-                  disabled={loading}
+                  disabled={loadingSongs}
                 >
-                  刷新推荐
+                  换一批
                 </Button>
               </Stack>
               <Divider />
-              {loading ? (
+              {loadingSongs ? (
                 <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
                   加载中...
                 </Typography>
@@ -230,9 +333,13 @@ export default function HomeClient() {
                             : "linear-gradient(135deg, #f3efe7, #e8dfd1)",
                         }}
                       />
-                      <Stack spacing={0.6}>
-                        <Typography variant="subtitle1">{song.title}</Typography>
-                        <Typography variant="caption" color="text.secondary">
+                      <Stack spacing={0.6} sx={{ minWidth: 0 }}>
+                        <Typography variant="subtitle1" noWrap>{song.title}</Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          noWrap
+                        >
                           {song.description}
                         </Typography>
                         <Stack direction="row" spacing={1} flexWrap="wrap">

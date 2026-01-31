@@ -384,9 +384,6 @@ export default function AdminShell() {
                                 <Chip label={song.audioDefaultName} size="small" />
                               )}
                             </Stack>
-                            <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "pre-line" }}>
-                              {song.description || "无描述"}
-                            </Typography>
                             <Stack direction="row" spacing={1} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
                               <Typography variant="caption" color="text.secondary">
                                 {Object.keys(song.audioVersions || {}).length} 个音频版本
