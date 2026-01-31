@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -84,8 +84,24 @@ export default function UploadForm() {
   const [lrcText, setLrcText] = useState("");
   const [lrcError, setLrcError] = useState<string | null>(null);
   const [lyricsEditorKey, setLyricsEditorKey] = useState(0);
+  const skipNextSaveRef = useRef(false);
 
-  const snapshot = () => ({
+  useEffect(() => {
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
+    saveDraft({
+      title,
+      description,
+      staff,
+      versions,
+      audioDefaultName,
+      lyricsVersions,
+      coverObjectId,
+      coverFilename,
+    });
+  }, [
     title,
     description,
     staff,
@@ -94,29 +110,21 @@ export default function UploadForm() {
     lyricsVersions,
     coverObjectId,
     coverFilename,
-  });
-
-  const commitDraft = (next: Partial<ReturnType<typeof snapshot>>) => {
-    const data = { ...snapshot(), ...next };
-    saveDraft(data);
-  };
+  ]);
 
   const addStaff = () => {
     const next = [...staff, { id: `staff_${staff.length + 1}`, role: "", name: "" }];
     setStaff(next);
-    commitDraft({ staff: next });
   };
 
   const updateStaff = (id: string, updates: Partial<StaffItem>) => {
     const next = staff.map((item) => (item.id === id ? { ...item, ...updates } : item));
     setStaff(next);
-    commitDraft({ staff: next });
   };
 
   const removeStaff = (id: string) => {
     const next = staff.filter((item) => item.id !== id);
     setStaff(next);
-    commitDraft({ staff: next });
   };
 
   const addVersion = () => {
@@ -131,7 +139,6 @@ export default function UploadForm() {
       },
     ];
     setVersions(next);
-    commitDraft({ versions: next });
   };
 
   const updateVersion = (id: string, updates: Partial<VersionItem>) => {
@@ -148,10 +155,8 @@ export default function UploadForm() {
     setVersions(next);
     if (updates.key && next.find((v) => v.id === id)?.isDefault) {
       setAudioDefaultName(next.find((v) => v.id === id)?.key ?? null);
-      commitDraft({ versions: next, audioDefaultName: next.find((v) => v.id === id)?.key ?? null });
       return;
     }
-    commitDraft({ versions: next });
   };
 
   const setDefaultVersion = (id: string) => {
@@ -159,7 +164,6 @@ export default function UploadForm() {
     const defaultName = next.find((item) => item.id === id)?.key ?? null;
     setVersions(next);
     setAudioDefaultName(defaultName && defaultName.length > 0 ? defaultName : null);
-    commitDraft({ versions: next, audioDefaultName: defaultName ?? null });
   };
 
   const removeVersion = (id: string) => {
@@ -169,7 +173,6 @@ export default function UploadForm() {
       setAudioDefaultName(next[0].key || null);
     }
     setVersions(next);
-    commitDraft({ versions: next, audioDefaultName: next.find((v) => v.isDefault)?.key ?? null });
   };
 
   const addLyricsVersion = () => {
@@ -188,7 +191,6 @@ export default function UploadForm() {
     ];
     setLyricsVersions(next);
     setActiveLyricsId(next[next.length - 1].id);
-    commitDraft({ lyricsVersions: next });
   };
 
   const updateLyricsKey = (id: string, key: string) => {
@@ -200,13 +202,11 @@ export default function UploadForm() {
       item.id === id ? { ...item, key: nextKey } : item
     );
     setLyricsVersions(next);
-    commitDraft({ lyricsVersions: next });
   };
 
   const setDefaultLyrics = (id: string) => {
     const next = lyricsVersions.map((item) => ({ ...item, isDefault: item.id === id }));
     setLyricsVersions(next);
-    commitDraft({ lyricsVersions: next });
   };
 
   const removeLyricsVersion = (id: string) => {
@@ -216,7 +216,6 @@ export default function UploadForm() {
     }
     setLyricsVersions(next);
     setActiveLyricsId(next[0]?.id ?? "");
-    commitDraft({ lyricsVersions: next });
   };
 
   const updateLyricsLines = (id: string, lines: LineDraft[]) => {
@@ -224,7 +223,6 @@ export default function UploadForm() {
       item.id === id ? { ...item, lines } : item
     );
     setLyricsVersions(next);
-    commitDraft({ lyricsVersions: next });
   };
 
   const activeLyrics = lyricsVersions.find((item) => item.id === activeLyricsId);
@@ -354,7 +352,6 @@ export default function UploadForm() {
                     onChange={(event) => {
                       const next = event.target.value;
                       setTitle(next);
-                      commitDraft({ title: next });
                     }}
                   />
                   <TextField
@@ -367,7 +364,6 @@ export default function UploadForm() {
                     onChange={(event) => {
                       const next = event.target.value;
                       setDescription(next);
-                      commitDraft({ description: next });
                     }}
                   />
                 </Stack>
@@ -427,11 +423,9 @@ export default function UploadForm() {
                   objectId={coverObjectId}
                   onObjectIdChange={(value) => {
                     setCoverObjectId(value);
-                    commitDraft({ coverObjectId: value });
                   }}
                   onFilenameChange={(value) => {
                     setCoverFilename(value);
-                    commitDraft({ coverFilename: value });
                   }}
                 />
               </Stack>
@@ -557,6 +551,7 @@ export default function UploadForm() {
                   <Button
                     variant="outlined"
                     onClick={() => {
+                      skipNextSaveRef.current = true;
                       clearDraft();
                       setTitle("");
                       setDescription("");

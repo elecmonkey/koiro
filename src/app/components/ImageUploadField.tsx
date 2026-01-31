@@ -39,6 +39,22 @@ export default function ImageUploadField({
     };
   }, [previewUrl]);
 
+  useEffect(() => {
+    let alive = true;
+    if (!objectId) {
+      setUploadedPreviewUrl(null);
+      return;
+    }
+    if (file) return;
+    fetchPreviewUrl(objectId).then((url) => {
+      if (!alive) return;
+      if (url) setUploadedPreviewUrl(url);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [objectId, file]);
+
   return (
     <Stack spacing={1.5}>
       <Typography variant="subtitle1">{label}</Typography>
