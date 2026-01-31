@@ -6,8 +6,6 @@ export type UploadDraft = {
   staff: { id: string; role: string; name: string }[];
   versions: { id: string; key: string; objectId: string; isDefault: boolean }[];
   coverObjectId: string | null;
-  musicObjectId: string | null;
-  musicFilename: string | null;
   coverFilename: string | null;
 };
 

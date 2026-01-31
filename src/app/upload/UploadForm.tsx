@@ -16,6 +16,7 @@ import {
 import EditorShell from "../editor/EditorShell";
 import { useS3Upload } from "./useS3Upload";
 import { clearDraft, loadDraft, saveDraft } from "./draftStore";
+import VersionRow from "./VersionRow";
 
 type StaffItem = {
   id: string;
@@ -49,16 +50,9 @@ export default function UploadForm() {
   );
   const [title, setTitle] = useState(initialDraft?.title ?? "");
   const [description, setDescription] = useState(initialDraft?.description ?? "");
-  const [musicFile, setMusicFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [musicObjectId, setMusicObjectId] = useState<string | null>(
-    initialDraft?.musicObjectId ?? null
-  );
   const [coverObjectId, setCoverObjectId] = useState<string | null>(
     initialDraft?.coverObjectId ?? null
-  );
-  const [musicFilename, setMusicFilename] = useState<string | null>(
-    initialDraft?.musicFilename ?? null
   );
   const [coverFilename, setCoverFilename] = useState<string | null>(
     initialDraft?.coverFilename ?? null
@@ -78,12 +72,6 @@ export default function UploadForm() {
     };
   }, [coverPreviewUrl]);
 
-  const commitDraft = (next: Partial<ReturnType<typeof snapshot>>) => {
-    const data = { ...snapshot(), ...next };
-    saveDraft(data);
-  };
-
-  const musicUpload = useS3Upload();
   const coverUpload = useS3Upload();
 
   const snapshot = () => ({
@@ -92,19 +80,13 @@ export default function UploadForm() {
     staff,
     versions,
     coverObjectId,
-    musicObjectId,
-    musicFilename,
     coverFilename,
   });
 
-  const formatSize = (size: number) => {
-    if (!size) return "";
-    const mb = size / (1024 * 1024);
-    if (mb >= 1) return `${mb.toFixed(2)} MB`;
-    const kb = size / 1024;
-    return `${kb.toFixed(2)} KB`;
+  const commitDraft = (next: Partial<ReturnType<typeof snapshot>>) => {
+    const data = { ...snapshot(), ...next };
+    saveDraft(data);
   };
-
 
   const addStaff = () => {
     const next = [...staff, { id: `staff_${staff.length + 1}`, role: "", name: "" }];
@@ -170,116 +152,6 @@ export default function UploadForm() {
       <Container sx={{ pt: 4 }}>
         <Stack spacing={3}>
           <Card className="float-in">
-            <CardContent>
-              <Stack spacing={2}>
-                <Typography variant="h6">音频文件</Typography>
-                <Stack
-                  direction={{ xs: "column", md: "row" }}
-                  spacing={2}
-                  alignItems={{ xs: "stretch", md: "center" }}
-                >
-                  <Box
-                    sx={{
-                      border: "1px dashed rgba(31, 26, 22, 0.25)",
-                      p: 3,
-                      flex: 1,
-                      textAlign: "center",
-                      background: "#fff",
-                    }}
-                  >
-                    <Typography variant="subtitle1">拖拽文件到此处</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      支持 WAV / FLAC / MP3，最大 500MB
-                    </Typography>
-                    <Button variant="outlined" component="label" sx={{ mt: 2 }}>
-                      选择文件
-                      <input
-                        hidden
-                        type="file"
-                        accept="audio/*"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0] ?? null;
-                          setMusicFile(file);
-                          const nextName = file ? file.name : null;
-                          setMusicFilename(nextName);
-                          setMusicObjectId(null);
-                          commitDraft({ musicFilename: nextName, musicObjectId: null });
-                        }}
-                      />
-                    </Button>
-                  </Box>
-                  <Stack spacing={1} sx={{ minWidth: { md: 240 } }}>
-                    <Typography variant="subtitle2">当前选择</Typography>
-                    <Typography variant="body2">
-                      {musicFile ? musicFile.name : musicFilename ?? "未选择文件"}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {musicFile ? formatSize(musicFile.size) : ""}
-                    </Typography>
-                    <Stack direction="row" spacing={1}>
-                      <Button
-                        variant="contained"
-                        disabled={!musicFile || musicUpload.isUploading}
-                        onClick={async () => {
-                          if (!musicFile) return;
-                          const result = await musicUpload.upload(musicFile, "music");
-                          if (result?.objectId) {
-                            const nextObjectId = result.objectId;
-                            const nextVersions = versions.map((item) =>
-                              item.id === "ver_1"
-                                ? { ...item, objectId: nextObjectId, key: "default" }
-                                : item
-                            );
-                            setMusicObjectId(nextObjectId);
-                            setVersions(nextVersions);
-                            commitDraft({
-                              musicObjectId: nextObjectId,
-                              versions: nextVersions,
-                            });
-                          }
-                        }}
-                      >
-                        {musicUpload.isUploading ? "上传中..." : "上传音频"}
-                      </Button>
-                      {musicFile ? (
-                        <Button
-                          variant="text"
-                          onClick={() => {
-                            setMusicFile(null);
-                            setMusicObjectId(null);
-                            setMusicFilename(null);
-                            commitDraft({ musicFilename: null, musicObjectId: null });
-                          }}
-                        >
-                          清除
-                        </Button>
-                      ) : null}
-                    </Stack>
-                    {musicUpload.isUploading ? (
-                      <Stack spacing={0.5}>
-                        <LinearProgress variant="determinate" value={musicUpload.progress} />
-                        <Typography variant="caption" color="text.secondary">
-                          上传中 · {musicUpload.progress}%
-                        </Typography>
-                      </Stack>
-                    ) : null}
-                    {musicObjectId ? (
-                      <Typography variant="caption" color="text.secondary">
-                        已上传：{musicObjectId}
-                      </Typography>
-                    ) : null}
-                    {musicUpload.error ? (
-                      <Typography variant="caption" color="error">
-                        {musicUpload.error}
-                      </Typography>
-                    ) : null}
-                  </Stack>
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-
-          <Card className="float-in stagger-1">
             <CardContent>
               <Stack spacing={2.5}>
                 <Typography variant="h6">歌曲信息</Typography>
@@ -347,34 +219,15 @@ export default function UploadForm() {
                       添加版本
                     </Button>
                   </Stack>
-                  <Stack spacing={1.5}>
+                  <Stack spacing={2}>
                     {versions.map((item) => (
-                      <Stack key={item.id} direction={{ xs: "column", md: "row" }} spacing={1}>
-                        <TextField
-                          label="版本名"
-                          value={item.key}
-                          onChange={(event) => updateVersion(item.id, { key: event.target.value })}
-                          fullWidth
-                        />
-                        <TextField
-                          label="对象 ID"
-                          value={item.objectId}
-                          onChange={(event) =>
-                            updateVersion(item.id, { objectId: event.target.value })
-                          }
-                          placeholder="music/xxx"
-                          fullWidth
-                        />
-                        <Button
-                          variant={item.isDefault ? "contained" : "outlined"}
-                          onClick={() => setDefaultVersion(item.id)}
-                        >
-                          默认
-                        </Button>
-                        <Button color="error" onClick={() => removeVersion(item.id)}>
-                          删除
-                        </Button>
-                      </Stack>
+                      <VersionRow
+                        key={item.id}
+                        item={item}
+                        onChange={updateVersion}
+                        onRemove={removeVersion}
+                        onSetDefault={setDefaultVersion}
+                      />
                     ))}
                   </Stack>
                 </Stack>
@@ -491,33 +344,23 @@ export default function UploadForm() {
                 <Typography variant="h6">歌词与预览</Typography>
                 <EditorShell />
                 <Divider />
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  spacing={1.5}
-                  alignItems={{ xs: "stretch", sm: "center" }}
-                  justifyContent="space-between"
-                >
-                  <Stack direction="row" spacing={1.5}>
-                    <Button variant="contained">提交上传</Button>
-                    <Button
-                      variant="outlined"
-                      onClick={() => {
-                        clearDraft();
-                        setTitle("");
-                        setDescription("");
-                        setStaff(STAFF_TEMPLATE);
-                        setVersions(VERSION_TEMPLATE);
-                        setMusicFile(null);
-                        setCoverFile(null);
-                        setMusicObjectId(null);
-                        setCoverObjectId(null);
-                        setMusicFilename(null);
-                        setCoverFilename(null);
-                      }}
-                    >
-                      清空草稿
-                    </Button>
-                  </Stack>
+                <Stack direction="row" spacing={1}>
+                  <Button variant="contained">提交上传</Button>
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      clearDraft();
+                      setTitle("");
+                      setDescription("");
+                      setStaff(STAFF_TEMPLATE);
+                      setVersions(VERSION_TEMPLATE);
+                      setCoverFile(null);
+                      setCoverObjectId(null);
+                      setCoverFilename(null);
+                    }}
+                  >
+                    清空草稿
+                  </Button>
                 </Stack>
               </Stack>
             </CardContent>
