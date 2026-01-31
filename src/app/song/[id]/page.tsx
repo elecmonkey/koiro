@@ -10,8 +10,11 @@ import {
   Typography,
 } from "@mui/material";
 import { lyricsPreview, songs } from "../../lib/sample-data";
+import { requireAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/lib/permissions";
 
-export default function SongDetailPage() {
+export default async function SongDetailPage() {
+  await requireAuth({ permission: PERMISSIONS.VIEW, allowAnonymous: true });
   const song = songs[0];
 
   return (

@@ -10,8 +10,11 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { requireAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/lib/permissions";
 
-export default function UploadPage() {
+export default async function UploadPage() {
+  await requireAuth({ permission: PERMISSIONS.UPLOAD });
   return (
     <Box component="main" sx={{ pb: 8 }}>
       <Container sx={{ pt: 6 }}>

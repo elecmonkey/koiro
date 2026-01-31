@@ -11,8 +11,11 @@ import {
   Typography,
 } from "@mui/material";
 import { adminPlaylists } from "../lib/sample-data";
+import { requireAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/lib/permissions";
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  await requireAuth({ permission: PERMISSIONS.ADMIN });
   return (
     <Box component="main" sx={{ pb: 8 }}>
       <Container sx={{ pt: 6 }}>

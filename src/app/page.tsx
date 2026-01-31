@@ -11,38 +11,16 @@ import {
 } from "@mui/material";
 import LogoMark from "./components/LogoMark";
 import { playlists, songs } from "./lib/sample-data";
+import { requireAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/lib/permissions";
 
-export default function Home() {
+export default async function Home() {
+  await requireAuth({ permission: PERMISSIONS.VIEW, allowAnonymous: true });
   const featuredPlaylists = playlists.slice(0, 3);
   const featuredSongs = songs.slice(0, 3);
 
   return (
     <Box component="main" sx={{ pb: 10 }}>
-      <Container sx={{ pt: 4 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Stack direction="row" spacing={2} alignItems="center">
-            <LogoMark size={40} />
-            <Stack spacing={0.2}>
-              <Typography
-                variant="h5"
-                sx={{
-                  fontWeight: 800,
-                  fontSize: { xs: 26, sm: 28 },
-                  fontFamily: "var(--font-display)",
-                }}
-              >
-                Koiro こいろ
-              </Typography>
-            </Stack>
-          </Stack>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Button variant="text">搜索</Button>
-            <Button variant="outlined">登录</Button>
-            <Button variant="contained">上传</Button>
-          </Stack>
-        </Stack>
-      </Container>
-
       <Container sx={{ pt: 4 }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
           <Card className="float-in" variant="outlined" sx={{ flex: 1 }}>

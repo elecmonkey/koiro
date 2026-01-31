@@ -11,12 +11,15 @@ import {
   Typography,
 } from "@mui/material";
 import { searchResults } from "../lib/sample-data";
+import { requireAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/lib/permissions";
 
 type SearchPageProps = {
   searchParams?: { keyword?: string };
 };
 
-export default function SearchPage({ searchParams }: SearchPageProps) {
+export default async function SearchPage({ searchParams }: SearchPageProps) {
+  await requireAuth({ permission: PERMISSIONS.VIEW, allowAnonymous: true });
   const keyword = searchParams?.keyword?.trim() ?? "";
   const hasKeyword = Boolean(keyword);
 
