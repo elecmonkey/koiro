@@ -106,7 +106,7 @@ export default async function SongDetailPage({ params }: PageProps) {
             <Stack spacing={2}>
               <Stack spacing={1}>
                 <Typography variant="h4">{song.title}</Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "pre-line" }}>
                   {song.description}
                 </Typography>
               </Stack>
