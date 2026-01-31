@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
 import { auth } from "@/auth";
 import { PERMISSIONS, hasPermission } from "@/lib/permissions";
-import { s3Client } from "@/lib/s3";
 
 const bucket = process.env.S3_BUCKET;
 const endpoint = process.env.S3_ENDPOINT;

@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { PutObjectCommand, getSignedUrl, buildObjectKey, s3Client } from "@/lib/s3";
 import { auth } from "@/auth";
 import { PERMISSIONS, hasPermission } from "@/lib/permissions";
-import { buildObjectKey, s3Client } from "@/lib/s3";
 
 const bucket = process.env.S3_BUCKET;
 const endpoint = process.env.S3_ENDPOINT;

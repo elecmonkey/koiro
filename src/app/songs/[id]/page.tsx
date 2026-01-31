@@ -11,12 +11,10 @@ import {
 } from "@mui/material";
 import Link from "next/link";
 import CoverArt from "@/app/components/CoverArt";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
 import { PERMISSIONS, hasPermission } from "@/lib/permissions";
-import { s3Client } from "@/lib/s3";
 
 type PageProps = {
   params: Promise<{ id: string }>;

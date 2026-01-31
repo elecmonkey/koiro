@@ -2,7 +2,7 @@ import "dotenv/config";
 import crypto from "node:crypto";
 import { stdin as input, stdout as output } from "node:process";
 import { createInterface } from "node:readline/promises";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "@koiro/db";
 
 const PERMISSIONS = {
   VIEW: 1,

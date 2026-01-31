@@ -1,31 +1,11 @@
-import { S3Client } from "@aws-sdk/client-s3";
+// Re-export everything from @koiro/s3 package
+export * from "@koiro/s3";
+import { getDefaultS3Client, buildObjectKey as _buildObjectKey } from "@koiro/s3";
 
-const endpoint = process.env.S3_ENDPOINT;
-const region = process.env.S3_REGION;
-const accessKeyId = process.env.S3_ACCESS_KEY_ID;
-const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
-const bucketEndpoint = process.env.S3_BUCKET_ENDPOINT === "true";
+// 保持向后兼容的导出
+export const s3Client = getDefaultS3Client();
 
-if (!endpoint || !region || !accessKeyId || !secretAccessKey) {
-  throw new Error("Missing S3 configuration in environment variables");
-}
-
-export const s3Client = new S3Client({
-  region,
-  endpoint,
-  credentials: {
-    accessKeyId,
-    secretAccessKey,
-  },
-  bucketEndpoint,
-  forcePathStyle: bucketEndpoint ? false : true,
-});
-
+// 向后兼容的 buildObjectKey 函数
 export function buildObjectKey(prefix: string, folder: string, filename: string) {
-  const trimmedPrefix = prefix ? prefix.replace(/\/+$/, "") + "/" : "";
-  const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-  if (!folder) {
-    return `${trimmedPrefix}${safeName}`;
-  }
-  return `${trimmedPrefix}${folder}/${safeName}`;
+  return _buildObjectKey(prefix, folder, filename);
 }

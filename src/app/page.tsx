@@ -13,9 +13,7 @@ import { playlists } from "./lib/sample-data";
 import { requireAuth } from "@/lib/auth-guard";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { s3Client } from "@/lib/s3";
+import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

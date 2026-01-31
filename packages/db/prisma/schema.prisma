@@ -95,25 +95,4 @@ model LyricsDocument {
   @@unique([songId, versionKey])
 }
 
-////////////////////
-// 异步任务（转码队列）
-////////////////////
 
-model Job {
-  id         String   @id @default(uuid())
-  type       String
-  payload    Json
-  status     String
-
-  attempts   Int      @default(0)
-  runAt      DateTime @default(now())
-  lockedAt   DateTime?
-  lockedBy   String?
-
-  lastError  String?
-
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@index([status, runAt])
-}

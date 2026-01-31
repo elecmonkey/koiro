@@ -206,7 +206,6 @@ export default function AdminShell() {
             variant="contained"
             onClick={() => {
               setDraft({ name: "", coverObjectId: "", description: "" });
-              setCoverFile(null);
               handleClose();
             }}
           >

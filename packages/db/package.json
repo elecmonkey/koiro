@@ -1,0 +1,36 @@
+{
+  "name": "@koiro/db",
+  "version": "0.1.0",
+  "description": "Prisma client for Koiro",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./client": {
+      "import": "./src/generated/prisma/client.ts",
+      "types": "./src/generated/prisma/client.ts"
+    }
+  },
+  "scripts": {
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "prisma:push": "prisma db push"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.3.0",
+    "dotenv": "^16.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.1.0",
+    "prisma": "^7.3.0",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "prisma": "^7.3.0"
+  }
+}

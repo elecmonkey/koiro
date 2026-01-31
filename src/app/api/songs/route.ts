@@ -71,13 +71,13 @@ export async function POST(request: Request) {
         audioDefaultName: body.audioDefaultName,
         lyrics: {
           create: (body.lyricsVersions ?? []).map((lyr) => {
-            const blocks: Block[] = lyr.lines.map((line) => ({
-              type: "line",
+            const blocks = lyr.lines.map((line) => ({
+              type: "line" as const,
               time: { startMs: line.startMs, endMs: line.endMs },
               children: buildLineInlines(line.text ?? "", line.rubyByIndex),
             }));
             const content = { type: "doc", blocks };
-            const plainText = buildPlainText(blocks);
+            const plainText = buildPlainText(blocks as Block[]);
             return {
               versionKey: lyr.key.trim(),
               isDefault: !!lyr.isDefault,

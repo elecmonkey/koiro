@@ -42,9 +42,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         ttlDays: { label: "TTL Days", type: "text" },
       },
       authorize: async (credentials) => {
-        const email = credentials?.email?.trim();
-        const password = credentials?.password ?? "";
-        const ttlKey = (credentials?.ttlDays ?? "7").trim();
+        const email = (credentials?.email as string | undefined)?.trim();
+        const password = (credentials?.password as string | undefined) ?? "";
+        const ttlKey = ((credentials?.ttlDays as string | undefined) ?? "7").trim();
         const ttlDays = PERMISSION_TTLS[ttlKey] ?? 7;
 
         if (!email || !password) {
@@ -82,7 +82,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.exp = Math.floor(((user as { expiresAt: number }).expiresAt ?? 0) / 1000);
       }
 
-      if (token.expiresAt && Date.now() > token.expiresAt) {
+      if (token.expiresAt && Date.now() > (token.expiresAt as number)) {
         return null;
       }
 
@@ -96,7 +96,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.permissions = token.permissions as number;
       }
       if (token?.expiresAt) {
-        session.expires = new Date(token.expiresAt as number).toISOString();
+        (session as { expires: string }).expires = new Date(token.expiresAt as number).toISOString();
       }
       return session;
     },
