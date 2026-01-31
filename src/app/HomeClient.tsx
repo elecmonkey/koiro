@@ -393,21 +393,56 @@ export default function HomeClient() {
                         sx={{
                           position: "relative",
                           transition: "border-color 0.2s",
+                          overflow: "hidden",
                           "&:hover": {
                             borderColor: "primary.main",
                           },
                         }}
                       >
+                        {/* 移动端背景封面 */}
+                        {song.coverUrl && (
+                          <Box
+                            sx={{
+                              display: { xs: "block", sm: "none" },
+                              position: "absolute",
+                              left: 0,
+                              top: 0,
+                              bottom: 0,
+                              width: "45%",
+                              background: `url(${song.coverUrl}) center/cover no-repeat`,
+                              "&::after": {
+                                content: '""',
+                                position: "absolute",
+                                top: 0,
+                                right: 0,
+                                bottom: 0,
+                                width: "60%",
+                                background: (theme) => `linear-gradient(to right, transparent, ${theme.palette.background.paper})`,
+                              },
+                            }}
+                          />
+                        )}
+
                         <CardActionArea
                           component={Link}
                           href={`/songs/${song.id}`}
-                          sx={{ height: 72 }}
+                          sx={{ height: { xs: "auto", sm: 72 } }}
                         >
-                          <CardContent sx={{ py: 0, pl: 0, height: "100%", display: "flex", alignItems: "center" }}>
-                            <Stack direction="row" spacing={2} alignItems="center" sx={{ width: "100%", pr: track ? 6 : 0 }}>
-                              {/* 封面 */}
+                          <CardContent
+                            sx={{
+                              py: { xs: 2, sm: 0 },
+                              pl: { xs: 2, sm: 0 },
+                              height: "100%",
+                              display: "flex",
+                              alignItems: "center",
+                              position: "relative",
+                            }}
+                          >
+                            <Stack direction="row" spacing={2} alignItems={{ xs: "flex-start", sm: "center" }} sx={{ width: "100%", pr: track ? 6 : 0 }}>
+                              {/* 封面 - 仅桌面端显示 */}
                               <Box
                                 sx={{
+                                  display: { xs: "none", sm: "block" },
                                   width: 72,
                                   height: 72,
                                   flexShrink: 0,
@@ -418,35 +453,43 @@ export default function HomeClient() {
                               />
 
                               {/* 歌曲信息 */}
-                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Box sx={{ flex: 1, minWidth: 0, pl: { xs: "30%", sm: 0 } }}>
                                 <Typography variant="subtitle1" noWrap color="text.primary">
                                   {song.title}
-                                  </Typography>
-                                  {song.staff && song.staff.length > 0 && (
-                                    <Stack
-                                      direction="row"
-                                      spacing={0.5}
-                                      sx={{ mt: 0.5 }}
-                                      flexWrap="wrap"
-                                      useFlexGap
-                                    >
-                                      {song.staff.slice(0, 3).map((s, idx) => (
-                                        <Chip
-                                          key={idx}
-                                          label={`${s.role || "Staff"} · ${s.name || ""}`}
-                                          size="small"
-                                          variant="outlined"
-                                        />
-                                      ))}
-                                      {song.staff.length > 3 && (
-                                        <Chip
-                                          label={`+${song.staff.length - 3}`}
-                                          size="small"
-                                          variant="outlined"
-                                        />
-                                      )}
-                                    </Stack>
-                                  )}
+                                </Typography>
+                                {song.staff && song.staff.length > 0 && (
+                                  <Stack
+                                    direction="row"
+                                    spacing={0.5}
+                                    sx={{ mt: 0.5 }}
+                                    flexWrap="wrap"
+                                    useFlexGap
+                                  >
+                                    {song.staff.slice(0, 3).map((s, idx) => (
+                                      <Chip
+                                        key={idx}
+                                        label={`${s.role || "Staff"} · ${s.name || ""}`}
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{
+                                          bgcolor: { xs: "rgba(255,255,255,0.8)", sm: "transparent" },
+                                          backdropFilter: { xs: "blur(4px)", sm: "none" },
+                                        }}
+                                      />
+                                    ))}
+                                    {song.staff.length > 3 && (
+                                      <Chip
+                                        label={`+${song.staff.length - 3}`}
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{
+                                          bgcolor: { xs: "rgba(255,255,255,0.8)", sm: "transparent" },
+                                          backdropFilter: { xs: "blur(4px)", sm: "none" },
+                                        }}
+                                      />
+                                    )}
+                                  </Stack>
+                                )}
                               </Box>
                             </Stack>
                           </CardContent>
