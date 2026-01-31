@@ -28,7 +28,12 @@ export default async function EditSongPage({ params }: PageProps) {
 
   const song = await prisma.song.findUnique({
     where: { id: songId },
-    include: { lyrics: true },
+    include: { 
+      lyrics: true,
+      playlists: {
+        include: { playlist: { select: { id: true, name: true } } },
+      },
+    },
   });
 
   if (!song) {
@@ -126,6 +131,7 @@ export default async function EditSongPage({ params }: PageProps) {
     lyricsVersions,
     coverObjectId: song.coverObjectId,
     coverFilename: null,
+    playlistIds: song.playlists.map((sp) => sp.playlist.id),
   };
 
   return <EditSongClient songId={songId} initialData={initialData} />;

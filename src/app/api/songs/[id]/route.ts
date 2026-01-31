@@ -75,6 +75,7 @@ type UpdateSongBody = {
     isDefault: boolean;
     lines: { id: string; startMs: number; endMs?: number; text: string; rubyByIndex?: Record<number, string> }[];
   }[];
+  playlistIds?: string[];
 };
 
 // PUT - 更新歌曲（完整更新，包括歌词）
@@ -154,6 +155,22 @@ export async function PUT(request: Request, { params }: RouteParams) {
           content,
           plainText,
         },
+      });
+    }
+  }
+
+  // 处理播放列表关联
+  if (body.playlistIds !== undefined) {
+    // 删除旧的关联
+    await prisma.songPlaylist.deleteMany({ where: { songId: id } });
+    // 创建新的关联
+    if (body.playlistIds.length > 0) {
+      await prisma.songPlaylist.createMany({
+        data: body.playlistIds.map((playlistId, index) => ({
+          songId: id,
+          playlistId,
+          order: index,
+        })),
       });
     }
   }

@@ -51,6 +51,7 @@ type Body = {
     isDefault: boolean;
     lines: { id: string; startMs: number; endMs?: number; text: string; rubyByIndex?: Record<number, string> }[];
   }[];
+  playlistIds?: string[];
 };
 
 export async function POST(request: Request) {
@@ -120,6 +121,13 @@ export async function POST(request: Request) {
             };
           }),
         },
+        // 关联播放列表
+        playlists: body.playlistIds?.length ? {
+          create: body.playlistIds.map((playlistId, index) => ({
+            playlistId,
+            order: index,
+          })),
+        } : undefined,
       },
     });
 

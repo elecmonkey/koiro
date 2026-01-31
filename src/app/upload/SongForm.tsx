@@ -2,10 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Autocomplete,
   Box,
   Button,
   Card,
   CardContent,
+  Checkbox,
+  Chip,
   Container,
   Divider,
   Snackbar,
@@ -13,6 +16,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import { useRouter } from "next/navigation";
 import EditorShell from "../editor/EditorShell";
 import { clearDraft, loadDraft, saveDraft } from "./draftStore";
@@ -40,6 +45,11 @@ type LyricsVersion = {
   lines: LineDraft[];
 };
 
+type PlaylistOption = {
+  id: string;
+  name: string;
+};
+
 // 表单数据类型
 export type SongFormData = {
   title: string;
@@ -50,6 +60,7 @@ export type SongFormData = {
   lyricsVersions: LyricsVersion[];
   coverObjectId: string | null;
   coverFilename: string | null;
+  playlistIds?: string[];
 };
 
 // 初始模板
@@ -138,6 +149,11 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     () => (initialData?.lyricsVersions?.[0]?.id ?? draftData?.lyricsVersions?.[0]?.id ?? "lyr_1")
   );
 
+  // 播放列表相关状态
+  const [allPlaylists, setAllPlaylists] = useState<PlaylistOption[]>([]);
+  const [selectedPlaylists, setSelectedPlaylists] = useState<PlaylistOption[]>([]);
+  const [playlistsLoading, setPlaylistsLoading] = useState(true);
+
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -145,6 +161,34 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
   const [lrcError, setLrcError] = useState<string | null>(null);
   const [lyricsEditorKey, setLyricsEditorKey] = useState(0);
   const skipNextSaveRef = useRef(false);
+
+  // 加载所有播放列表
+  useEffect(() => {
+    const fetchPlaylists = async () => {
+      try {
+        const res = await fetch("/api/playlists");
+        if (res.ok) {
+          const data = await res.json();
+          const options: PlaylistOption[] = data.playlists.map((p: { id: string; name: string }) => ({
+            id: p.id,
+            name: p.name,
+          }));
+          setAllPlaylists(options);
+          
+          // 如果是编辑模式，设置已选中的播放列表
+          if (initialData?.playlistIds) {
+            const selected = options.filter((p) => initialData.playlistIds?.includes(p.id));
+            setSelectedPlaylists(selected);
+          }
+        }
+      } catch {
+        // 忽略错误，播放列表是可选的
+      } finally {
+        setPlaylistsLoading(false);
+      }
+    };
+    fetchPlaylists();
+  }, [initialData?.playlistIds]);
 
   // 仅在创建模式下保存草稿
   useEffect(() => {
@@ -324,6 +368,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
       audioDefaultName,
       versions,
       lyricsVersions,
+      playlistIds: selectedPlaylists.map((p) => p.id),
     };
 
     try {
@@ -503,6 +548,49 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
                       setCoverFilename(value);
                     }}
                   />
+                  <Divider />
+                  <Stack spacing={1.5}>
+                    <Typography variant="subtitle1">所属播放列表</Typography>
+                    <Autocomplete
+                      multiple
+                      options={allPlaylists}
+                      disableCloseOnSelect
+                      getOptionLabel={(option) => option.name}
+                      value={selectedPlaylists}
+                      onChange={(_, value) => setSelectedPlaylists(value)}
+                      loading={playlistsLoading}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      renderOption={(props, option, { selected }) => {
+                        const { key, ...restProps } = props;
+                        return (
+                          <li key={key} {...restProps}>
+                            <Checkbox
+                              icon={<CheckBoxOutlineBlankIcon fontSize="small" />}
+                              checkedIcon={<CheckBoxIcon fontSize="small" />}
+                              style={{ marginRight: 8 }}
+                              checked={selected}
+                            />
+                            {option.name}
+                          </li>
+                        );
+                      }}
+                      renderTags={(value, getTagProps) =>
+                        value.map((option, index) => {
+                          const { key, ...tagProps } = getTagProps({ index });
+                          return (
+                            <Chip key={key} label={option.name} size="small" {...tagProps} />
+                          );
+                        })
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder={selectedPlaylists.length === 0 ? "选择播放列表（可选）" : ""}
+                        />
+                      )}
+                      noOptionsText="暂无播放列表"
+                    />
+                  </Stack>
                 </Stack>
               </CardContent>
             </Card>

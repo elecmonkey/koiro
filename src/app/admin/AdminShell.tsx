@@ -65,12 +65,21 @@ export default function AdminShell() {
   
   // 对话框状态
   const [createPlaylistOpen, setCreatePlaylistOpen] = useState(false);
+  const [editPlaylistOpen, setEditPlaylistOpen] = useState(false);
+  const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "playlist" | "song"; id: string; name: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   
   // 播放列表草稿
   const [playlistDraft, setPlaylistDraft] = useState<PlaylistDraft>({
+    name: "",
+    coverObjectId: "",
+    description: "",
+  });
+
+  // 编辑播放列表草稿
+  const [editPlaylistDraft, setEditPlaylistDraft] = useState<PlaylistDraft>({
     name: "",
     coverObjectId: "",
     description: "",
@@ -132,6 +141,41 @@ export default function AdminShell() {
       fetchPlaylists();
     } catch (err) {
       alert(err instanceof Error ? err.message : "创建失败");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 打开编辑播放列表对话框
+  const openEditPlaylist = (playlist: Playlist) => {
+    setEditingPlaylist(playlist);
+    setEditPlaylistDraft({
+      name: playlist.name,
+      coverObjectId: playlist.coverObjectId,
+      description: playlist.description,
+    });
+    setEditPlaylistOpen(true);
+  };
+
+  // 保存编辑播放列表
+  const handleEditPlaylist = async () => {
+    if (!editingPlaylist || !editPlaylistDraft.name.trim() || !editPlaylistDraft.coverObjectId) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/playlists/${editingPlaylist.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editPlaylistDraft),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "保存失败");
+      }
+      setEditPlaylistOpen(false);
+      setEditingPlaylist(null);
+      fetchPlaylists();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "保存失败");
     } finally {
       setSubmitting(false);
     }
@@ -271,9 +315,14 @@ export default function AdminShell() {
                             )}
                           </Box>
                           <Stack direction="row" spacing={1} alignItems="center">
-                            <Button size="small" variant="outlined" disabled>
+                            <Button size="small" variant="outlined" onClick={() => openEditPlaylist(list)}>
                               编辑
                             </Button>
+                            <Link href={`/admin/playlists/${list.id}`}>
+                              <Button size="small" variant="text">
+                                管理
+                              </Button>
+                            </Link>
                             <Button
                               size="small"
                               color="error"
@@ -439,6 +488,53 @@ export default function AdminShell() {
             disabled={submitting || !playlistDraft.name.trim() || !playlistDraft.coverObjectId}
           >
             {submitting ? "创建中..." : "创建"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 编辑播放列表对话框 */}
+      <Dialog open={editPlaylistOpen} onClose={() => setEditPlaylistOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>编辑播放列表</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="播放列表名称"
+              value={editPlaylistDraft.name}
+              onChange={(event) =>
+                setEditPlaylistDraft((prev) => ({ ...prev, name: event.target.value }))
+              }
+              fullWidth
+              required
+            />
+            <ImageUploadField
+              label="封面图片"
+              objectId={editPlaylistDraft.coverObjectId || null}
+              onObjectIdChange={(value) =>
+                setEditPlaylistDraft((prev) => ({ ...prev, coverObjectId: value ?? "" }))
+              }
+            />
+            <TextField
+              label="简介"
+              value={editPlaylistDraft.description}
+              onChange={(event) =>
+                setEditPlaylistDraft((prev) => ({ ...prev, description: event.target.value }))
+              }
+              fullWidth
+              multiline
+              minRows={3}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setEditPlaylistOpen(false)} disabled={submitting}>
+            取消
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleEditPlaylist}
+            disabled={submitting || !editPlaylistDraft.name.trim() || !editPlaylistDraft.coverObjectId}
+          >
+            {submitting ? "保存中..." : "保存"}
           </Button>
         </DialogActions>
       </Dialog>
