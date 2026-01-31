@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useReducer, useRef } from "react";
 import type { Block, Inline, LyricsDocument } from "../ast/types";
 import { buildPlainText } from "../ast/plainText";
 
@@ -20,18 +20,80 @@ type UseLyricsEditorOptions = {
   onChange?: (lines: LineDraft[]) => void;
 };
 
+type EditorState = {
+  lines: LineDraft[];
+  selectedId: string;
+};
+
+type EditorAction =
+  | { type: "select"; id: string }
+  | { type: "update"; id: string; updates: Partial<LineDraft> }
+  | { type: "add" }
+  | { type: "remove"; id: string }
+  | { type: "move"; id: string; direction: "up" | "down" };
+
+function editorReducer(state: EditorState, action: EditorAction): EditorState {
+  switch (action.type) {
+    case "select":
+      return { ...state, selectedId: action.id };
+    case "update": {
+      const next = state.lines.map((line) =>
+        line.id === action.id ? { ...line, ...action.updates } : line
+      );
+      return { ...state, lines: next };
+    }
+    case "add": {
+      const last = state.lines[state.lines.length - 1];
+      const nextStart = last ? last.startMs + 2000 : 0;
+      const nextId = `line_${state.lines.length + 1}`;
+      const next = [...state.lines, { id: nextId, startMs: nextStart, text: "" }];
+      const selectedId = state.selectedId || next[0]?.id || "";
+      return { lines: next, selectedId };
+    }
+    case "remove": {
+      const next = state.lines.filter((line) => line.id !== action.id);
+      const selectedId =
+        state.selectedId === action.id ? next[0]?.id ?? "" : state.selectedId;
+      return { lines: next, selectedId };
+    }
+    case "move": {
+      const index = state.lines.findIndex((line) => line.id === action.id);
+      if (index < 0) return state;
+      const targetIndex = action.direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= state.lines.length) return state;
+      const next = [...state.lines];
+      const [item] = next.splice(index, 1);
+      next.splice(targetIndex, 0, item);
+      return { ...state, lines: next };
+    }
+    default:
+      return state;
+  }
+}
+
 export function useLyricsEditor(options: UseLyricsEditorOptions = {}) {
   const seed = options.initial ?? initialLines;
-  const [lines, setLines] = useState<LineDraft[]>(seed);
-  const [selectedId, setSelectedId] = useState<string>(seed[0]?.id ?? "");
+  const [state, dispatch] = useReducer(editorReducer, {
+    lines: seed,
+    selectedId: seed[0]?.id ?? "",
+  });
+  const onChangeRef = useRef(options.onChange);
+
+  useEffect(() => {
+    onChangeRef.current = options.onChange;
+  }, [options.onChange]);
+
+  useEffect(() => {
+    onChangeRef.current?.(state.lines);
+  }, [state.lines]);
 
   const selectedLine = useMemo(
-    () => lines.find((line) => line.id === selectedId) ?? lines[0],
-    [lines, selectedId]
+    () => state.lines.find((line) => line.id === state.selectedId) ?? state.lines[0],
+    [state.lines, state.selectedId]
   );
 
   const blocks = useMemo<Block[]>(() => {
-    return lines.map((line) => ({
+    return state.lines.map((line) => ({
       type: "line",
       time: {
         startMs: line.startMs,
@@ -39,7 +101,7 @@ export function useLyricsEditor(options: UseLyricsEditorOptions = {}) {
       },
       children: textToInlines(line.text, line.rubyByIndex),
     }));
-  }, [lines]);
+  }, [state.lines]);
 
   const doc = useMemo<LyricsDocument>(() => {
     return {
@@ -54,52 +116,26 @@ export function useLyricsEditor(options: UseLyricsEditorOptions = {}) {
   const plainText = useMemo(() => buildPlainText(blocks), [blocks]);
 
   const updateLine = (id: string, updates: Partial<LineDraft>) => {
-    setLines((prev) => {
-      const next = prev.map((line) => (line.id === id ? { ...line, ...updates } : line));
-      options.onChange?.(next);
-      return next;
-    });
+    dispatch({ type: "update", id, updates });
   };
 
   const addLine = () => {
-    setLines((prev) => {
-      const last = prev[prev.length - 1];
-      const nextStart = last ? last.startMs + 2000 : 0;
-      const nextId = `line_${prev.length + 1}`;
-      const next = [...prev, { id: nextId, startMs: nextStart, text: "" }];
-      options.onChange?.(next);
-      return next;
-    });
+    dispatch({ type: "add" });
   };
 
   const removeLine = (id: string) => {
-    setLines((prev) => {
-      const next = prev.filter((line) => line.id !== id);
-      options.onChange?.(next);
-      return next;
-    });
-    setSelectedId((prev) => (prev === id && lines.length > 1 ? lines[0].id : prev));
+    dispatch({ type: "remove", id });
   };
 
   const moveLine = (id: string, direction: "up" | "down") => {
-    setLines((prev) => {
-      const index = prev.findIndex((line) => line.id === id);
-      if (index < 0) return prev;
-      const targetIndex = direction === "up" ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
-      const next = [...prev];
-      const [item] = next.splice(index, 1);
-      next.splice(targetIndex, 0, item);
-      options.onChange?.(next);
-      return next;
-    });
+    dispatch({ type: "move", id, direction });
   };
 
   return {
-    lines,
+    lines: state.lines,
     selectedLine,
-    selectedId,
-    setSelectedId,
+    selectedId: state.selectedId,
+    setSelectedId: (id: string) => dispatch({ type: "select", id }),
     updateLine,
     addLine,
     removeLine,

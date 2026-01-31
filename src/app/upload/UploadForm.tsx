@@ -81,6 +81,9 @@ export default function UploadForm() {
     initialDraft?.lyricsVersions?.[0]?.id ?? "lyr_1"
   );
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [lrcText, setLrcText] = useState("");
+  const [lrcError, setLrcError] = useState<string | null>(null);
+  const [lyricsEditorKey, setLyricsEditorKey] = useState(0);
 
   const snapshot = () => ({
     title,
@@ -134,7 +137,10 @@ export default function UploadForm() {
   const updateVersion = (id: string, updates: Partial<VersionItem>) => {
     let nextKey = updates.key;
     if (typeof nextKey === "string") {
-      nextKey = uniqueName(nextKey, versions.map((v) => v.key), id);
+      nextKey = uniqueName(
+        nextKey,
+        versions.filter((v) => v.id !== id).map((v) => v.key)
+      );
     }
     const next = versions.map((item) =>
       item.id === id ? { ...item, ...updates, key: nextKey ?? item.key } : item
@@ -186,7 +192,10 @@ export default function UploadForm() {
   };
 
   const updateLyricsKey = (id: string, key: string) => {
-    const nextKey = uniqueName(key, lyricsVersions.map((v) => v.key), id);
+    const nextKey = uniqueName(
+      key,
+      lyricsVersions.filter((v) => v.id !== id).map((v) => v.key)
+    );
     const next = lyricsVersions.map((item) =>
       item.id === id ? { ...item, key: nextKey } : item
     );
@@ -245,7 +254,22 @@ export default function UploadForm() {
     // TODO: 调用后端提交接口，成功后再 clearDraft
   };
 
-  function uniqueName(base: string, existing: string[], excludeId?: string) {
+  const handleImportLrc = (content: string) => {
+    if (!activeLyrics) {
+      setLrcError("请选择一个歌词版本");
+      return;
+    }
+    const parsed = parseLrc(content);
+    if (!parsed.length) {
+      setLrcError("未解析到有效的 LRC 行");
+      return;
+    }
+    setLrcError(null);
+    updateLyricsLines(activeLyrics.id, parsed);
+    setLyricsEditorKey((prev) => prev + 1);
+  };
+
+  function uniqueName(base: string, existing: string[]) {
     const cleanedBase = base.trim() || "未命名";
     const normalized = existing
       .filter((name) => name.trim())
@@ -267,6 +291,44 @@ export default function UploadForm() {
         ? crypto.randomUUID()
         : `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     return `${prefix}_${rand}`;
+  }
+
+  function parseLrc(content: string): LineDraft[] {
+    const lines = content.split(/\r?\n/);
+    const result: LineDraft[] = [];
+    const timeTag = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
+
+    lines.forEach((line, index) => {
+      const text = line.replace(timeTag, "").trim();
+      let match: RegExpExecArray | null;
+      let hasTime = false;
+      timeTag.lastIndex = 0;
+      while ((match = timeTag.exec(line))) {
+        hasTime = true;
+        const min = Number(match[1]);
+        const sec = Number(match[2]);
+        const fractionRaw = match[3] ?? "";
+        const fraction =
+          fractionRaw.length === 1
+            ? Number(fractionRaw) * 100
+            : fractionRaw.length === 2
+              ? Number(fractionRaw) * 10
+              : fractionRaw.length === 3
+                ? Number(fractionRaw)
+                : 0;
+        const startMs = min * 60 * 1000 + sec * 1000 + fraction;
+        result.push({
+          id: `lrc_${index}_${startMs}`,
+          startMs,
+          text,
+        });
+      }
+      if (!hasTime && text) {
+        result.push({ id: `lrc_${index}_0`, startMs: 0, text });
+      }
+    });
+
+    return result.sort((a, b) => a.startMs - b.startMs);
   }
 
   return (
@@ -376,8 +438,8 @@ export default function UploadForm() {
             </CardContent>
           </Card>
 
-          <Card className="float-in stagger-2">
-            <CardContent>
+          <Card className="float-in stagger-2" sx={{ overflow: "visible" }}>
+            <CardContent sx={{ overflow: "visible" }}>
               <Stack spacing={2}>
                 <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                   <Stack spacing={1} flex={1}>
@@ -426,8 +488,62 @@ export default function UploadForm() {
                         </Button>
                       ) : null}
                     </Stack>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Stack spacing={1.5}>
+                          <Typography variant="subtitle1">导入 LRC</Typography>
+                          <TextField
+                            label="粘贴 LRC 内容"
+                            value={lrcText}
+                            onChange={(event) => setLrcText(event.target.value)}
+                            multiline
+                            minRows={6}
+                            maxRows={6}
+                            fullWidth
+                            sx={{
+                              "& .MuiInputBase-root": {
+                                alignItems: "flex-start",
+                                overflow: "auto",
+                              },
+                            }}
+                          />
+                          <Stack direction="row" spacing={1.5} flexWrap="wrap">
+                            <Button variant="outlined" onClick={() => handleImportLrc(lrcText)}>
+                              从粘贴内容导入
+                            </Button>
+                            <Button variant="outlined" component="label">
+                              选择 LRC 文件
+                              <input
+                                hidden
+                                type="file"
+                                accept=".lrc,text/plain"
+                                onChange={(event) => {
+                                  const file = event.target.files?.[0];
+                                  if (!file) return;
+                                  const reader = new FileReader();
+                                  reader.onload = () => {
+                                    const content = String(reader.result ?? "");
+                                    setLrcText(content);
+                                    handleImportLrc(content);
+                                  };
+                                  reader.readAsText(file);
+                                }}
+                              />
+                            </Button>
+                          </Stack>
+                          {lrcError ? (
+                            <Typography variant="caption" color="error">
+                              {lrcError}
+                            </Typography>
+                          ) : null}
+                          <Typography variant="caption" color="text.secondary">
+                            导入会覆盖当前版本的歌词内容。
+                          </Typography>
+                        </Stack>
+                      </CardContent>
+                    </Card>
                     <EditorShell
-                      key={activeLyrics.id}
+                      key={`${activeLyrics.id}-${lyricsEditorKey}`}
                       initialLines={activeLyrics.lines}
                       onLinesChange={(lines) => updateLyricsLines(activeLyrics.id, lines)}
                     />
@@ -451,9 +567,12 @@ export default function UploadForm() {
                         { id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES },
                       ]);
                       setActiveLyricsId("lyr_1");
+                      setLyricsEditorKey((prev) => prev + 1);
                       setCoverObjectId(null);
                       setCoverFilename(null);
                       setSubmitError(null);
+                      setLrcText("");
+                      setLrcError(null);
                     }}
                   >
                     清空草稿

@@ -1,8 +1,8 @@
 import { requireAuth } from "@/lib/auth-guard";
 import { PERMISSIONS } from "@/lib/permissions";
-import UploadForm from "./UploadForm";
+import UploadFormClient from "./UploadFormClient";
 
 export default async function UploadPage() {
   await requireAuth({ permission: PERMISSIONS.UPLOAD });
-  return <UploadForm />;
+  return <UploadFormClient />;
 }

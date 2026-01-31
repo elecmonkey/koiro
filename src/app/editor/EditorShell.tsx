@@ -55,7 +55,13 @@ export default function EditorShell({ initialLines, onLinesChange }: EditorShell
             </CardContent>
           </Card>
         </Box>
-        <Box>
+        <Box
+          sx={{
+            position: { md: "sticky" },
+            top: { md: 80 },
+            alignSelf: "start",
+          }}
+        >
           <Card variant="outlined">
             <CardContent>
               <LineEditor line={selectedLine} onChange={updateLine} />

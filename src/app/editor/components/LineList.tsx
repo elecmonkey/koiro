@@ -1,4 +1,4 @@
-import { Box, Button, Chip, Stack, Typography } from "@mui/material";
+import { Box, Button, ButtonGroup, Chip, Stack, Typography } from "@mui/material";
 import type { LineDraft } from "../state/useLyricsEditor";
 
 type LineListProps = {
@@ -27,7 +27,7 @@ export default function LineList({
         </Button>
       </Stack>
       <Stack spacing={1.5}>
-        {lines.map((line) => (
+        {lines.map((line, index) => (
           <Box
             key={line.id}
             onClick={() => onSelect(line.id)}
@@ -41,29 +41,77 @@ export default function LineList({
           >
             <Stack spacing={1}>
               <Stack direction="row" spacing={1} alignItems="center">
-                <Chip size="small" label={`${line.startMs}ms`} />
+                <Chip size="small" label={String(index + 1).padStart(2, "0")} />
+                <Chip size="small" label={formatTime(line.startMs)} />
                 {line.endMs !== undefined ? (
-                  <Chip size="small" variant="outlined" label={`${line.endMs}ms`} />
+                  <Chip size="small" variant="outlined" label={formatTime(line.endMs)} />
                 ) : null}
+                <ButtonGroup
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    height: 24,
+                    "& .MuiButtonGroup-grouped": {
+                      minHeight: 24,
+                      height: 24,
+                      minWidth: 28,
+                      px: 0,
+                      lineHeight: 1,
+                      borderColor: "rgba(31, 26, 22, 0.35) !important",
+                    },
+                    "& svg": { display: "block" },
+                  }}
+                >
+                  <Button
+                    onClick={() => onMove(line.id, "up")}
+                    disabled={index === 0}
+                    aria-label="上移"
+                    sx={{ color: "text.secondary" }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6l-6 6z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </Button>
+                  <Button
+                    onClick={() => onMove(line.id, "down")}
+                    disabled={index === lines.length - 1}
+                    aria-label="下移"
+                    sx={{ color: "text.secondary" }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6l-6-6z" fill="currentColor" />
+                    </svg>
+                  </Button>
+                  <Button
+                    color="error"
+                    onClick={() => onRemove(line.id)}
+                    disabled={lines.length === 1}
+                    aria-label="删除"
+                    sx={{ color: "error.main" }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </Button>
+                </ButtonGroup>
               </Stack>
               <Typography variant="body2" color="text.secondary">
                 {line.text || "(空行)"}
               </Typography>
-              <Stack direction="row" spacing={1}>
-                <Button size="small" onClick={() => onMove(line.id, "up")}>
-                  上移
-                </Button>
-                <Button size="small" onClick={() => onMove(line.id, "down")}>
-                  下移
-                </Button>
-                <Button size="small" color="error" onClick={() => onRemove(line.id)}>
-                  删除
-                </Button>
-              </Stack>
             </Stack>
           </Box>
         ))}
       </Stack>
     </Stack>
   );
+}
+
+function formatTime(ms: number) {
+  return `${(ms / 1000).toFixed(3)}s`;
 }
