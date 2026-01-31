@@ -14,19 +14,21 @@ type NavUserMenuProps = {
 export default function NavUserMenu({ user }: NavUserMenuProps) {
   if (!user) {
     return (
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Typography variant="caption" color="text.secondary">
-          未登录
-        </Typography>
+      <Box sx={{ display: { xs: "none", md: "block" } }}>
         <Button component={Link} href="/login" variant="outlined" size="small">
           登录
         </Button>
-      </Stack>
+      </Box>
     );
   }
 
   return (
-    <Stack direction="row" spacing={1.5} alignItems="center">
+    <Stack
+      direction="row"
+      spacing={1.5}
+      alignItems="center"
+      sx={{ display: { xs: "none", md: "flex" } }}
+    >
       <Box>
         <Typography variant="caption" color="text.secondary">
           已登录

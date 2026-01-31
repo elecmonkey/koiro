@@ -9,19 +9,19 @@ export default function HomeLink() {
   const isHome = pathname === "/";
 
   const content = (
-    <Stack direction="row" spacing={1.5} alignItems="center">
+    <Stack direction="row" spacing={1} alignItems="center">
       <Box
         component="img"
         src="/icon.svg"
         alt="Koiro logo"
-        sx={{ width: 40, height: 40, borderRadius: "50%" }}
+        sx={{ width: { xs: 32, md: 40 }, height: { xs: 32, md: 40 }, borderRadius: "50%" }}
       />
       <Typography
         variant="h5"
         sx={{
           fontFamily: "var(--font-display)",
           fontWeight: 800,
-          fontSize: { xs: 27, sm: 29 },
+          fontSize: { xs: 22, md: 29 },
           whiteSpace: "nowrap",
           lineHeight: 1,
         }}

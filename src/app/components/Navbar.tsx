@@ -28,12 +28,12 @@ export default async function Navbar() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            py: 1.5,
+            py: { xs: 1, md: 1.5 },
           }}
         >
           <HomeLink />
-          <Stack direction="row" spacing={2} alignItems="center">
-            <NavLinks permissions={session?.user?.permissions ?? 0} />
+          <Stack direction="row" spacing={{ xs: 1, md: 2 }} alignItems="center">
+            <NavLinks permissions={session?.user?.permissions ?? 0} user={session?.user} />
             <NavUserMenu user={session?.user} />
           </Stack>
         </Container>
