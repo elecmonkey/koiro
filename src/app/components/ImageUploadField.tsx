@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Box, Button, LinearProgress, Stack, Typography } from "@mui/material";
+import { Box, Button, LinearProgress, Stack, TextField, Typography } from "@mui/material";
 import { useS3Upload } from "../upload/useS3Upload";
 
 type ImageUploadFieldProps = {
@@ -20,6 +20,10 @@ export default function ImageUploadField({
   onFilenameChange,
 }: ImageUploadFieldProps) {
   const [file, setFile] = useState<File | null>(null);
+  const [remoteUrl, setRemoteUrl] = useState("");
+  const [remoteError, setRemoteError] = useState<string | null>(null);
+  const [isFetchingRemote, setIsFetchingRemote] = useState(false);
+  const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState<string | null>(null);
   const upload = useS3Upload();
 
   const previewUrl = useMemo(() => {
@@ -55,10 +59,10 @@ export default function ImageUploadField({
             overflow: "hidden",
           }}
         >
-          {previewUrl ? (
+          {previewUrl || uploadedPreviewUrl ? (
             <Box
               component="img"
-              src={previewUrl}
+              src={previewUrl ?? uploadedPreviewUrl ?? ""}
               alt="封面预览"
               sx={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
@@ -91,6 +95,10 @@ export default function ImageUploadField({
                 const result = await upload.upload(file, "img");
                 if (result?.objectId) {
                   onObjectIdChange(result.objectId);
+                  const preview = await fetchPreviewUrl(result.objectId);
+                  if (preview) {
+                    setUploadedPreviewUrl(preview);
+                  }
                 }
               }}
             >
@@ -103,17 +111,84 @@ export default function ImageUploadField({
                   setFile(null);
                   onObjectIdChange(null);
                   onFilenameChange?.(null);
+                  setUploadedPreviewUrl(null);
                 }}
               >
                 清除选择
               </Button>
             ) : null}
           </Stack>
-          {upload.isUploading ? (
+          <Stack spacing={1} sx={{ maxWidth: 520 }}>
+            <TextField
+              label="远程图片 URL"
+              placeholder="https://example.com/cover.png"
+              value={remoteUrl}
+              onChange={(event) => setRemoteUrl(event.target.value)}
+              size="small"
+              fullWidth
+            />
+            <Stack direction="row" spacing={1.5} flexWrap="wrap">
+              <Button
+                variant="outlined"
+                disabled={!remoteUrl.trim() || isFetchingRemote || upload.isUploading}
+                onClick={async () => {
+                  const url = remoteUrl.trim();
+                  if (!url) return;
+                  setRemoteError(null);
+                  setIsFetchingRemote(true);
+                  try {
+                    const res = await fetch("/api/upload-remote", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ url, folder: "img" }),
+                    });
+                    if (!res.ok) {
+                      const body = (await res.json()) as { error?: string };
+                      throw new Error(body?.error ?? `拉取失败：${res.status}`);
+                    }
+                    const data = (await res.json()) as { objectId: string };
+                    if (data?.objectId) {
+                      onObjectIdChange(data.objectId);
+                      onFilenameChange?.(filenameFromUrl(url));
+                      const preview = await fetchPreviewUrl(data.objectId);
+                      if (preview) {
+                        setUploadedPreviewUrl(preview);
+                      }
+                      setFile(null);
+                    }
+                  } catch (error) {
+                    const message =
+                      error instanceof Error ? error.message : "拉取失败，请检查链接或权限。";
+                    setRemoteError(message);
+                  } finally {
+                    setIsFetchingRemote(false);
+                  }
+                }}
+              >
+                {isFetchingRemote ? "拉取中..." : "从 URL 上传"}
+              </Button>
+              <Button
+                variant="text"
+                disabled={!remoteUrl}
+                onClick={() => {
+                  setRemoteUrl("");
+                  setRemoteError(null);
+                }}
+              >
+                清除链接
+              </Button>
+            </Stack>
+            {remoteError ? (
+              <Typography variant="caption" color="error">
+                {remoteError}
+              </Typography>
+            ) : null}
+          </Stack>
+          {upload.isUploading || isFetchingRemote ? (
             <Stack spacing={0.5}>
               <LinearProgress variant="determinate" value={upload.progress} />
               <Typography variant="caption" color="text.secondary">
-                上传中 · {upload.progress}%
+                {upload.isUploading ? `上传中 · ${upload.progress}%` : "正在拉取远程图片"}
               </Typography>
             </Stack>
           ) : null}
@@ -134,4 +209,32 @@ export default function ImageUploadField({
       </Stack>
     </Stack>
   );
+}
+
+function filenameFromUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const base = parsed.pathname.split("/").pop();
+    if (base && base.includes(".")) {
+      return base;
+    }
+  } catch {
+    // ignore
+  }
+  return "remote-image.jpg";
+}
+
+async function fetchPreviewUrl(objectId: string) {
+  try {
+    const res = await fetch("/api/object-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ objectId }),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { url?: string };
+    return data.url ?? null;
+  } catch {
+    return null;
+  }
 }
