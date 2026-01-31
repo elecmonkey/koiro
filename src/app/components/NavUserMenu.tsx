@@ -36,7 +36,7 @@ export default function NavUserMenu({ user }: NavUserMenuProps) {
         </Typography>
       </Box>
       <Button
-        variant="outlined"
+        variant="contained"
         size="small"
         onClick={() => signOut({ callbackUrl: "/login" })}
       >

@@ -9,7 +9,6 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import LogoMark from "./components/LogoMark";
 import { playlists, songs } from "./lib/sample-data";
 import { requireAuth } from "@/lib/auth-guard";
 import { PERMISSIONS } from "@/lib/permissions";
