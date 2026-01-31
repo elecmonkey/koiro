@@ -9,6 +9,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import Link from "next/link";
 import { playlists } from "./lib/sample-data";
 import { requireAuth } from "@/lib/auth-guard";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -87,19 +88,15 @@ export default async function Home() {
                   </Typography>
                 )}
                 <Divider />
-                <Stack spacing={1}>
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="caption" color="text.secondary">
-                      转码队列
-                    </Typography>
-                    <Typography variant="caption">等待中 · 2</Typography>
-                  </Stack>
-                  <Stack direction="row" spacing={1}>
-                    <Button size="small" variant="outlined">
-                      播放
-                    </Button>
-                    <Button size="small">详情</Button>
-                  </Stack>
+                <Stack direction="row" spacing={1}>
+                  <Button size="small" variant="outlined">
+                    播放
+                  </Button>
+                  {nowPlaying && (
+                    <Link href={`/songs/${nowPlaying.id}`}>
+                      <Button size="small">详情</Button>
+                    </Link>
+                  )}
                 </Stack>
               </Stack>
             </Box>
@@ -212,9 +209,9 @@ export default async function Home() {
                         <Button size="small" variant="outlined">
                           播放
                         </Button>
-                        <Button size="small" component="a" href={`/songs/${song.id}`}>
-                          详情
-                        </Button>
+                        <Link href={`/songs/${song.id}`}>
+                          <Button size="small">详情</Button>
+                        </Link>
                       </Stack>
                     </Stack>
                   </Box>

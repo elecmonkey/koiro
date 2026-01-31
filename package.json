@@ -27,6 +27,7 @@
     "@emotion/styled": "^11.14.1",
     "@koiro/db": "workspace:*",
     "@koiro/s3": "workspace:*",
+    "@mui/icons-material": "^7.3.7",
     "@mui/material": "^7.3.7",
     "axios": "^1.13.4",
     "next": "16.1.6",
