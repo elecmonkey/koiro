@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -8,11 +8,13 @@ import {
   CardContent,
   Container,
   Divider,
+  LinearProgress,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
 import EditorShell from "../editor/EditorShell";
+import { useS3Upload } from "./useS3Upload";
 
 type StaffItem = {
   id: string;
@@ -39,6 +41,27 @@ const VERSION_TEMPLATE: VersionItem[] = [
 export default function UploadForm() {
   const [staff, setStaff] = useState<StaffItem[]>(STAFF_TEMPLATE);
   const [versions, setVersions] = useState<VersionItem[]>(VERSION_TEMPLATE);
+  const [musicFile, setMusicFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [musicObjectId, setMusicObjectId] = useState<string | null>(null);
+  const [coverObjectId, setCoverObjectId] = useState<string | null>(null);
+  const coverPreviewUrl = useMemo(() => {
+    if (!coverFile) {
+      return null;
+    }
+    const url = URL.createObjectURL(coverFile);
+    return url;
+  }, [coverFile]);
+
+  useEffect(() => {
+    return () => {
+      if (coverPreviewUrl) {
+        URL.revokeObjectURL(coverPreviewUrl);
+      }
+    };
+  }, [coverPreviewUrl]);
+  const musicUpload = useS3Upload();
+  const coverUpload = useS3Upload();
   const staffPreview = useMemo(() => {
     const entries = staff
       .filter((item) => item.role.trim() && item.name.trim())
@@ -52,6 +75,14 @@ export default function UploadForm() {
       .map((item) => `${item.key}:${item.objectId}`);
     return entries.length > 0 ? `{ ${entries.join(", ")} }` : "{}";
   }, [versions]);
+
+  const formatSize = (size: number) => {
+    if (!size) return "";
+    const mb = size / (1024 * 1024);
+    if (mb >= 1) return `${mb.toFixed(2)} MB`;
+    const kb = size / 1024;
+    return `${kb.toFixed(2)} KB`;
+  };
 
   const addStaff = () => {
     setStaff((prev) => [
@@ -102,6 +133,7 @@ export default function UploadForm() {
     });
   };
 
+
   return (
     <Box component="main" sx={{ pb: 8 }}>
       <Container sx={{ pt: 6 }}>
@@ -119,22 +151,93 @@ export default function UploadForm() {
             <CardContent>
               <Stack spacing={2}>
                 <Typography variant="h6">音频文件</Typography>
-                <Box
-                  sx={{
-                    border: "1px dashed rgba(31, 26, 22, 0.25)",
-                    borderRadius: 3,
-                    p: 4,
-                    textAlign: "center",
-                  }}
+                <Stack
+                  direction={{ xs: "column", md: "row" }}
+                  spacing={2}
+                  alignItems={{ xs: "stretch", md: "center" }}
                 >
-                  <Typography variant="subtitle1">拖拽文件到此处</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    或选择本地音频文件（WAV / FLAC / MP3）
-                  </Typography>
-                  <Button variant="outlined" sx={{ mt: 2 }}>
-                    选择文件
-                  </Button>
-                </Box>
+                  <Box
+                    sx={{
+                      border: "1px dashed rgba(31, 26, 22, 0.25)",
+                      p: 3,
+                      flex: 1,
+                      textAlign: "center",
+                      background: "#fff",
+                    }}
+                  >
+                    <Typography variant="subtitle1">拖拽文件到此处</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      支持 WAV / FLAC / MP3，最大 500MB
+                    </Typography>
+                    <Button variant="outlined" component="label" sx={{ mt: 2 }}>
+                      选择文件
+                      <input
+                        hidden
+                        type="file"
+                        accept="audio/*"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null;
+                          setMusicFile(file);
+                          setMusicObjectId(null);
+                        }}
+                      />
+                    </Button>
+                  </Box>
+                  <Stack spacing={1} sx={{ minWidth: { md: 240 } }}>
+                    <Typography variant="subtitle2">当前选择</Typography>
+                    <Typography variant="body2">
+                      {musicFile ? musicFile.name : "未选择文件"}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {musicFile ? formatSize(musicFile.size) : ""}
+                    </Typography>
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        variant="contained"
+                        disabled={!musicFile || musicUpload.isUploading}
+                        onClick={async () => {
+                          if (!musicFile) return;
+                          const result = await musicUpload.upload(musicFile, "music");
+                          if (result?.objectId) {
+                            setMusicObjectId(result.objectId);
+                            updateVersion("ver_1", { objectId: result.objectId, key: "default" });
+                          }
+                        }}
+                      >
+                        {musicUpload.isUploading ? "上传中..." : "上传音频"}
+                      </Button>
+                      {musicFile ? (
+                        <Button
+                          variant="text"
+                          onClick={() => {
+                            setMusicFile(null);
+                            setMusicObjectId(null);
+                          }}
+                        >
+                          清除
+                        </Button>
+                      ) : null}
+                    </Stack>
+                    {musicUpload.isUploading ? (
+                      <Stack spacing={0.5}>
+                        <LinearProgress variant="determinate" value={musicUpload.progress} />
+                        <Typography variant="caption" color="text.secondary">
+                          上传中 · {musicUpload.progress}%
+                        </Typography>
+                      </Stack>
+                    ) : null}
+                    {musicObjectId ? (
+                      <Typography variant="caption" color="text.secondary">
+                        已上传：{musicObjectId}
+                      </Typography>
+                    ) : null}
+                    {musicUpload.error ? (
+                      <Typography variant="caption" color="error">
+                        {musicUpload.error}
+                      </Typography>
+                    ) : null}
+                  </Stack>
+                </Stack>
               </Stack>
             </CardContent>
           </Card>
@@ -231,7 +334,98 @@ export default function UploadForm() {
                 <Divider />
                 <Stack spacing={1.5}>
                   <Typography variant="subtitle1">封面</Typography>
-                  <TextField label="封面对象 ID" placeholder="img/xxx" fullWidth />
+                  <Stack
+                    direction={{ xs: "column", md: "row" }}
+                    spacing={2}
+                    alignItems={{ xs: "stretch", md: "center" }}
+                  >
+                    <Box
+                      sx={{
+                        width: 180,
+                        height: 180,
+                        border: "1px dashed rgba(31, 26, 22, 0.25)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "#fff",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {coverPreviewUrl ? (
+                        <Box
+                          component="img"
+                          src={coverPreviewUrl}
+                          alt="封面预览"
+                          sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">
+                          暂无封面
+                        </Typography>
+                      )}
+                    </Box>
+                    <Stack spacing={1.5} flex={1}>
+                      <Stack direction="row" spacing={1.5} flexWrap="wrap">
+                        <Button variant="outlined" component="label">
+                          选择封面
+                          <input
+                            hidden
+                            type="file"
+                            accept="image/*"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0] ?? null;
+                              setCoverFile(file);
+                            }}
+                          />
+                        </Button>
+                        <Button
+                          variant="contained"
+                          disabled={!coverFile || coverUpload.isUploading}
+                          onClick={async () => {
+                            if (!coverFile) return;
+                            const result = await coverUpload.upload(coverFile, "img");
+                            if (result?.objectId) {
+                              setCoverObjectId(result.objectId);
+                            }
+                          }}
+                        >
+                          {coverUpload.isUploading ? "上传中..." : "上传封面"}
+                        </Button>
+                        {coverFile ? (
+                          <Button
+                            variant="text"
+                            onClick={() => {
+                              setCoverFile(null);
+                              setCoverObjectId(null);
+                            }}
+                          >
+                            清除选择
+                          </Button>
+                        ) : null}
+                      </Stack>
+                      {coverUpload.isUploading ? (
+                        <Stack spacing={0.5}>
+                          <LinearProgress variant="determinate" value={coverUpload.progress} />
+                          <Typography variant="caption" color="text.secondary">
+                            上传中 · {coverUpload.progress}%
+                          </Typography>
+                        </Stack>
+                      ) : null}
+                      <Typography variant="caption" color="text.secondary">
+                        建议尺寸：1:1 或 4:3，最大 30MB，支持 PNG/JPG/WebP。
+                      </Typography>
+                      {coverObjectId ? (
+                        <Typography variant="caption" color="text.secondary">
+                          已上传：{coverObjectId}
+                        </Typography>
+                      ) : null}
+                      {coverUpload.error ? (
+                        <Typography variant="caption" color="error">
+                          {coverUpload.error}
+                        </Typography>
+                      ) : null}
+                    </Stack>
+                  </Stack>
                 </Stack>
               </Stack>
             </CardContent>
