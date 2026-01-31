@@ -1,13 +1,18 @@
 "use client";
 
 import { Box, Card, CardContent, Stack, Typography } from "@mui/material";
-import { useLyricsEditor } from "./state/useLyricsEditor";
+import { useLyricsEditor, LineDraft } from "./state/useLyricsEditor";
 import LineList from "./components/LineList";
 import LineEditor from "./components/LineEditor";
 import PreviewPanel from "./components/PreviewPanel";
 import { validateBlocks } from "./ast/validate";
 
-export default function EditorShell() {
+type EditorShellProps = {
+  initialLines?: LineDraft[];
+  onLinesChange?: (lines: LineDraft[]) => void;
+};
+
+export default function EditorShell({ initialLines, onLinesChange }: EditorShellProps) {
   const {
     lines,
     selectedId,
@@ -19,7 +24,7 @@ export default function EditorShell() {
     moveLine,
     doc,
     plainText,
-  } = useLyricsEditor();
+  } = useLyricsEditor({ initial: initialLines, onChange: onLinesChange });
 
   const validation = validateBlocks(doc.blocks);
 

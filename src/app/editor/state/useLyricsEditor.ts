@@ -15,9 +15,15 @@ const initialLines: LineDraft[] = [
   { id: "line_2", startMs: 16800, text: "世界を変える" },
 ];
 
-export function useLyricsEditor() {
-  const [lines, setLines] = useState<LineDraft[]>(initialLines);
-  const [selectedId, setSelectedId] = useState<string>(initialLines[0].id);
+type UseLyricsEditorOptions = {
+  initial?: LineDraft[];
+  onChange?: (lines: LineDraft[]) => void;
+};
+
+export function useLyricsEditor(options: UseLyricsEditorOptions = {}) {
+  const seed = options.initial ?? initialLines;
+  const [lines, setLines] = useState<LineDraft[]>(seed);
+  const [selectedId, setSelectedId] = useState<string>(seed[0]?.id ?? "");
 
   const selectedLine = useMemo(
     () => lines.find((line) => line.id === selectedId) ?? lines[0],
@@ -48,9 +54,11 @@ export function useLyricsEditor() {
   const plainText = useMemo(() => buildPlainText(blocks), [blocks]);
 
   const updateLine = (id: string, updates: Partial<LineDraft>) => {
-    setLines((prev) =>
-      prev.map((line) => (line.id === id ? { ...line, ...updates } : line))
-    );
+    setLines((prev) => {
+      const next = prev.map((line) => (line.id === id ? { ...line, ...updates } : line));
+      options.onChange?.(next);
+      return next;
+    });
   };
 
   const addLine = () => {
@@ -58,15 +66,18 @@ export function useLyricsEditor() {
       const last = prev[prev.length - 1];
       const nextStart = last ? last.startMs + 2000 : 0;
       const nextId = `line_${prev.length + 1}`;
-      return [
-        ...prev,
-        { id: nextId, startMs: nextStart, text: "" },
-      ];
+      const next = [...prev, { id: nextId, startMs: nextStart, text: "" }];
+      options.onChange?.(next);
+      return next;
     });
   };
 
   const removeLine = (id: string) => {
-    setLines((prev) => prev.filter((line) => line.id !== id));
+    setLines((prev) => {
+      const next = prev.filter((line) => line.id !== id);
+      options.onChange?.(next);
+      return next;
+    });
     setSelectedId((prev) => (prev === id && lines.length > 1 ? lines[0].id : prev));
   };
 
@@ -79,6 +90,7 @@ export function useLyricsEditor() {
       const next = [...prev];
       const [item] = next.splice(index, 1);
       next.splice(targetIndex, 0, item);
+      options.onChange?.(next);
       return next;
     });
   };

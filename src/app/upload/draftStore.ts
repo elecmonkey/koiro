@@ -5,6 +5,13 @@ export type UploadDraft = {
   description: string;
   staff: { id: string; role: string; name: string }[];
   versions: { id: string; key: string; objectId: string; isDefault: boolean }[];
+  audioDefaultName: string | null;
+  lyricsVersions: {
+    id: string;
+    key: string;
+    isDefault: boolean;
+    lines: { id: string; startMs: number; endMs?: number; text: string; rubyByIndex?: Record<number, string> }[];
+  }[];
   coverObjectId: string | null;
   coverFilename: string | null;
 };

@@ -32,6 +32,7 @@ model Song {
   description   String
   coverObjectId String?
   audioVersions Json
+  audioDefaultName String?
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
