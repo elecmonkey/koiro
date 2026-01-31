@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -8,15 +8,14 @@ import {
   CardContent,
   Container,
   Divider,
-  LinearProgress,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
 import EditorShell from "../editor/EditorShell";
-import { useS3Upload } from "./useS3Upload";
 import { clearDraft, loadDraft, saveDraft } from "./draftStore";
 import VersionRow from "./VersionRow";
+import ImageUploadField from "../components/ImageUploadField";
 
 type StaffItem = {
   id: string;
@@ -50,29 +49,12 @@ export default function UploadForm() {
   );
   const [title, setTitle] = useState(initialDraft?.title ?? "");
   const [description, setDescription] = useState(initialDraft?.description ?? "");
-  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverObjectId, setCoverObjectId] = useState<string | null>(
     initialDraft?.coverObjectId ?? null
   );
   const [coverFilename, setCoverFilename] = useState<string | null>(
     initialDraft?.coverFilename ?? null
   );
-  const coverPreviewUrl = useMemo(() => {
-    if (!coverFile) {
-      return null;
-    }
-    return URL.createObjectURL(coverFile);
-  }, [coverFile]);
-
-  useEffect(() => {
-    return () => {
-      if (coverPreviewUrl) {
-        URL.revokeObjectURL(coverPreviewUrl);
-      }
-    };
-  }, [coverPreviewUrl]);
-
-  const coverUpload = useS3Upload();
 
   const snapshot = () => ({
     title,
@@ -232,108 +214,18 @@ export default function UploadForm() {
                   </Stack>
                 </Stack>
                 <Divider />
-                <Stack spacing={1.5}>
-                  <Typography variant="subtitle1">封面</Typography>
-                  <Stack
-                    direction={{ xs: "column", md: "row" }}
-                    spacing={2}
-                    alignItems={{ xs: "stretch", md: "center" }}
-                  >
-                    <Box
-                      sx={{
-                        width: 180,
-                        height: 180,
-                        border: "1px dashed rgba(31, 26, 22, 0.25)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: "#fff",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {coverPreviewUrl ? (
-                        <Box
-                          component="img"
-                          src={coverPreviewUrl}
-                          alt="封面预览"
-                          sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                      ) : (
-                        <Typography variant="caption" color="text.secondary">
-                          暂无封面
-                        </Typography>
-                      )}
-                    </Box>
-                    <Stack spacing={1.5} flex={1}>
-                      <Stack direction="row" spacing={1.5} flexWrap="wrap">
-                        <Button variant="outlined" component="label">
-                          选择封面
-                          <input
-                            hidden
-                            type="file"
-                            accept="image/*"
-                            onChange={(event) => {
-                              const file = event.target.files?.[0] ?? null;
-                              setCoverFile(file);
-                              const nextName = file ? file.name : null;
-                              setCoverFilename(nextName);
-                              commitDraft({ coverFilename: nextName });
-                            }}
-                          />
-                        </Button>
-                        <Button
-                          variant="contained"
-                          disabled={!coverFile || coverUpload.isUploading}
-                          onClick={async () => {
-                            if (!coverFile) return;
-                            const result = await coverUpload.upload(coverFile, "img");
-                            if (result?.objectId) {
-                              const nextObjectId = result.objectId;
-                              setCoverObjectId(nextObjectId);
-                              commitDraft({ coverObjectId: nextObjectId });
-                            }
-                          }}
-                        >
-                          {coverUpload.isUploading ? "上传中..." : "上传封面"}
-                        </Button>
-                        {coverFile ? (
-                          <Button
-                            variant="text"
-                            onClick={() => {
-                              setCoverFile(null);
-                              setCoverObjectId(null);
-                              setCoverFilename(null);
-                              commitDraft({ coverFilename: null, coverObjectId: null });
-                            }}
-                          >
-                            清除选择
-                          </Button>
-                        ) : null}
-                      </Stack>
-                      {coverUpload.isUploading ? (
-                        <Stack spacing={0.5}>
-                          <LinearProgress variant="determinate" value={coverUpload.progress} />
-                          <Typography variant="caption" color="text.secondary">
-                            上传中 · {coverUpload.progress}%
-                          </Typography>
-                        </Stack>
-                      ) : null}
-                      <Typography variant="caption" color="text.secondary">
-                        建议尺寸：1:1 或 4:3，最大 30MB，支持 PNG/JPG/WebP。
-                      </Typography>
-                      {coverObjectId ? (
-                        <Typography variant="caption" color="text.secondary">
-                          已上传：{coverObjectId}
-                        </Typography>
-                      ) : null}
-                      {coverUpload.error ? (
-                        <Typography variant="caption" color="error">
-                          {coverUpload.error}
-                        </Typography>
-                      ) : null}
-                    </Stack>
-                  </Stack>
-                </Stack>
+                <ImageUploadField
+                  label="封面"
+                  objectId={coverObjectId}
+                  onObjectIdChange={(value) => {
+                    setCoverObjectId(value);
+                    commitDraft({ coverObjectId: value });
+                  }}
+                  onFilenameChange={(value) => {
+                    setCoverFilename(value);
+                    commitDraft({ coverFilename: value });
+                  }}
+                />
               </Stack>
             </CardContent>
           </Card>
@@ -354,7 +246,6 @@ export default function UploadForm() {
                       setDescription("");
                       setStaff(STAFF_TEMPLATE);
                       setVersions(VERSION_TEMPLATE);
-                      setCoverFile(null);
                       setCoverObjectId(null);
                       setCoverFilename(null);
                     }}
