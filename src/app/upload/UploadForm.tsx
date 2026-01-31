@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import EditorShell from "../editor/EditorShell";
 import { useS3Upload } from "./useS3Upload";
+import { clearDraft, loadDraft, saveDraft } from "./draftStore";
 
 type StaffItem = {
   id: string;
@@ -39,18 +40,34 @@ const VERSION_TEMPLATE: VersionItem[] = [
 ];
 
 export default function UploadForm() {
-  const [staff, setStaff] = useState<StaffItem[]>(STAFF_TEMPLATE);
-  const [versions, setVersions] = useState<VersionItem[]>(VERSION_TEMPLATE);
+  const initialDraft = useMemo(() => loadDraft(), []);
+  const [staff, setStaff] = useState<StaffItem[]>(
+    initialDraft?.staff?.length ? initialDraft.staff : STAFF_TEMPLATE
+  );
+  const [versions, setVersions] = useState<VersionItem[]>(
+    initialDraft?.versions?.length ? initialDraft.versions : VERSION_TEMPLATE
+  );
+  const [title, setTitle] = useState(initialDraft?.title ?? "");
+  const [description, setDescription] = useState(initialDraft?.description ?? "");
   const [musicFile, setMusicFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [musicObjectId, setMusicObjectId] = useState<string | null>(null);
-  const [coverObjectId, setCoverObjectId] = useState<string | null>(null);
+  const [musicObjectId, setMusicObjectId] = useState<string | null>(
+    initialDraft?.musicObjectId ?? null
+  );
+  const [coverObjectId, setCoverObjectId] = useState<string | null>(
+    initialDraft?.coverObjectId ?? null
+  );
+  const [musicFilename, setMusicFilename] = useState<string | null>(
+    initialDraft?.musicFilename ?? null
+  );
+  const [coverFilename, setCoverFilename] = useState<string | null>(
+    initialDraft?.coverFilename ?? null
+  );
   const coverPreviewUrl = useMemo(() => {
     if (!coverFile) {
       return null;
     }
-    const url = URL.createObjectURL(coverFile);
-    return url;
+    return URL.createObjectURL(coverFile);
   }, [coverFile]);
 
   useEffect(() => {
@@ -60,21 +77,25 @@ export default function UploadForm() {
       }
     };
   }, [coverPreviewUrl]);
+
+  const commitDraft = (next: Partial<ReturnType<typeof snapshot>>) => {
+    const data = { ...snapshot(), ...next };
+    saveDraft(data);
+  };
+
   const musicUpload = useS3Upload();
   const coverUpload = useS3Upload();
-  const staffPreview = useMemo(() => {
-    const entries = staff
-      .filter((item) => item.role.trim() && item.name.trim())
-      .map((item) => `${item.role}:${item.name}`);
-    return entries.length > 0 ? `{ ${entries.join(", ")} }` : "{}";
-  }, [staff]);
 
-  const versionPreview = useMemo(() => {
-    const entries = versions
-      .filter((item) => item.key.trim() && item.objectId.trim())
-      .map((item) => `${item.key}:${item.objectId}`);
-    return entries.length > 0 ? `{ ${entries.join(", ")} }` : "{}";
-  }, [versions]);
+  const snapshot = () => ({
+    title,
+    description,
+    staff,
+    versions,
+    coverObjectId,
+    musicObjectId,
+    musicFilename,
+    coverFilename,
+  });
 
   const formatSize = (size: number) => {
     if (!size) return "";
@@ -84,55 +105,59 @@ export default function UploadForm() {
     return `${kb.toFixed(2)} KB`;
   };
 
+
   const addStaff = () => {
-    setStaff((prev) => [
-      ...prev,
-      { id: `staff_${prev.length + 1}`, role: "", name: "" },
-    ]);
+    const next = [...staff, { id: `staff_${staff.length + 1}`, role: "", name: "" }];
+    setStaff(next);
+    commitDraft({ staff: next });
   };
 
   const updateStaff = (id: string, updates: Partial<StaffItem>) => {
-    setStaff((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+    const next = staff.map((item) => (item.id === id ? { ...item, ...updates } : item));
+    setStaff(next);
+    commitDraft({ staff: next });
   };
 
   const removeStaff = (id: string) => {
-    setStaff((prev) => prev.filter((item) => item.id !== id));
+    const next = staff.filter((item) => item.id !== id);
+    setStaff(next);
+    commitDraft({ staff: next });
   };
 
   const addVersion = () => {
-    setVersions((prev) => [
-      ...prev,
+    const next = [
+      ...versions,
       {
-        id: `ver_${prev.length + 1}`,
+        id: `ver_${versions.length + 1}`,
         key: "",
         objectId: "",
-        isDefault: prev.length === 0,
+        isDefault: versions.length === 0,
       },
-    ]);
+    ];
+    setVersions(next);
+    commitDraft({ versions: next });
   };
 
   const updateVersion = (id: string, updates: Partial<VersionItem>) => {
-    setVersions((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
-    );
+    const next = versions.map((item) => (item.id === id ? { ...item, ...updates } : item));
+    setVersions(next);
+    commitDraft({ versions: next });
   };
 
   const setDefaultVersion = (id: string) => {
-    setVersions((prev) =>
-      prev.map((item) => ({ ...item, isDefault: item.id === id }))
-    );
+    const next = versions.map((item) => ({ ...item, isDefault: item.id === id }));
+    setVersions(next);
+    commitDraft({ versions: next });
   };
 
   const removeVersion = (id: string) => {
-    setVersions((prev) => {
-      const next = prev.filter((item) => item.id !== id);
-      if (next.length > 0 && !next.some((item) => item.isDefault)) {
-        next[0].isDefault = true;
-      }
-      return next;
-    });
+    const next = versions.filter((item) => item.id !== id);
+    if (next.length > 0 && !next.some((item) => item.isDefault)) {
+      next[0].isDefault = true;
+    }
+    setVersions(next);
+    commitDraft({ versions: next });
   };
-
 
   return (
     <Box component="main" sx={{ pb: 8 }}>
@@ -175,7 +200,10 @@ export default function UploadForm() {
                         onChange={(event) => {
                           const file = event.target.files?.[0] ?? null;
                           setMusicFile(file);
+                          const nextName = file ? file.name : null;
+                          setMusicFilename(nextName);
                           setMusicObjectId(null);
+                          commitDraft({ musicFilename: nextName, musicObjectId: null });
                         }}
                       />
                     </Button>
@@ -183,7 +211,7 @@ export default function UploadForm() {
                   <Stack spacing={1} sx={{ minWidth: { md: 240 } }}>
                     <Typography variant="subtitle2">当前选择</Typography>
                     <Typography variant="body2">
-                      {musicFile ? musicFile.name : "未选择文件"}
+                      {musicFile ? musicFile.name : musicFilename ?? "未选择文件"}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {musicFile ? formatSize(musicFile.size) : ""}
@@ -196,8 +224,18 @@ export default function UploadForm() {
                           if (!musicFile) return;
                           const result = await musicUpload.upload(musicFile, "music");
                           if (result?.objectId) {
-                            setMusicObjectId(result.objectId);
-                            updateVersion("ver_1", { objectId: result.objectId, key: "default" });
+                            const nextObjectId = result.objectId;
+                            const nextVersions = versions.map((item) =>
+                              item.id === "ver_1"
+                                ? { ...item, objectId: nextObjectId, key: "default" }
+                                : item
+                            );
+                            setMusicObjectId(nextObjectId);
+                            setVersions(nextVersions);
+                            commitDraft({
+                              musicObjectId: nextObjectId,
+                              versions: nextVersions,
+                            });
                           }
                         }}
                       >
@@ -209,6 +247,8 @@ export default function UploadForm() {
                           onClick={() => {
                             setMusicFile(null);
                             setMusicObjectId(null);
+                            setMusicFilename(null);
+                            commitDraft({ musicFilename: null, musicObjectId: null });
                           }}
                         >
                           清除
@@ -244,13 +284,29 @@ export default function UploadForm() {
               <Stack spacing={2.5}>
                 <Typography variant="h6">歌曲信息</Typography>
                 <Stack spacing={2}>
-                  <TextField label="歌曲名" placeholder="例如：玻璃海" fullWidth />
+                  <TextField
+                    label="歌曲名"
+                    placeholder="例如：玻璃海"
+                    fullWidth
+                    value={title}
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      setTitle(next);
+                      commitDraft({ title: next });
+                    }}
+                  />
                   <TextField
                     label="简介"
                     placeholder="描述这首歌的氛围、来源..."
                     fullWidth
                     multiline
                     minRows={3}
+                    value={description}
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      setDescription(next);
+                      commitDraft({ description: next });
+                    }}
                   />
                 </Stack>
                 <Divider />
@@ -366,6 +422,9 @@ export default function UploadForm() {
                             onChange={(event) => {
                               const file = event.target.files?.[0] ?? null;
                               setCoverFile(file);
+                              const nextName = file ? file.name : null;
+                              setCoverFilename(nextName);
+                              commitDraft({ coverFilename: nextName });
                             }}
                           />
                         </Button>
@@ -376,7 +435,9 @@ export default function UploadForm() {
                             if (!coverFile) return;
                             const result = await coverUpload.upload(coverFile, "img");
                             if (result?.objectId) {
-                              setCoverObjectId(result.objectId);
+                              const nextObjectId = result.objectId;
+                              setCoverObjectId(nextObjectId);
+                              commitDraft({ coverObjectId: nextObjectId });
                             }
                           }}
                         >
@@ -388,6 +449,8 @@ export default function UploadForm() {
                             onClick={() => {
                               setCoverFile(null);
                               setCoverObjectId(null);
+                              setCoverFilename(null);
+                              commitDraft({ coverFilename: null, coverObjectId: null });
                             }}
                           >
                             清除选择
@@ -428,8 +491,33 @@ export default function UploadForm() {
                 <Typography variant="h6">歌词与预览</Typography>
                 <EditorShell />
                 <Divider />
-                <Stack direction="row" spacing={1}>
-                  <Button variant="contained">提交上传</Button>
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1.5}
+                  alignItems={{ xs: "stretch", sm: "center" }}
+                  justifyContent="space-between"
+                >
+                  <Stack direction="row" spacing={1.5}>
+                    <Button variant="contained">提交上传</Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => {
+                        clearDraft();
+                        setTitle("");
+                        setDescription("");
+                        setStaff(STAFF_TEMPLATE);
+                        setVersions(VERSION_TEMPLATE);
+                        setMusicFile(null);
+                        setCoverFile(null);
+                        setMusicObjectId(null);
+                        setCoverObjectId(null);
+                        setMusicFilename(null);
+                        setCoverFilename(null);
+                      }}
+                    >
+                      清空草稿
+                    </Button>
+                  </Stack>
                 </Stack>
               </Stack>
             </CardContent>

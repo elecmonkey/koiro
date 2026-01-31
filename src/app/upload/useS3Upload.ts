@@ -59,7 +59,7 @@ export function useS3Upload() {
           setState((prev) => ({ ...prev, progress: percent }));
         },
       });
-    } catch (error) {
+    } catch {
       setState({
         isUploading: false,
         error: "上传到对象存储失败",
