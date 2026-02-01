@@ -3,26 +3,23 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Alert,
-  Avatar,
   Box,
-  Card,
-  CardActionArea,
-  CardContent,
-  Chip,
   CircularProgress,
   Container,
   Pagination,
   Stack,
   Typography,
 } from "@mui/material";
-import Link from "next/link";
+import SongCard, { type SongCardData } from "@/app/components/SongCard";
 
 type Song = {
   id: string;
   title: string;
   description: string | null;
-  staff: { role: string; name: string }[];
+  staff: { role: string; name: string | string[] }[];
   coverUrl: string | null;
+  audioVersions: Record<string, string> | null;
+  lyrics: any | null;
   updatedAt: string;
 };
 
@@ -92,73 +89,7 @@ export default function SongsClient() {
         ) : (
           <Stack spacing={2}>
             {songs.map((song) => (
-              <Link
-                key={song.id}
-                href={`/songs/${song.id}`}
-                style={{ textDecoration: "none" }}
-              >
-                <Card
-                  variant="outlined"
-                  sx={{
-                    transition: "border-color 0.2s",
-                    "&:hover": {
-                      borderColor: "primary.main",
-                    },
-                  }}
-                >
-                  <CardActionArea>
-                    <CardContent sx={{ py: 1.5 }}>
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        {/* 封面 */}
-                        <Avatar
-                          variant="rounded"
-                          src={song.coverUrl || undefined}
-                          sx={{ width: 56, height: 56, bgcolor: "action.hover" }}
-                        >
-                          ♪
-                        </Avatar>
-
-                        {/* 歌曲信息 */}
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography variant="subtitle1" noWrap>
-                            {song.title}
-                          </Typography>
-                          {song.description && (
-                            <Typography variant="body2" color="text.secondary" noWrap>
-                              {song.description}
-                            </Typography>
-                          )}
-                          {song.staff && song.staff.length > 0 && (
-                            <Stack
-                              direction="row"
-                              spacing={0.5}
-                              sx={{ mt: 0.5 }}
-                              flexWrap="wrap"
-                              useFlexGap
-                            >
-                              {song.staff.slice(0, 3).map((s, idx) => (
-                                <Chip
-                                  key={idx}
-                                  label={`${s.role || "Staff"} · ${s.name || ""}`}
-                                  size="small"
-                                  variant="outlined"
-                                />
-                              ))}
-                              {song.staff.length > 3 && (
-                                <Chip
-                                  label={`+${song.staff.length - 3}`}
-                                  size="small"
-                                  variant="outlined"
-                                />
-                              )}
-                            </Stack>
-                          )}
-                        </Box>
-                      </Stack>
-                    </CardContent>
-                  </CardActionArea>
-                </Card>
-              </Link>
+              <SongCard key={song.id} song={song} />
             ))}
 
             {pagination && pagination.totalPages > 1 && (
