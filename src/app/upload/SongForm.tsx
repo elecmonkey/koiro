@@ -421,6 +421,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     setLyricsEditorKey((prev) => prev + 1);
     setCoverObjectId(null);
     setCoverFilename(null);
+    setSelectedPlaylists([]);
     setSubmitError(null);
     setLrcText("");
     setLrcError(null);
