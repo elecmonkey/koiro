@@ -224,11 +224,9 @@ export default function HomeClient() {
                   </Typography>
                 </Stack>
                 <Stack direction="row" spacing={1}>
-                  <Link href="/playlists" style={{ textDecoration: "none" }}>
-                    <Button size="small" variant="text">
-                      全部歌单
-                    </Button>
-                  </Link>
+                  <Button component={Link} href="/playlists" size="small" variant="text">
+                    全部歌单
+                  </Button>
                   <Button
                     size="small"
                     variant="outlined"
@@ -261,17 +259,17 @@ export default function HomeClient() {
                   }}
                 >
                   {featuredPlaylists.map((playlist) => (
-                    <Link key={playlist.id} href={`/playlists/${playlist.id}`} style={{ textDecoration: "none" }}>
-                      <Card
-                        variant="outlined"
-                        sx={{
-                          height: "100%",
-                          transition: "border-color 0.2s",
-                          "&:hover": { borderColor: "primary.main" },
-                        }}
-                      >
-                        <CardActionArea sx={{ height: "100%" }}>
-                          {playlist.coverUrl ? (
+                    <Card
+                      key={playlist.id}
+                      variant="outlined"
+                      sx={{
+                        height: "100%",
+                        transition: "border-color 0.2s",
+                        "&:hover": { borderColor: "primary.main" },
+                      }}
+                    >
+                      <CardActionArea component={Link} href={`/playlists/${playlist.id}`} sx={{ height: "100%" }}>
+                        {playlist.coverUrl ? (
                             <CardMedia
                               component="img"
                               image={playlist.coverUrl}
@@ -303,7 +301,6 @@ export default function HomeClient() {
                           </CardContent>
                         </CardActionArea>
                       </Card>
-                    </Link>
                   ))}
                 </Box>
               )}
@@ -325,11 +322,9 @@ export default function HomeClient() {
                   </Typography>
                 </Stack>
                 <Stack direction="row" spacing={1}>
-                  <Link href="/songs" style={{ textDecoration: "none" }}>
-                    <Button size="small" variant="text">
-                      全部歌曲
-                    </Button>
-                  </Link>
+                  <Button component={Link} href="/songs" size="small" variant="text">
+                    全部歌曲
+                  </Button>
                   <Button
                     size="small"
                     variant="outlined"

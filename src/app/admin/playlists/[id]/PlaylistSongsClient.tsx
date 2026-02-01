@@ -177,11 +177,9 @@ export default function PlaylistSongsClient({ playlist, availableSongs }: Props)
                           <Typography variant="subtitle1">{song.title}</Typography>
                         </Box>
                         <Stack direction="row" spacing={1}>
-                          <Link href={`/songs/${song.id}`}>
-                            <Button size="small" variant="text">
-                              查看
-                            </Button>
-                          </Link>
+                          <Button component={Link} href={`/songs/${song.id}`} size="small" variant="text">
+                            查看
+                          </Button>
                           <IconButton
                             size="small"
                             color="error"

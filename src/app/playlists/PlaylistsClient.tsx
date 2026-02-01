@@ -98,23 +98,19 @@ export default function PlaylistsClient() {
               }}
             >
               {playlists.map((playlist) => (
-                <Link
+                <Card
                   key={playlist.id}
-                  href={`/playlists/${playlist.id}`}
-                  style={{ textDecoration: "none" }}
+                  variant="outlined"
+                  sx={{
+                    height: "100%",
+                    transition: "border-color 0.2s",
+                    "&:hover": {
+                      borderColor: "primary.main",
+                    },
+                  }}
                 >
-                  <Card
-                    variant="outlined"
-                    sx={{
-                      height: "100%",
-                      transition: "border-color 0.2s",
-                      "&:hover": {
-                        borderColor: "primary.main",
-                      },
-                    }}
-                  >
-                    <CardActionArea sx={{ height: "100%" }}>
-                      {playlist.coverUrl ? (
+                  <CardActionArea component={Link} href={`/playlists/${playlist.id}`} sx={{ height: "100%" }}>
+                    {playlist.coverUrl ? (
                         <CardMedia
                           component="img"
                           image={playlist.coverUrl}
@@ -150,7 +146,6 @@ export default function PlaylistsClient() {
                       </CardContent>
                     </CardActionArea>
                   </Card>
-                </Link>
               ))}
             </Box>
 

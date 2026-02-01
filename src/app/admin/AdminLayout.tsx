@@ -36,23 +36,24 @@ export default function AdminLayout({ children, activeTab }: AdminLayoutProps) {
 
         <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
           {tabs.map((tab) => (
-            <Link key={tab.key} href={tab.href} style={{ textDecoration: "none" }}>
-              <ButtonBase
-                sx={{
-                  px: 2,
-                  py: 1,
-                  borderRadius: 2,
-                  border: "1px solid",
-                  borderColor: activeTab === tab.key ? "primary.main" : "divider",
-                  bgcolor: activeTab === tab.key ? "primary.main" : "transparent",
-                  color: activeTab === tab.key ? "primary.contrastText" : "text.primary",
-                  transition: "all 0.2s",
-                }}
-              >
-                {tab.icon}
-                <Typography variant="button">{tab.label}</Typography>
-              </ButtonBase>
-            </Link>
+            <ButtonBase
+              key={tab.key}
+              component={Link}
+              href={tab.href}
+              sx={{
+                px: 2,
+                py: 1,
+                borderRadius: 2,
+                border: "1px solid",
+                borderColor: activeTab === tab.key ? "primary.main" : "divider",
+                bgcolor: activeTab === tab.key ? "primary.main" : "transparent",
+                color: activeTab === tab.key ? "primary.contrastText" : "text.primary",
+                transition: "all 0.2s",
+              }}
+            >
+              {tab.icon}
+              <Typography variant="button">{tab.label}</Typography>
+            </ButtonBase>
           ))}
         </Stack>
 

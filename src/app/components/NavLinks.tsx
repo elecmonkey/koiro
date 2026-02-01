@@ -73,7 +73,6 @@ export default function NavLinks({ permissions = 0, user }: NavLinksProps) {
       {/* 移动端：汉堡菜单按钮 */}
       <Box sx={{ display: { xs: "flex", md: "none" } }}>
         <IconButton
-          edge="end"
           color="inherit"
           aria-label="menu"
           onClick={toggleDrawer(true)}

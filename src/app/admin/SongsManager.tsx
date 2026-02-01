@@ -158,16 +158,12 @@ export default function SongsManager() {
                         )}
                       </Box>
                       <Stack direction="row" spacing={1} alignItems="center">
-                        <Link href={`/songs/${song.id}/edit`}>
-                          <Button size="small" variant="outlined">
-                            编辑
-                          </Button>
-                        </Link>
-                        <Link href={`/songs/${song.id}`}>
-                          <Button size="small" variant="text">
-                            查看
-                          </Button>
-                        </Link>
+                        <Button component={Link} href={`/songs/${song.id}/edit`} size="small" variant="outlined">
+                          编辑
+                        </Button>
+                        <Button component={Link} href={`/songs/${song.id}`} size="small" variant="text">
+                          查看
+                        </Button>
                         <Button
                           size="small"
                           color="error"

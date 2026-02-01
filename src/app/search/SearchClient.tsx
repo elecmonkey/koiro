@@ -178,10 +178,9 @@ export default function SearchClient() {
                 ) : (
                   <Stack spacing={2}>
                     {results.map((item) => (
-                      <Link key={item.id} href={`/songs/${item.id}`} style={{ textDecoration: "none" }}>
-                        <Card variant="outlined" sx={{ "&:hover": { bgcolor: "action.hover" } }}>
-                          <CardActionArea>
-                            <Box sx={{ p: 2 }}>
+                      <Card key={item.id} variant="outlined" sx={{ "&:hover": { bgcolor: "action.hover" } }}>
+                        <CardActionArea component={Link} href={`/songs/${item.id}`}>
+                          <Box sx={{ p: 2 }}>
                               <Stack spacing={1}>
                                 <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                                   <Typography variant="subtitle1" fontWeight={500}>
@@ -222,7 +221,6 @@ export default function SearchClient() {
                             </Box>
                           </CardActionArea>
                         </Card>
-                      </Link>
                     ))}
                   </Stack>
                 )}

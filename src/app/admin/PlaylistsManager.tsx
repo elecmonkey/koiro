@@ -216,11 +216,9 @@ export default function PlaylistsManager() {
                         <Button size="small" variant="outlined" onClick={() => openEdit(list)}>
                           编辑
                         </Button>
-                        <Link href={`/admin/playlists/${list.id}`}>
-                          <Button size="small" variant="text">
-                            管理
-                          </Button>
-                        </Link>
+                        <Button component={Link} href={`/admin/playlists/${list.id}`} size="small" variant="text">
+                          管理
+                        </Button>
                         <Button
                           size="small"
                           color="error"
