@@ -137,7 +137,7 @@ export default function HomeClient() {
                   fontWeight: 900,
                   color: "text.secondary",
                   letterSpacing: "0.1em",
-                  mb: -3, // 假名离汉字更近
+                  mb: -2.2, // 假名离汉字更近
                 }}
               >
                 こえ
@@ -163,7 +163,7 @@ export default function HomeClient() {
                   fontWeight: 900,
                   color: "text.secondary",
                   letterSpacing: "0.1em",
-                  mb: -3, // 假名离汉字更近
+                  mb: -2.2, // 假名离汉字更近
                 }}
               >
                 いろ
