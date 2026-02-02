@@ -99,6 +99,7 @@ export function AudioControls({ song, audioVersions, canDownload, defaultLyrics 
               artist: song.artist,
               coverUrl: song.coverUrl,
               audioObjectId: currentVersion.objectId,
+              versionKey: currentVersion.key,
               lyrics: defaultLyrics,
             }}
           />

@@ -17,6 +17,7 @@ export interface Track {
   artist?: string;
   coverUrl?: string | null;
   audioObjectId: string;
+  versionKey?: string; // 音频版本名称，用于区分同一歌曲的不同版本
   lyrics?: LyricsDocument | null;
 }
 

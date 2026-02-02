@@ -11,7 +11,10 @@ interface PlayButtonProps {
 export function PlayButton({ track }: PlayButtonProps) {
   const { play, pause, resume, track: currentTrack, isPlaying, isLoading } = usePlayer();
 
-  const isCurrentTrack = currentTrack?.id === track.id;
+  // 通过歌曲 ID 和 audioObjectId 同时匹配，确保是同一个版本
+  const isCurrentTrack = 
+    currentTrack?.id === track.id && 
+    currentTrack?.audioObjectId === track.audioObjectId;
 
   const handleClick = async () => {
     if (isCurrentTrack) {

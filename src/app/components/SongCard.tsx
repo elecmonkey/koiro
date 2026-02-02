@@ -37,7 +37,8 @@ export default function SongCard({ song, showPlayButton = true }: SongCardProps)
   // 获取默认音频版本
   const audioVersions = song.audioVersions ?? {};
   const versionNames = Object.keys(audioVersions);
-  const defaultAudioObjectId = versionNames.length > 0 ? audioVersions[versionNames[0]] : null;
+  const defaultVersionKey = versionNames[0];
+  const defaultAudioObjectId = versionNames.length > 0 ? audioVersions[defaultVersionKey] : null;
   const artist = (song.staff ?? []).map((s) => (Array.isArray(s.name) ? s.name.join("、") : s.name)).join("、");
 
   const track: Track | null = defaultAudioObjectId
@@ -47,17 +48,21 @@ export default function SongCard({ song, showPlayButton = true }: SongCardProps)
         artist,
         coverUrl: song.coverUrl,
         audioObjectId: defaultAudioObjectId,
+        versionKey: defaultVersionKey,
         lyrics: song.lyrics,
       }
     : null;
 
-  const isCurrentSong = currentTrack?.id === song.id;
+  // 通过歌曲 ID 和 audioObjectId 同时匹配，确保是同一个版本
+  const isCurrentTrack = 
+    track && currentTrack?.id === song.id && 
+    currentTrack?.audioObjectId === track.audioObjectId;
 
   const handlePlayClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!track) return;
-    if (isCurrentSong) {
+    if (isCurrentTrack) {
       if (isPlaying) {
         pause();
       } else {
@@ -188,7 +193,7 @@ export default function SongCard({ song, showPlayButton = true }: SongCardProps)
           size="small"
           color="primary"
           onClick={handlePlayClick}
-          disabled={isLoading && isCurrentSong}
+          disabled={isLoading && !!isCurrentTrack}
           sx={{
             position: "absolute",
             right: 16,
@@ -201,7 +206,7 @@ export default function SongCard({ song, showPlayButton = true }: SongCardProps)
             "&:hover": { bgcolor: "primary.dark" },
           }}
         >
-          {isCurrentSong && isPlaying ? (
+          {isCurrentTrack && isPlaying ? (
             <PauseIcon fontSize="small" />
           ) : (
             <PlayArrowIcon fontSize="small" />
