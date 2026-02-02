@@ -18,6 +18,7 @@ const initialLines: LineDraft[] = [
 type UseLyricsEditorOptions = {
   initial?: LineDraft[];
   onChange?: (lines: LineDraft[]) => void;
+  languages?: string[];
 };
 
 type EditorState = {
@@ -107,11 +108,11 @@ export function useLyricsEditor(options: UseLyricsEditorOptions = {}) {
     return {
       type: "doc",
       meta: {
-        languages: ["ja", "zh"],
+        languages: options.languages ?? ["ja", "zh"],
       },
       blocks,
     };
-  }, [blocks]);
+  }, [blocks, options.languages]);
 
   const plainText = useMemo(() => buildPlainText(blocks), [blocks]);
 

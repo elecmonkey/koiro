@@ -10,9 +10,10 @@ import { validateBlocks } from "./ast/validate";
 type EditorShellProps = {
   initialLines?: LineDraft[];
   onLinesChange?: (lines: LineDraft[]) => void;
+  languages?: string[];
 };
 
-export default function EditorShell({ initialLines, onLinesChange }: EditorShellProps) {
+export default function EditorShell({ initialLines, onLinesChange, languages }: EditorShellProps) {
   const {
     lines,
     selectedId,
@@ -24,7 +25,7 @@ export default function EditorShell({ initialLines, onLinesChange }: EditorShell
     moveLine,
     doc,
     plainText,
-  } = useLyricsEditor({ initial: initialLines, onChange: onLinesChange });
+  } = useLyricsEditor({ initial: initialLines, onChange: onLinesChange, languages });
 
   const validation = validateBlocks(doc.blocks);
 

@@ -11,6 +11,7 @@ export type UploadDraft = {
     key: string;
     isDefault: boolean;
     lines: { id: string; startMs: number; endMs?: number; text: string; rubyByIndex?: Record<number, string> }[];
+    languages: string[];
   }[];
   coverObjectId: string | null;
   coverFilename: string | null;
@@ -25,7 +26,17 @@ export function loadDraft(): UploadDraft | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as UploadDraft;
+    const draft = JSON.parse(raw) as UploadDraft;
+    
+    // 向后兼容：为旧草稿数据添加 languages 字段
+    if (draft.lyricsVersions) {
+      draft.lyricsVersions = draft.lyricsVersions.map((lyr) => ({
+        ...lyr,
+        languages: lyr.languages ?? ["ja"],
+      }));
+    }
+    
+    return draft;
   } catch {
     return null;
   }

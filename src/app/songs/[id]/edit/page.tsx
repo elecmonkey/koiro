@@ -82,7 +82,7 @@ export default async function EditSongPage({ params }: PageProps) {
   };
 
   const lyricsVersions = song.lyrics.map((lyr) => {
-    const content = lyr.content as LyricsContent;
+    const content = lyr.content as LyricsContent & { meta?: { languages?: string[] } };
     const blocks = content?.blocks ?? [];
     const lines: LyricsLine[] = blocks
       .filter((block) => block.type === "line")
@@ -114,11 +114,15 @@ export default async function EditSongPage({ params }: PageProps) {
         };
       });
 
+    // 从 meta 中读取 languages，如果没有则默认为 ["ja"]
+    const languages = content?.meta?.languages ?? ["ja"];
+
     return {
       id: lyr.id,
       key: lyr.versionKey,
       isDefault: lyr.isDefault,
       lines,
+      languages,
     };
   });
 

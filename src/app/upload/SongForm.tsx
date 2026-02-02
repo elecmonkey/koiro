@@ -44,6 +44,7 @@ type LyricsVersion = {
   key: string;
   isDefault: boolean;
   lines: LineDraft[];
+  languages: string[];
 };
 
 type PlaylistOption = {
@@ -85,7 +86,7 @@ const EMPTY_FORM_DATA: SongFormData = {
   staff: STAFF_TEMPLATE,
   versions: VERSION_TEMPLATE,
   audioDefaultName: VERSION_TEMPLATE[0].key,
-  lyricsVersions: [{ id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES }],
+  lyricsVersions: [{ id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES, languages: ["ja"] }],
   coverObjectId: null,
   coverFilename: null,
 };
@@ -296,6 +297,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
         key: nextKey,
         isDefault: lyricsVersions.length === 0,
         lines: DEFAULT_LINES,
+        languages: ["ja"],
       },
     ];
     setLyricsVersions(next);
@@ -309,6 +311,13 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     );
     const next = lyricsVersions.map((item) =>
       item.id === id ? { ...item, key: nextKey } : item
+    );
+    setLyricsVersions(next);
+  };
+
+  const updateLyricsLanguages = (id: string, languages: string[]) => {
+    const next = lyricsVersions.map((item) =>
+      item.id === id ? { ...item, languages } : item
     );
     setLyricsVersions(next);
   };
@@ -416,7 +425,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     setVersions(VERSION_TEMPLATE);
     setAudioDefaultName(VERSION_TEMPLATE[0].key);
     setLyricsVersions([
-      { id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES },
+      { id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES, languages: ["ja"] },
     ]);
     setActiveLyricsId("lyr_1");
     setLyricsEditorKey((prev) => prev + 1);
@@ -620,6 +629,29 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
                           }
                           fullWidth
                         />
+                        <Autocomplete
+                          multiple
+                          options={["zh", "ja", "en", "ko"]}
+                          value={activeLyrics.languages}
+                          onChange={(_, value) => updateLyricsLanguages(activeLyrics.id, value)}
+                          freeSolo
+                          renderTags={(value, getTagProps) =>
+                            value.map((option, index) => {
+                              const { key, ...tagProps } = getTagProps({ index });
+                              return (
+                                <Chip key={key} label={option} size="small" {...tagProps} />
+                              );
+                            })
+                          }
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label="语言标签"
+                              placeholder="选择或输入语言"
+                            />
+                          )}
+                          sx={{ minWidth: 240 }}
+                        />
                         <Button
                           variant={activeLyrics.isDefault ? "contained" : "outlined"}
                           onClick={() => setDefaultLyrics(activeLyrics.id)}
@@ -695,6 +727,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
                         key={`${activeLyrics.id}-${lyricsEditorKey}`}
                         initialLines={activeLyrics.lines}
                         onLinesChange={(lines) => updateLyricsLines(activeLyrics.id, lines)}
+                        languages={activeLyrics.languages}
                       />
                     </Stack>
                   ) : null}
