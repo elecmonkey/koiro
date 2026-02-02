@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Shippori_Mincho_B1, Zen_Kaku_Gothic_New } from "next/font/google";
+import { Noto_Sans_SC, Noto_Serif_SC } from "next/font/google";
 import EmotionRegistry from "./emotion-registry";
 import { Providers } from "./providers";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import "./globals.css";
 
-const bodyFont = Zen_Kaku_Gothic_New({
+const bodyFont = Noto_Sans_SC({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "700"],
 });
 
-const displayFont = Shippori_Mincho_B1({
+const displayFont = Noto_Serif_SC({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["400", "600", "700"],
