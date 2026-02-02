@@ -101,7 +101,7 @@ export default function HomeClient() {
               color: "text.primary",
               m: 0,
               textAlign: "center",
-              fontFamily: '"Noto Serif JP", "Noto Serif SC", Georgia, "Times New Roman", serif',
+              fontFamily: 'var(--font-jp-display), "Noto Serif SC", Georgia, "Times New Roman", serif',
               display: "flex",
               alignItems: "flex-end", // 底部对齐
             }}

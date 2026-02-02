@@ -66,7 +66,7 @@ function renderInline(inlines: Inline[]): React.ReactNode {
         return (
           <ruby key={index}>
             {inline.base}
-            <rt>{inline.ruby}</rt>
+            <rt style={{ fontSize: "0.7em" }}>{inline.ruby}</rt>
           </ruby>
         );
       case "annotation":

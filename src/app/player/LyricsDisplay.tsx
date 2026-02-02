@@ -10,6 +10,8 @@ interface LyricsDisplayProps {
   nextLine: LyricLine | null;
   /** 是否处于预览模式（第一句歌词开始前） */
   isPreview?: boolean;
+  /** 歌词语言列表，用于判断字体优先级 */
+  languages?: string[];
 }
 
 /**
@@ -25,7 +27,7 @@ function renderInlines(inlines: Inline[]): React.ReactNode {
           <ruby key={index} style={{ rubyPosition: "over" }}>
             {inline.base}
             <rp>(</rp>
-            <rt style={{ fontSize: "0.6em", fontWeight: 400 }}>{inline.ruby}</rt>
+            <rt style={{ fontSize: "0.7em", fontWeight: 400 }}>{inline.ruby}</rt>
             <rp>)</rp>
           </ruby>
         );
@@ -55,13 +57,23 @@ function LyricLineView({
   line,
   variant,
   isPreview = false,
+  languages = [],
 }: {
   line: LyricLine | null;
   variant: "prev" | "current" | "next";
   isPreview?: boolean;
+  languages?: string[];
 }) {
   // 预览模式下 current 也不高亮
   const effectiveVariant = isPreview ? "prev" : variant;
+  
+  // 判断是否为日文歌词（ja 或 jp）
+  const isJapanese = languages.some(lang => lang.toLowerCase() === 'ja' || lang.toLowerCase() === 'jp');
+  
+  // 根据语言动态设置字体
+  const fontFamily = isJapanese
+    ? 'var(--font-jp-sans), var(--font-jp-serif), "Noto Sans SC", "Noto Serif SC", sans-serif'
+    : 'var(--font-body), var(--font-jp-sans), "Noto Sans SC", sans-serif';
   
   const baseStyles = {
     prev: {
@@ -97,6 +109,7 @@ function LyricLineView({
       component="div"
       sx={{
         ...baseStyles[effectiveVariant],
+        fontFamily,
         lineHeight: 1.6,
         textAlign: "center",
         whiteSpace: "nowrap",
@@ -129,7 +142,7 @@ function LyricLineView({
 /**
  * 歌词显示组件 - 显示3行歌词（上一行、当前行、下一行）
  */
-export function LyricsDisplay({ prevLine, currentLine, nextLine, isPreview = false }: LyricsDisplayProps) {
+export function LyricsDisplay({ prevLine, currentLine, nextLine, isPreview = false, languages = [] }: LyricsDisplayProps) {
   const hasLyrics = prevLine || currentLine || nextLine;
   
   if (!hasLyrics) {
@@ -159,9 +172,9 @@ export function LyricsDisplay({ prevLine, currentLine, nextLine, isPreview = fal
         overflow: "hidden",
       }}
     >
-      <LyricLineView line={prevLine} variant="prev" isPreview={isPreview} />
-      <LyricLineView line={currentLine} variant="current" isPreview={isPreview} />
-      <LyricLineView line={nextLine} variant="next" isPreview={isPreview} />
+      <LyricLineView line={prevLine} variant="prev" isPreview={isPreview} languages={languages} />
+      <LyricLineView line={currentLine} variant="current" isPreview={isPreview} languages={languages} />
+      <LyricLineView line={nextLine} variant="next" isPreview={isPreview} languages={languages} />
     </Stack>
   );
 }

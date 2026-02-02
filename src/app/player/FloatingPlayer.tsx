@@ -149,6 +149,7 @@ export function FloatingPlayer() {
             currentLine={currentLine}
             nextLine={nextLine}
             isPreview={isPreview}
+            languages={track.languages}
           />
           <Divider />
 

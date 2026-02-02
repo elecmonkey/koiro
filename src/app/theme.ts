@@ -26,23 +26,23 @@ export const theme = createTheme({
     borderRadius: 6,
   },
   typography: {
-    fontFamily: 'var(--font-body), "Noto Sans SC", "Zen Kaku Gothic New", sans-serif',
+    fontFamily: 'var(--font-body), var(--font-jp-sans), "Noto Sans SC", sans-serif',
     h1: {
-      fontFamily: 'var(--font-display), "Noto Serif SC", "Shippori Mincho B1", serif',
+      fontFamily: 'var(--font-display), var(--font-jp-serif), "Noto Serif SC", serif',
       fontWeight: 700,
       letterSpacing: "-0.02em",
     },
     h2: {
-      fontFamily: 'var(--font-display), "Noto Serif SC", "Shippori Mincho B1", serif',
+      fontFamily: 'var(--font-display), var(--font-jp-serif), "Noto Serif SC", serif',
       fontWeight: 700,
       letterSpacing: "-0.01em",
     },
     h3: {
-      fontFamily: 'var(--font-display), "Noto Serif SC", "Shippori Mincho B1", serif',
+      fontFamily: 'var(--font-display), var(--font-jp-serif), "Noto Serif SC", serif',
       fontWeight: 600,
     },
     h4: {
-      fontFamily: 'var(--font-display), "Noto Serif SC", "Shippori Mincho B1", serif',
+      fontFamily: 'var(--font-display), var(--font-jp-serif), "Noto Serif SC", serif',
       fontWeight: 600,
     },
     subtitle1: {

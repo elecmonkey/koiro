@@ -117,6 +117,7 @@ export function AudioControls({ song, audioVersions, canDownload, lyricsVersions
               audioObjectId: currentVersion.objectId,
               versionKey: currentVersion.key,
               lyrics: currentLyrics,
+              languages: currentLyricsVersion?.languages,
             }}
           />
         )}
@@ -144,6 +145,7 @@ export function LyricsDisplay({ lyrics }: LyricsDisplayProps) {
   });
 
   const currentLyrics = lyrics[selectedLyrics];
+  const currentLanguages = currentLyrics?.languages || [];
 
   return (
     <Card className="float-in">
@@ -178,7 +180,7 @@ export function LyricsDisplay({ lyrics }: LyricsDisplayProps) {
 
               {currentLyrics && (
                 <Stack spacing={1}>
-                  {renderLyricsBlocks(currentLyrics.content)}
+                  {renderLyricsBlocks(currentLyrics.content, currentLanguages)}
                 </Stack>
               )}
             </>
@@ -189,7 +191,7 @@ export function LyricsDisplay({ lyrics }: LyricsDisplayProps) {
   );
 }
 
-function renderLyricsBlocks(content: LyricsDocument) {
+function renderLyricsBlocks(content: LyricsDocument, languages: string[] = []) {
   if (!content || content.type !== "doc" || !Array.isArray(content.blocks)) {
     return (
       <Typography variant="body2" color="text.secondary">
@@ -198,14 +200,22 @@ function renderLyricsBlocks(content: LyricsDocument) {
     );
   }
   return content.blocks.map((block, index) => (
-    <BlockView key={index} block={block} />
+    <BlockView key={index} block={block} languages={languages} />
   ));
 }
 
-function BlockView({ block }: { block: Block }) {
+function BlockView({ block, languages = [] }: { block: Block; languages?: string[] }) {
+  // 判断是否为日文歌词（ja 或 jp）
+  const isJapanese = languages.some(lang => lang.toLowerCase() === 'ja' || lang.toLowerCase() === 'jp');
+  
+  // 根据语言动态设置字体
+  const fontFamily = isJapanese
+    ? 'var(--font-jp-sans), var(--font-jp-serif), "Noto Sans SC", "Noto Serif SC", sans-serif'
+    : undefined; // 使用默认字体
+  
   if (block.type === "line") {
     return (
-      <Typography variant="body1" sx={{ lineHeight: 1.9 }}>
+      <Typography variant="body1" sx={{ lineHeight: 1.9, fontFamily }}>
         {block.children.map((node, idx) => (
           <InlineView key={idx} node={node} />
         ))}
@@ -214,7 +224,7 @@ function BlockView({ block }: { block: Block }) {
   }
   if (block.type === "p") {
     return (
-      <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.9 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.9, fontFamily }}>
         {block.children.map((node, idx) => (
           <InlineView key={idx} node={node} />
         ))}
@@ -232,7 +242,7 @@ function InlineView({ node }: { node: Inline }): React.ReactNode {
       return (
         <ruby>
           {node.base}
-          <rt>{node.ruby}</rt>
+          <rt style={{ fontSize: "0.7em" }}>{node.ruby}</rt>
         </ruby>
       );
     case "em":

@@ -6,7 +6,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-body), "Noto Sans SC", "Zen Kaku Gothic New", sans-serif;
+  font-family: var(--font-body), var(--font-jp-sans), "Noto Sans SC", sans-serif;
 }
 
 .float-in {

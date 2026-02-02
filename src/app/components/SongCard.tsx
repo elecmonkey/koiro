@@ -56,6 +56,7 @@ export default function SongCard({ song, showPlayButton = true }: SongCardProps)
         audioObjectId: defaultAudioObjectId,
         versionKey: defaultVersionKey,
         lyrics: hasLyricsBinding ? song.lyrics : null,
+        languages: hasLyricsBinding && song.lyrics?.meta?.languages ? song.lyrics.meta.languages : undefined,
       }
     : null;
 
