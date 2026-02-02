@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Button,
   Card,
@@ -47,35 +47,6 @@ export function AudioControls({ song, audioVersions, canDownload, lyricsVersions
   const currentLyrics = currentVersion?.lyricsId
     ? lyricsVersions.find((l) => l.id === currentVersion.lyricsId)?.content
     : null;
-
-  // 当切换版本时，如果当前正在播放这首歌，自动切换到新版本
-  useEffect(() => {
-    if (currentTrack?.id === song.id && currentVersion && isPlaying) {
-      // 如果切换的是不同的音频版本，重新播放
-      if (currentTrack.audioObjectId !== currentVersion.objectId) {
-        play({
-          id: song.id,
-          title: song.title,
-          artist: song.artist,
-          coverUrl: song.coverUrl,
-          audioObjectId: currentVersion.objectId,
-          versionKey: currentVersion.key,
-          lyrics: currentLyrics,
-        });
-      } else if (currentTrack.lyrics !== currentLyrics) {
-        // 如果是同一个音频但歌词不同（不应该发生，但保险起见），也更新
-        play({
-          id: song.id,
-          title: song.title,
-          artist: song.artist,
-          coverUrl: song.coverUrl,
-          audioObjectId: currentVersion.objectId,
-          versionKey: currentVersion.key,
-          lyrics: currentLyrics,
-        });
-      }
-    }
-  }, [selectedVersion, currentVersion, currentLyrics, currentTrack, isPlaying, song, play]);
 
   const handleDownload = async () => {
     if (!currentVersion || !canDownload) return;
