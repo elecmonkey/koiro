@@ -68,12 +68,13 @@ type UpdateSongBody = {
   coverObjectId?: string | null;
   coverFilename?: string | null;
   audioDefaultName?: string | null;
-  versions?: { id?: string; key: string; objectId: string; isDefault: boolean }[];
+  versions?: { id?: string; key: string; objectId: string; isDefault: boolean; lyricsId?: string | null }[];
   lyricsVersions?: {
     id: string;
     key: string;
     isDefault: boolean;
     lines: { id: string; startMs: number; endMs?: number; text: string; rubyByIndex?: Record<number, string> }[];
+    languages?: string[];
   }[];
   playlistIds?: string[];
 };
@@ -98,12 +99,15 @@ export async function PUT(request: Request, { params }: RouteParams) {
   }
 
   // 构建音频版本对象
-  let audioVersions = existing.audioVersions as Record<string, string>;
+  let audioVersions = existing.audioVersions as Record<string, { objectId: string; lyricsId?: string | null }>;
   if (body.versions !== undefined) {
-    audioVersions = body.versions.reduce<Record<string, string>>((acc, item) => {
+    audioVersions = body.versions.reduce<Record<string, { objectId: string; lyricsId?: string | null }>>((acc, item) => {
       const name = item.key?.trim();
       if (!name) return acc;
-      acc[name] = item.objectId;
+      acc[name] = {
+        objectId: item.objectId,
+        lyricsId: item.lyricsId ?? null,
+      };
       return acc;
     }, {});
   }
@@ -134,30 +138,62 @@ export async function PUT(request: Request, { params }: RouteParams) {
     },
   });
 
-  // 处理歌词版本：删除旧的，创建新的
+  // 处理歌词版本：更新现有的，创建新的，删除不需要的
   if (body.lyricsVersions !== undefined) {
-    // 删除所有旧歌词
-    await prisma.lyricsDocument.deleteMany({ where: { songId: id } });
+    const newLyricsIds = body.lyricsVersions.map(l => l.id).filter(Boolean) as string[];
     
-    // 创建新歌词
+    // 删除不在新列表中的旧歌词
+    if (newLyricsIds.length > 0) {
+      // 有现有歌词，删除不在列表中的
+      await prisma.lyricsDocument.deleteMany({ 
+        where: { 
+          songId: id,
+          id: { notIn: newLyricsIds }
+        } 
+      });
+    } else {
+      // 所有歌词都是新的，删除所有旧歌词
+      await prisma.lyricsDocument.deleteMany({ 
+        where: { songId: id } 
+      });
+    }
+    
+    // 更新或创建歌词
     for (const lyrVer of body.lyricsVersions) {
       const blocks = lyrVer.lines.map((line) => ({
         type: "line" as const,
         time: { startMs: line.startMs, endMs: line.endMs },
         children: buildLineInlines(line.text ?? "", line.rubyByIndex),
       }));
-      const content = { type: "doc", blocks };
+      const content = { 
+        type: "doc", 
+        meta: { languages: lyrVer.languages ?? ["ja"] },
+        blocks 
+      };
       const plainText = buildPlainText(blocks as Block[]);
-      await prisma.lyricsDocument.create({
-        data: {
-          songId: id,
-          versionKey: lyrVer.key?.trim() || "未命名",
-          isDefault: lyrVer.isDefault,
-          format: "KOIRO_AST_V1",
-          content,
-          plainText,
-        },
-      });
+      
+      const lyricsData = {
+        songId: id,
+        versionKey: lyrVer.key?.trim() || "未命名",
+        isDefault: lyrVer.isDefault,
+        format: "KOIRO_AST_V1",
+        content,
+        plainText,
+      };
+      
+      if (lyrVer.id) {
+        // 更新现有歌词
+        await prisma.lyricsDocument.upsert({
+          where: { id: lyrVer.id },
+          update: lyricsData,
+          create: { id: lyrVer.id, ...lyricsData },
+        });
+      } else {
+        // 创建新歌词
+        await prisma.lyricsDocument.create({
+          data: lyricsData,
+        });
+      }
     }
   }
 

@@ -4,7 +4,7 @@ export type UploadDraft = {
   title: string;
   description: string;
   staff: { id: string; role: string; name: string | string[] }[];
-  versions: { id: string; key: string; objectId: string; isDefault: boolean }[];
+  versions: { id: string; key: string; objectId: string; isDefault: boolean; lyricsId?: string | null }[];
   audioDefaultName: string | null;
   lyricsVersions: {
     id: string;

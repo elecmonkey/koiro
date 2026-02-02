@@ -37,6 +37,7 @@ type VersionItem = {
   key: string;
   objectId: string;
   isDefault: boolean;
+  lyricsId?: string | null; // 绑定的歌词版本ID
 };
 
 type LyricsVersion = {
@@ -72,7 +73,7 @@ const STAFF_TEMPLATE: StaffItem[] = [
 ];
 
 const VERSION_TEMPLATE: VersionItem[] = [
-  { id: "ver_1", key: "主版本", objectId: "", isDefault: true },
+  { id: "ver_1", key: "主版本", objectId: "", isDefault: true, lyricsId: null },
 ];
 
 const DEFAULT_LINES: LineDraft[] = [
@@ -246,6 +247,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
         key: nextName,
         objectId: "",
         isDefault: versions.length === 0,
+        lyricsId: null,
       },
     ];
     setVersions(next);
@@ -334,6 +336,13 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     }
     setLyricsVersions(next);
     setActiveLyricsId(next[0]?.id ?? "");
+    
+    // 清除所有音频版本中对该歌词的绑定
+    setVersions(prevVersions => 
+      prevVersions.map(v => 
+        v.lyricsId === id ? { ...v, lyricsId: null } : v
+      )
+    );
   };
 
   const updateLyricsLines = (id: string, lines: LineDraft[]) => {
@@ -422,8 +431,8 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     setTitle("");
     setDescription("");
     setStaff(STAFF_TEMPLATE);
-    setVersions(VERSION_TEMPLATE);
-    setAudioDefaultName(VERSION_TEMPLATE[0].key);
+    setVersions([{ id: "ver_1", key: "主版本", objectId: "", isDefault: true, lyricsId: null }]);
+    setAudioDefaultName("主版本");
     setLyricsVersions([
       { id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES, languages: ["ja"] },
     ]);
@@ -531,6 +540,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
                           onChange={updateVersion}
                           onRemove={removeVersion}
                           onSetDefault={setDefaultVersion}
+                          lyricsVersions={lyricsVersions}
                         />
                       ))}
                     </Stack>

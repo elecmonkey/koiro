@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, LinearProgress, Stack, TextField, Typography } from "@mui/material";
+import { Button, LinearProgress, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { useS3Upload } from "./useS3Upload";
 
 type VersionItem = {
@@ -9,6 +9,12 @@ type VersionItem = {
   key: string;
   objectId: string;
   isDefault: boolean;
+  lyricsId?: string | null;
+};
+
+type LyricsVersionOption = {
+  id: string;
+  key: string;
 };
 
 type VersionRowProps = {
@@ -16,9 +22,10 @@ type VersionRowProps = {
   onChange: (id: string, updates: Partial<VersionItem>) => void;
   onRemove: (id: string) => void;
   onSetDefault: (id: string) => void;
+  lyricsVersions: LyricsVersionOption[];
 };
 
-export default function VersionRow({ item, onChange, onRemove, onSetDefault }: VersionRowProps) {
+export default function VersionRow({ item, onChange, onRemove, onSetDefault, lyricsVersions }: VersionRowProps) {
   const [file, setFile] = useState<File | null>(null);
   const upload = useS3Upload();
 
@@ -31,6 +38,20 @@ export default function VersionRow({ item, onChange, onRemove, onSetDefault }: V
           onChange={(event) => onChange(item.id, { key: event.target.value })}
           fullWidth
         />
+        <TextField
+          select
+          label="绑定歌词"
+          value={item.lyricsId ?? ""}
+          onChange={(event) => onChange(item.id, { lyricsId: event.target.value || null })}
+          sx={{ minWidth: 180 }}
+        >
+          <MenuItem value="">无歌词</MenuItem>
+          {lyricsVersions.map((lyr) => (
+            <MenuItem key={lyr.id} value={lyr.id}>
+              {lyr.key}
+            </MenuItem>
+          ))}
+        </TextField>
         <Button
           variant={item.isDefault ? "contained" : "outlined"}
           onClick={() => onSetDefault(item.id)}

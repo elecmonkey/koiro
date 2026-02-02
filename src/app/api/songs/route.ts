@@ -43,13 +43,14 @@ type Body = {
   description: string;
   coverObjectId: string | null;
   audioDefaultName: string | null;
-  versions: { key: string; objectId: string; isDefault: boolean }[];
+  versions: { key: string; objectId: string; isDefault: boolean; lyricsId?: string | null }[];
   staff: { id: string; role: string; name: string | string[] }[];
   lyricsVersions: {
     id: string;
     key: string;
     isDefault: boolean;
     lines: { id: string; startMs: number; endMs?: number; text: string; rubyByIndex?: Record<number, string> }[];
+    languages?: string[];
   }[];
   playlistIds?: string[];
 };
@@ -81,10 +82,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "音频版本名不能为空" }, { status: 400 });
   }
 
-  const audioVersions = body.versions.reduce<Record<string, string>>((acc, item) => {
+  const audioVersions = body.versions.reduce<Record<string, { objectId: string; lyricsId?: string | null }>>((acc, item) => {
     const name = item.key?.trim();
     if (!name) return acc;
-    acc[name] = item.objectId;
+    acc[name] = {
+      objectId: item.objectId,
+      lyricsId: item.lyricsId ?? null,
+    };
     return acc;
   }, {});
   const staff = (body.staff ?? [])
@@ -112,7 +116,11 @@ export async function POST(request: Request) {
               time: { startMs: line.startMs, endMs: line.endMs },
               children: buildLineInlines(line.text ?? "", line.rubyByIndex),
             }));
-            const content = { type: "doc", blocks };
+            const content = { 
+              type: "doc", 
+              meta: { languages: lyr.languages ?? ["ja"] },
+              blocks 
+            };
             const plainText = buildPlainText(blocks as Block[]);
             return {
               versionKey: lyr.key.trim(),

@@ -72,16 +72,23 @@ export default async function SongDetailPage({ params }: PageProps) {
         (item) => item && typeof item === "object"
       )
     : [];
-  const audioVersionsRaw = (song.audioVersions ?? {}) as Record<string, string>;
+  const audioVersionsRaw = (song.audioVersions ?? {}) as Record<string, string | { objectId: string; lyricsId?: string | null }>;
   const coverUrl = song.coverObjectId ? await signObjectUrl(song.coverObjectId) : null;
   const canDownload = hasPermission(permissions, PERMISSIONS.DOWNLOAD);
 
   // 构建音频版本列表
-  const audioVersions: AudioVersion[] = Object.entries(audioVersionsRaw).map(([key, objectId]) => ({
-    key,
-    objectId,
-    isDefault: key === song.audioDefaultName,
-  }));
+  const audioVersions: AudioVersion[] = Object.entries(audioVersionsRaw).map(([key, value]) => {
+    // 兼容旧格式（直接是objectId字符串）和新格式（对象）
+    const objectId = typeof value === 'string' ? value : value.objectId;
+    const lyricsId = typeof value === 'string' ? null : (value.lyricsId ?? null);
+    
+    return {
+      key,
+      objectId,
+      isDefault: key === song.audioDefaultName,
+      lyricsId,
+    };
+  });
 
   // 构建歌词版本列表
   const lyricsVersions: LyricsVersion[] = song.lyrics.map((lyr) => ({
@@ -129,7 +136,7 @@ export default async function SongDetailPage({ params }: PageProps) {
                 }}
                 audioVersions={audioVersions}
                 canDownload={canDownload}
-                defaultLyrics={lyricsVersions.find((l) => l.isDefault)?.content ?? lyricsVersions[0]?.content}
+                lyricsVersions={lyricsVersions}
               />
             </Stack>
           </Stack>
