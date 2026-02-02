@@ -12,7 +12,6 @@ import {
 } from "@mui/material";
 import { PlayButton } from "@/app/components/PlayButton";
 import { Download } from "@mui/icons-material";
-import { usePlayer } from "@/app/player";
 import type { LyricsDocument, Block, Inline } from "@/app/editor/ast/types";
 
 export interface AudioVersion {
@@ -20,6 +19,14 @@ export interface AudioVersion {
   objectId: string;
   isDefault: boolean;
   lyricsId?: string | null;
+}
+
+export interface LyricsVersion {
+  id: string;
+  versionKey: string;
+  isDefault: boolean;
+  content: LyricsDocument;
+  languages?: string[];
 }
 
 export interface SongDetailClientProps {
@@ -35,7 +42,6 @@ export interface SongDetailClientProps {
 }
 
 export function AudioControls({ song, audioVersions, canDownload, lyricsVersions }: SongDetailClientProps) {
-  const { play, track: currentTrack, isPlaying } = usePlayer();
   const [selectedVersion, setSelectedVersion] = useState(() => {
     const defaultIdx = audioVersions.findIndex((v) => v.isDefault);
     return defaultIdx >= 0 ? defaultIdx : 0;
@@ -44,9 +50,11 @@ export function AudioControls({ song, audioVersions, canDownload, lyricsVersions
   const currentVersion = audioVersions[selectedVersion];
   
   // 根据当前音频版本的 lyricsId 查找对应的歌词
-  const currentLyrics = currentVersion?.lyricsId
-    ? lyricsVersions.find((l) => l.id === currentVersion.lyricsId)?.content
+  const currentLyricsVersion = currentVersion?.lyricsId
+    ? lyricsVersions.find((l) => l.id === currentVersion.lyricsId)
     : null;
+  
+  const currentLyrics = currentLyricsVersion?.content ?? null;
 
   const handleDownload = async () => {
     if (!currentVersion || !canDownload) return;
@@ -123,13 +131,6 @@ export function AudioControls({ song, audioVersions, canDownload, lyricsVersions
       </Stack>
     </Stack>
   );
-}
-
-export interface LyricsVersion {
-  id: string;
-  versionKey: string;
-  isDefault: boolean;
-  content: LyricsDocument;
 }
 
 interface LyricsDisplayProps {

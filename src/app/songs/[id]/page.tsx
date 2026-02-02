@@ -91,12 +91,26 @@ export default async function SongDetailPage({ params }: PageProps) {
   });
 
   // 构建歌词版本列表
-  const lyricsVersions: LyricsVersion[] = song.lyrics.map((lyr) => ({
-    id: lyr.id,
-    versionKey: lyr.versionKey,
-    isDefault: lyr.isDefault,
-    content: lyr.content as LyricsVersion["content"],
-  }));
+  type LyricsContent = {
+    type: string;
+    blocks?: unknown[];
+    meta?: {
+      languages?: string[];
+    };
+  };
+  
+  const lyricsVersions: LyricsVersion[] = song.lyrics.map((lyr) => {
+    const content = lyr.content as LyricsContent;
+    const languages = content?.meta?.languages ?? ["ja"];
+    
+    return {
+      id: lyr.id,
+      versionKey: lyr.versionKey,
+      isDefault: lyr.isDefault,
+      content: lyr.content as LyricsVersion["content"],
+      languages,
+    };
+  });
 
   // 构建艺术家信息（从 staff 中提取）
   const artistInfo = staff
@@ -124,6 +138,11 @@ export default async function SongDetailPage({ params }: PageProps) {
                     label={`${item.role ?? "Staff"} · ${Array.isArray(item.name) ? item.name.join("、") : (item.name ?? "")}`}
                   />
                 ))}
+                {lyricsVersions.length > 0 && lyricsVersions[0].languages && lyricsVersions[0].languages.length > 0 && (
+                  lyricsVersions[0].languages.map((lang) => (
+                    <Chip key={lang} label={lang.toUpperCase()} size="small" color="primary" variant="outlined" />
+                  ))
+                )}
               </Stack>
 
               {/* 音频控制：版本切换 + 播放/下载 */}
