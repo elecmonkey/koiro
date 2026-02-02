@@ -24,6 +24,7 @@ type PermissionKey = keyof typeof PERMISSIONS;
 
 type Answers = {
   email: string;
+  displayName: string;
   password: string;
   permissions: number;
 };
@@ -97,6 +98,9 @@ async function prompt() {
       throw new Error("邮箱不能为空");
     }
 
+    const displayNameInput = (await rl.question("昵称 (留空则默认为邮箱): ")).trim();
+    const displayName = displayNameInput || email;
+
     rl.close();
     const password = await promptPassword("密码: ");
     if (!password) {
@@ -107,7 +111,7 @@ async function prompt() {
     const permissions = await promptPermissions(rl2);
     rl2.close();
 
-    const answers: Answers = { email, password, permissions };
+    const answers: Answers = { email, displayName, password, permissions };
     return answers;
   } catch (e) {
     rl.close();
@@ -116,12 +120,13 @@ async function prompt() {
 }
 
 async function main() {
-  const { email, password, permissions } = await prompt();
+  const { email, displayName, password, permissions } = await prompt();
   const passwordHash = hashPassword(password);
 
   const user = await prisma.user.create({
     data: {
       email,
+      displayName,
       passwordHash,
       permissions,
     },
@@ -130,6 +135,7 @@ async function main() {
   console.log("用户已创建:", {
     id: user.id,
     email: user.email,
+    displayName: user.displayName,
     permissions: user.permissions,
   });
 }

@@ -23,6 +23,7 @@ export async function GET() {
     select: {
       id: true,
       email: true,
+      displayName: true,
       permissions: true,
       createdAt: true,
       updatedAt: true,
@@ -33,6 +34,7 @@ export async function GET() {
     users: users.map((u) => ({
       id: u.id,
       email: u.email,
+      displayName: u.displayName,
       permissions: u.permissions,
       createdAt: u.createdAt.toISOString(),
       updatedAt: u.updatedAt.toISOString(),
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { email, password, permissions: userPermissions } = body;
+  const { email, password, permissions: userPermissions, displayName } = body;
 
   if (!email || typeof email !== "string" || !email.trim()) {
     return NextResponse.json({ error: "邮箱不能为空" }, { status: 400 });
@@ -61,6 +63,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "无效的权限值" }, { status: 400 });
   }
 
+  // displayName 默认为邮箱
+  const finalDisplayName = (displayName && typeof displayName === "string" && displayName.trim())
+    ? displayName.trim()
+    : email.trim();
+
   // 检查邮箱是否已存在
   const existing = await prisma.user.findUnique({ where: { email: email.trim() } });
   if (existing) {
@@ -71,6 +78,7 @@ export async function POST(request: Request) {
   const user = await prisma.user.create({
     data: {
       email: email.trim(),
+      displayName: finalDisplayName,
       passwordHash,
       permissions: userPermissions,
     },
@@ -80,6 +88,7 @@ export async function POST(request: Request) {
     user: {
       id: user.id,
       email: user.email,
+      displayName: user.displayName,
       permissions: user.permissions,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),

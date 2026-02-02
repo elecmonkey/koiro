@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import {
   AppBar,
   Container,
@@ -11,6 +12,23 @@ import HomeLink from "./HomeLink";
 
 export default async function Navbar() {
   const session = await auth();
+
+  // 如果用户已登录，从数据库获取最新的用户信息（包括 displayName）
+  let userWithDisplayName = null;
+  if (session?.user?.id) {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        permissions: true,
+      },
+    });
+    if (user) {
+      userWithDisplayName = user;
+    }
+  }
 
   return (
     <AppBar
@@ -33,8 +51,8 @@ export default async function Navbar() {
         >
           <HomeLink />
           <Stack direction="row" spacing={{ xs: 1, md: 2 }} alignItems="center">
-            <NavLinks permissions={session?.user?.permissions ?? 0} user={session?.user} />
-            <NavUserMenu user={session?.user} />
+            <NavLinks permissions={userWithDisplayName?.permissions ?? 0} user={userWithDisplayName} />
+            <NavUserMenu user={userWithDisplayName} />
           </Stack>
         </Container>
       </Toolbar>

@@ -7,6 +7,7 @@ import { Box, Button, Stack, Typography } from "@mui/material";
 type NavUserMenuProps = {
   user?: {
     email?: string | null;
+    displayName?: string | null;
     permissions?: number;
   } | null;
 };
@@ -29,12 +30,24 @@ export default function NavUserMenu({ user }: NavUserMenuProps) {
       alignItems="center"
       sx={{ display: { xs: "none", md: "flex" } }}
     >
-      <Box>
-        <Typography variant="caption" color="text.secondary">
-          已登录
+      <Box
+        component={Link}
+        href="/profile"
+        sx={{
+          textDecoration: "none",
+          color: "inherit",
+          "&:hover": {
+            opacity: 0.8,
+          },
+        }}
+      >
+        <Typography variant="body2">
+          <Typography component="span" variant="caption" color="text.secondary">
+            已登录 - {user.displayName ?? user.email ?? "(未设置昵称)"}
+          </Typography>
         </Typography>
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          {user.email ?? "(无邮箱)"}
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+          {user.email}
         </Typography>
       </Box>
       <Button

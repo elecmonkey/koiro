@@ -72,7 +72,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   return NextResponse.json({ ok: true });
 }
 
-// PATCH - 重置用户密码
+// PATCH - 重置用户密码或编辑昵称
 export async function PATCH(request: Request, { params }: RouteParams) {
   const { id } = await params;
   const session = await auth();
@@ -82,22 +82,45 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const body = await request.json();
-  const { password } = body;
-
-  if (!password || typeof password !== "string" || password.length < 6) {
-    return NextResponse.json({ error: "密码至少 6 位" }, { status: 400 });
-  }
+  const { password, displayName } = body;
 
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) {
     return NextResponse.json({ error: "用户不存在" }, { status: 404 });
   }
 
-  const passwordHash = hashPassword(password);
-  await prisma.user.update({
-    where: { id },
-    data: { passwordHash },
-  });
+  // 重置密码
+  if (password !== undefined) {
+    if (!password || typeof password !== "string" || password.length < 6) {
+      return NextResponse.json({ error: "密码至少 6 位" }, { status: 400 });
+    }
 
-  return NextResponse.json({ ok: true });
+    const passwordHash = hashPassword(password);
+    await prisma.user.update({
+      where: { id },
+      data: { passwordHash },
+    });
+
+    return NextResponse.json({ ok: true });
+  }
+
+  // 编辑昵称
+  if (displayName !== undefined) {
+    if (!displayName || typeof displayName !== "string" || !displayName.trim()) {
+      return NextResponse.json({ error: "昵称不能为空" }, { status: 400 });
+    }
+
+    if (displayName.trim().length > 50) {
+      return NextResponse.json({ error: "昵称不能超过50个字符" }, { status: 400 });
+    }
+
+    await prisma.user.update({
+      where: { id },
+      data: { displayName: displayName.trim() },
+    });
+
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ error: "没有提供要更新的内容" }, { status: 400 });
 }

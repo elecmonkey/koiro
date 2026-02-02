@@ -25,6 +25,7 @@ const PAGE_SIZE = 10;
 interface User {
   id: string;
   email: string;
+  displayName: string;
   permissions: number;
   createdAt: string;
   updatedAt: string;
@@ -55,6 +56,7 @@ export default function UsersManager() {
   // 新建用户对话框
   const [createOpen, setCreateOpen] = useState(false);
   const [createEmail, setCreateEmail] = useState("");
+  const [createDisplayName, setCreateDisplayName] = useState("");
   const [createPassword, setCreatePassword] = useState("");
   const [createPermissions, setCreatePermissions] = useState(1); // 默认 VIEW
 
@@ -62,6 +64,11 @@ export default function UsersManager() {
   const [resetOpen, setResetOpen] = useState(false);
   const [resetTarget, setResetTarget] = useState<User | null>(null);
   const [resetPassword, setResetPassword] = useState("");
+
+  // 编辑昵称对话框
+  const [editNameOpen, setEditNameOpen] = useState(false);
+  const [editNameTarget, setEditNameTarget] = useState<User | null>(null);
+  const [editDisplayName, setEditDisplayName] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -166,6 +173,7 @@ export default function UsersManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: createEmail.trim(),
+          displayName: createDisplayName.trim() || createEmail.trim(),
           password: createPassword,
           permissions: createPermissions,
         }),
@@ -176,6 +184,7 @@ export default function UsersManager() {
       }
       setCreateOpen(false);
       setCreateEmail("");
+      setCreateDisplayName("");
       setCreatePassword("");
       setCreatePermissions(1);
       fetchUsers();
@@ -206,6 +215,31 @@ export default function UsersManager() {
       alert("密码已重置");
     } catch (err) {
       alert(err instanceof Error ? err.message : "重置失败");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 编辑昵称
+  const handleEditDisplayName = async () => {
+    if (!editNameTarget || !editDisplayName.trim()) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/users/${editNameTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: editDisplayName.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "更新失败");
+      }
+      setEditNameOpen(false);
+      setEditNameTarget(null);
+      setEditDisplayName("");
+      fetchUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "更新失败");
     } finally {
       setSubmitting(false);
     }
@@ -246,7 +280,8 @@ export default function UsersManager() {
                   <Box key={user.id}>
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                       <Box flex={1}>
-                        <Typography variant="subtitle1">{user.email}</Typography>
+                        <Typography variant="subtitle1">{user.displayName}</Typography>
+                        <Typography variant="body2" color="text.secondary">{user.email}</Typography>
                         <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
                           {getPermissionLabels(user.permissions).map((label) => (
                             <Chip key={label} label={label} size="small" variant="outlined" />
@@ -259,6 +294,17 @@ export default function UsersManager() {
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Button size="small" variant="outlined" onClick={() => openEditDialog(user)}>
                           权限
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => {
+                            setEditNameTarget(user);
+                            setEditDisplayName(user.displayName);
+                            setEditNameOpen(true);
+                          }}
+                        >
+                          昵称
                         </Button>
                         <Button
                           size="small"
@@ -307,7 +353,7 @@ export default function UsersManager() {
         <DialogTitle>编辑权限</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            用户: {editTarget?.email}
+            用户: {editTarget?.displayName} ({editTarget?.email})
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             {PERMISSION_LABELS.map(({ value, label }) => (
@@ -336,7 +382,7 @@ export default function UsersManager() {
         <DialogTitle>确认删除</DialogTitle>
         <DialogContent>
           <Typography>
-            确定要删除用户「{deleteTarget?.email}」吗？此操作不可撤销。
+            确定要删除用户「{deleteTarget?.displayName}」（{deleteTarget?.email}）吗？此操作不可撤销。
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -361,6 +407,14 @@ export default function UsersManager() {
               onChange={(e) => setCreateEmail(e.target.value)}
               fullWidth
               required
+            />
+            <TextField
+              label="昵称"
+              type="text"
+              value={createDisplayName}
+              onChange={(e) => setCreateDisplayName(e.target.value)}
+              fullWidth
+              helperText="留空则默认为邮箱"
             />
             <TextField
               label="密码"
@@ -409,7 +463,7 @@ export default function UsersManager() {
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              用户: {resetTarget?.email}
+              用户: {resetTarget?.displayName} ({resetTarget?.email})
             </Typography>
             <TextField
               label="新密码"
@@ -432,6 +486,39 @@ export default function UsersManager() {
             disabled={submitting || resetPassword.length < 6}
           >
             {submitting ? "重置中..." : "重置密码"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 编辑昵称对话框 */}
+      <Dialog open={editNameOpen} onClose={() => setEditNameOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>编辑昵称</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              用户: {editNameTarget?.email}
+            </Typography>
+            <TextField
+              label="昵称"
+              type="text"
+              value={editDisplayName}
+              onChange={(e) => setEditDisplayName(e.target.value)}
+              fullWidth
+              required
+              helperText="昵称不能为空"
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setEditNameOpen(false)} disabled={submitting}>
+            取消
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleEditDisplayName}
+            disabled={submitting || !editDisplayName.trim()}
+          >
+            {submitting ? "保存中..." : "保存"}
           </Button>
         </DialogActions>
       </Dialog>

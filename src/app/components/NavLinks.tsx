@@ -24,6 +24,7 @@ type NavLinksProps = {
   permissions?: number;
   user?: {
     email?: string | null;
+    displayName?: string | null;
     permissions?: number;
   } | null;
 };
@@ -115,13 +116,25 @@ export default function NavLinks({ permissions = 0, user }: NavLinksProps) {
           {user ? (
             <Stack spacing={1.5}>
               <Box>
-                <Typography variant="caption" color="text.secondary">
-                  已登录
+                <Typography variant="body2">
+                  <Typography component="span" variant="caption" color="text.secondary">
+                    已登录 - {user.displayName ?? user.email ?? "(未设置昵称)"}
+                  </Typography>
                 </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {user.email ?? "(无邮箱)"}
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  {user.email}
                 </Typography>
               </Box>
+              <Button
+                component={Link}
+                href="/profile"
+                variant="outlined"
+                size="small"
+                fullWidth
+                onClick={toggleDrawer(false)}
+              >
+                个人中心
+              </Button>
               <Button
                 variant="outlined"
                 size="small"
