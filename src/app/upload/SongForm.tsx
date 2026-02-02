@@ -161,6 +161,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
   const [lrcText, setLrcText] = useState("");
   const [lrcError, setLrcError] = useState<string | null>(null);
   const [lyricsEditorKey, setLyricsEditorKey] = useState(0);
+  const [uploadComponentKey, setUploadComponentKey] = useState(0);
   const skipNextSaveRef = useRef(false);
 
   // 加载所有播放列表
@@ -419,6 +420,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     ]);
     setActiveLyricsId("lyr_1");
     setLyricsEditorKey((prev) => prev + 1);
+    setUploadComponentKey((prev) => prev + 1);
     setCoverObjectId(null);
     setCoverFilename(null);
     setSelectedPlaylists([]);
@@ -515,7 +517,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
                     <Stack spacing={2}>
                       {versions.map((item) => (
                         <VersionRow
-                          key={item.id}
+                          key={`${item.id}-${uploadComponentKey}`}
                           item={item}
                           onChange={updateVersion}
                           onRemove={removeVersion}
@@ -526,6 +528,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
                   </Stack>
                   <Divider />
                   <ImageUploadField
+                    key={uploadComponentKey}
                     label="封面"
                     objectId={coverObjectId}
                     onObjectIdChange={(value) => {
