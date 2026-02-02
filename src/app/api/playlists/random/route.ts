@@ -1,19 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { PERMISSIONS, checkApiPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
 
 // GET - 获取随机播放列表
-export async function GET(request: NextRequest) {
+export async function GET() {
   const session = await auth();
   const permissions = session?.user?.permissions;
   if (!checkApiPermission(permissions, PERMISSIONS.VIEW, true)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { searchParams } = new URL(request.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") || "4", 10), 10);
+  const limit = 4;
 
   const rows = (await prisma.$queryRaw`
     SELECT p.id, p.name, p.description, p."coverObjectId", COUNT(sp."songId")::int as "songCount"

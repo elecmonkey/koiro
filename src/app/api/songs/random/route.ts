@@ -1,19 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { PERMISSIONS, checkApiPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
 
 // GET - 获取随机歌曲
-export async function GET(request: NextRequest) {
+export async function GET() {
   const session = await auth();
   const permissions = session?.user?.permissions;
   if (!checkApiPermission(permissions, PERMISSIONS.VIEW, true)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { searchParams } = new URL(request.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") || "3", 10), 10);
+  const limit = 5;
 
   // 使用原生 SQL 获取随机歌曲 ID
   const randomIds = (await prisma.$queryRaw`

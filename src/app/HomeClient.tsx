@@ -41,7 +41,7 @@ export default function HomeClient() {
   const fetchRandomSongs = async () => {
     setLoadingSongs(true);
     try {
-      const res = await fetch("/api/songs/random?limit=3");
+      const res = await fetch("/api/songs/random");
       if (res.ok) {
         const data = await res.json();
         setFeaturedSongs(data.songs);
@@ -56,7 +56,7 @@ export default function HomeClient() {
   const fetchRandomPlaylists = async () => {
     setLoadingPlaylists(true);
     try {
-      const res = await fetch("/api/playlists/random?limit=4");
+      const res = await fetch("/api/playlists/random");
       if (res.ok) {
         const data = await res.json();
         setFeaturedPlaylists(data.playlists);
