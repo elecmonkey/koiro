@@ -1,6 +1,15 @@
 import { requireAuth } from "@/lib/auth-guard";
 import { PERMISSIONS } from "@/lib/permissions";
+import { getSiteName } from "@/lib/site-config";
 import HomeClient from "./HomeClient";
+import type { Metadata } from "next";
+
+const siteName = getSiteName();
+
+export const metadata: Metadata = {
+  title: `${siteName} - 首页`,
+  description: "音乐歌词管理平台",
+};
 
 export const dynamic = "force-dynamic";
 

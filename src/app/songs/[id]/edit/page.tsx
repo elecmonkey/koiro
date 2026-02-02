@@ -1,7 +1,9 @@
 import { Container, Typography } from "@mui/material";
+import type { Metadata } from "next";
 import { requireAuth } from "@/lib/auth-guard";
 import { PERMISSIONS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { getSiteName } from "@/lib/site-config";
 import EditSongClient from "./EditSongClient";
 
 type PageProps = {
@@ -10,6 +12,30 @@ type PageProps = {
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const resolvedParams = await params;
+  const songId = resolvedParams?.id ? decodeURIComponent(resolvedParams.id) : "";
+  const siteName = getSiteName();
+  
+  if (!songId) {
+    return { title: `编辑歌曲 - ${siteName}` };
+  }
+
+  const song = await prisma.song.findUnique({
+    where: { id: songId },
+    select: { title: true },
+  });
+
+  if (!song) {
+    return { title: `编辑歌曲 - ${siteName}` };
+  }
+
+  return {
+    title: `编辑 ${song.title} - ${siteName}`,
+    description: `编辑歌曲信息和歌词`,
+  };
+}
 
 export default async function EditSongPage({ params }: PageProps) {
   const resolvedParams = await params;

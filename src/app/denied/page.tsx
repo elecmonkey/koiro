@@ -1,4 +1,13 @@
 import { Box, Button, Card, CardContent, Container, Stack, Typography } from "@mui/material";
+import { getSiteName } from "@/lib/site-config";
+import type { Metadata } from "next";
+
+const siteName = getSiteName();
+
+export const metadata: Metadata = {
+  title: `访问被拒绝 - ${siteName}`,
+  description: "您没有访问此页面的权限",
+};
 
 export default function DeniedPage() {
   return (

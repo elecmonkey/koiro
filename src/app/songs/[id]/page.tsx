@@ -6,12 +6,14 @@ import {
   Typography,
 } from "@mui/material";
 import Link from "next/link";
+import type { Metadata } from "next";
 import CoverArt from "@/app/components/CoverArt";
 import { AudioControls, LyricsDisplay, type AudioVersion, type LyricsVersion } from "./SongDetailClient";
 import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
 import { PERMISSIONS, hasPermission } from "@/lib/permissions";
+import { getSiteName } from "@/lib/site-config";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -19,6 +21,30 @@ type PageProps = {
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const resolvedParams = await params;
+  const songId = resolvedParams?.id ? decodeURIComponent(resolvedParams.id) : "";
+  const siteName = getSiteName();
+  
+  if (!songId) {
+    return { title: `歌曲详情 - ${siteName}` };
+  }
+
+  const song = await prisma.song.findUnique({
+    where: { id: songId },
+    select: { title: true, description: true },
+  });
+
+  if (!song) {
+    return { title: `未找到歌曲 - ${siteName}` };
+  }
+
+  return {
+    title: `${song.title} - ${siteName}`,
+    description: song.description || `收听 ${song.title}`,
+  };
+}
 
 export default async function SongDetailPage({ params }: PageProps) {
   const resolvedParams = await params;
@@ -131,7 +157,7 @@ export default async function SongDetailPage({ params }: PageProps) {
                   {song.description}
                 </Typography>
               </Stack>
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
                 {staff.map((item, index) => (
                   <Chip
                     key={`${item.role ?? "role"}-${index}`}
