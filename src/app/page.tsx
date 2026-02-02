@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 const siteName = getSiteName();
 
 export const metadata: Metadata = {
-  title: `${siteName} - 首页`,
+  title: siteName,
   description: "音乐歌词管理平台",
 };
 

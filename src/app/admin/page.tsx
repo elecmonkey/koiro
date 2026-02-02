@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 const siteName = getSiteName();
 
 export const metadata: Metadata = {
-  title: `管理后台 - ${siteName}`,
+  title: `歌单管理 - ${siteName}`,
   description: "系统管理面板",
 };
 
