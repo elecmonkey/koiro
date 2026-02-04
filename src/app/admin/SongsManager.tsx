@@ -29,7 +29,6 @@ interface Song {
   staff: { role?: string; name?: string | string[] }[];
   coverObjectId: string | null;
   audioVersions: Record<string, string>;
-  audioDefaultName: string | null;
   lyricsCount: number;
   updatedAt: string;
 }
@@ -129,9 +128,6 @@ export default function SongsManager() {
                       <Box flex={1}>
                         <Stack direction="row" spacing={1} alignItems="center">
                           <Typography variant="subtitle1">{song.title}</Typography>
-                          {song.audioDefaultName && (
-                            <Chip label={song.audioDefaultName} size="small" />
-                          )}
                         </Stack>
                         <Stack direction="row" spacing={1} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
                           <Typography variant="caption" color="text.secondary">
