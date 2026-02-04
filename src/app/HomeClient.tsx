@@ -104,6 +104,8 @@ export default function HomeClient() {
               fontFamily: 'var(--font-jp-display), "Noto Serif SC", Georgia, "Times New Roman", serif',
               display: "flex",
               alignItems: "flex-end", // 底部对齐
+              userSelect: "none",
+              WebkitUserSelect: "none",
             }}
           >
             <Box component="span" sx={{ lineHeight: 1 }}>「</Box>
