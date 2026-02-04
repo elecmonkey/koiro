@@ -42,6 +42,19 @@ const jpDisplayFont = Noto_Serif_JP({
 export const metadata: Metadata = {
   title: "Koiro",
   description: "个人音乐集合 — Koiro",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.svg", type: "image/svg+xml", sizes: "192x192" },
+      { url: "/icons/icon-512.svg", type: "image/svg+xml", sizes: "512x512" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.svg", sizes: "180x180", type: "image/svg+xml" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Koiro",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({
