@@ -272,7 +272,7 @@ export default function UsersManager() {
               <Typography variant="h6">
                 用户 ({total})
               </Typography>
-              <Stack direction="row" spacing={1} alignItems="center">
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }} sx={{ width: { xs: "100%", md: "auto" } }}>
                 <TextField
                   size="small"
                   placeholder="搜索用户"
@@ -296,9 +296,10 @@ export default function UsersManager() {
                       ) : undefined,
                     },
                   }}
-                  sx={{ minWidth: { xs: "100%", md: 220 } }}
+                  fullWidth
+                  sx={{ minWidth: { md: 220 } }}
                 />
-                <Button variant="contained" onClick={() => setCreateOpen(true)}>
+                <Button variant="contained" onClick={() => setCreateOpen(true)} fullWidth>
                   新建用户
                 </Button>
               </Stack>

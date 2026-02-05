@@ -119,7 +119,7 @@ export default function SongsManager() {
               <Typography variant="h6">
                 歌曲 ({total})
               </Typography>
-              <Stack direction="row" spacing={1} alignItems="center">
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }} sx={{ width: { xs: "100%", md: "auto" } }}>
                 <TextField
                   size="small"
                   placeholder="搜索歌曲"
@@ -143,10 +143,13 @@ export default function SongsManager() {
                       ) : undefined,
                     },
                   }}
-                  sx={{ minWidth: { xs: "100%", md: 220 } }}
+                  fullWidth
+                  sx={{ minWidth: { md: 220 } }}
                 />
                 <Link href="/upload">
-                  <Button variant="contained">上传新歌曲</Button>
+                  <Button variant="contained" fullWidth>
+                    上传新歌曲
+                  </Button>
                 </Link>
               </Stack>
             </Stack>
