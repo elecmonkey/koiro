@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
+  ButtonBase,
   Card,
   CardContent,
   Chip,
@@ -131,7 +132,7 @@ export default function StaffCloudClient() {
                   const fontSize = scaleSize(item.count, minCount, maxCount, 14, 36);
                   const topRoles = item.roles.slice(0, 3);
                   return (
-                    <Box
+                    <ButtonBase
                       key={item.name}
                       component={Link}
                       href={`/staff/${encodeURIComponent(item.name)}`}
@@ -188,7 +189,7 @@ export default function StaffCloudClient() {
                           ))}
                         </Stack>
                       )}
-                    </Box>
+                    </ButtonBase>
                   );
                 })}
               </Box>
