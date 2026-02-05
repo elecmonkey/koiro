@@ -87,7 +87,7 @@ const EMPTY_FORM_DATA: SongFormData = {
   staff: STAFF_TEMPLATE,
   versions: VERSION_TEMPLATE,
   audioDefaultName: VERSION_TEMPLATE[0].key,
-  lyricsVersions: [{ id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES, languages: ["ja"] }],
+  lyricsVersions: [{ id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES, languages: ["zh"] }],
   coverObjectId: null,
   coverFilename: null,
 };
@@ -299,7 +299,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
         key: nextKey,
         isDefault: lyricsVersions.length === 0,
         lines: DEFAULT_LINES,
-        languages: ["ja"],
+        languages: ["zh"],
       },
     ];
     setLyricsVersions(next);
@@ -434,7 +434,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     setVersions([{ id: "ver_1", key: "主版本", objectId: "", isDefault: true, lyricsId: null }]);
     setAudioDefaultName("主版本");
     setLyricsVersions([
-      { id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES, languages: ["ja"] },
+      { id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES, languages: ["zh"] },
     ]);
     setActiveLyricsId("lyr_1");
     setLyricsEditorKey((prev) => prev + 1);
