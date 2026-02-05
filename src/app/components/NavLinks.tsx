@@ -36,10 +36,10 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { label: "搜索", href: "/search" },
-  { label: "staff", href: "/staff" },
-  { label: "歌曲", href: "/songs" },
-  { label: "歌单", href: "/playlists" },
+  { label: "搜索", href: "/search", permission: PERMISSIONS.VIEW },
+  { label: "staff", href: "/staff", permission: PERMISSIONS.VIEW },
+  { label: "歌曲", href: "/songs", permission: PERMISSIONS.VIEW },
+  { label: "歌单", href: "/playlists", permission: PERMISSIONS.VIEW },
   { label: "上传", href: "/upload", permission: PERMISSIONS.UPLOAD },
   { label: "管理", href: "/admin", permission: PERMISSIONS.ADMIN },
 ];

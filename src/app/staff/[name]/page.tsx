@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { getSiteName } from "@/lib/site-config";
+import { requireAuth } from "@/lib/auth-guard";
+import { PERMISSIONS } from "@/lib/permissions";
 import StaffDetailClient from "./StaffDetailClient";
 
 type Params = {
@@ -18,6 +20,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function StaffDetailPage({ params }: Params) {
+  await requireAuth({ permission: PERMISSIONS.VIEW });
   const { name } = await params;
   return <StaffDetailClient name={name} />;
 }
