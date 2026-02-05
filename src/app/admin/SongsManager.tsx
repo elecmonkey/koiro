@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Alert,
   Box,
@@ -14,13 +14,15 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  IconButton,
+  InputAdornment,
   Pagination,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import Link from "next/link";
-
-const PAGE_SIZE = 10;
 
 interface Song {
   id: string;
@@ -38,19 +40,25 @@ export default function SongsManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [keyword, setKeyword] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Song | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchSongs = useCallback(async () => {
+  const fetchSongs = useCallback(async (q: string, p: number) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/songs");
+      const res = await fetch(`/api/songs?q=${encodeURIComponent(q)}&page=${p}`);
       if (!res.ok) throw new Error("获取歌曲列表失败");
       const data = await res.json();
       setSongs(data.songs);
+      setTotal(data.pagination?.total ?? 0);
+      setTotalPages(data.pagination?.totalPages ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "未知错误");
     } finally {
@@ -59,17 +67,23 @@ export default function SongsManager() {
   }, []);
 
   useEffect(() => {
-    fetchSongs();
-  }, [fetchSongs]);
-
-  const totalPages = Math.ceil(songs.length / PAGE_SIZE);
-  const paginatedSongs = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return songs.slice(start, start + PAGE_SIZE);
-  }, [songs, page]);
+    fetchSongs(keyword, page);
+  }, [fetchSongs, keyword, page]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("zh-CN");
+  };
+
+  const handleSearch = () => {
+    const q = inputValue.trim();
+    setKeyword(q);
+    setPage(1);
+  };
+
+  const handleClear = () => {
+    setInputValue("");
+    setKeyword("");
+    setPage(1);
   };
 
   const handleDelete = async () => {
@@ -83,7 +97,7 @@ export default function SongsManager() {
       }
       setDeleteOpen(false);
       setDeleteTarget(null);
-      fetchSongs();
+      fetchSongs(keyword, page);
     } catch (err) {
       alert(err instanceof Error ? err.message : "删除失败");
     } finally {
@@ -103,11 +117,38 @@ export default function SongsManager() {
               justifyContent="space-between"
             >
               <Typography variant="h6">
-                歌曲 ({songs.length})
+                歌曲 ({total})
               </Typography>
-              <Link href="/upload">
-                <Button variant="contained">上传新歌曲</Button>
-              </Link>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <TextField
+                  size="small"
+                  placeholder="搜索歌曲"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSearch();
+                  }}
+                  slotProps={{
+                    input: {
+                      endAdornment: inputValue ? (
+                        <InputAdornment position="end">
+                          <IconButton
+                            size="small"
+                            onClick={handleClear}
+                            aria-label="clear search"
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </InputAdornment>
+                      ) : undefined,
+                    },
+                  }}
+                  sx={{ minWidth: { xs: "100%", md: 220 } }}
+                />
+                <Link href="/upload">
+                  <Button variant="contained">上传新歌曲</Button>
+                </Link>
+              </Stack>
             </Stack>
 
             {loading ? (
@@ -122,7 +163,7 @@ export default function SongsManager() {
               </Typography>
             ) : (
               <>
-                {paginatedSongs.map((song) => (
+                {songs.map((song) => (
                   <Box key={song.id}>
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                       <Box flex={1}>

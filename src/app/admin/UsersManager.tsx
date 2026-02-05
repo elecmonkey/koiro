@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Alert,
   Box,
@@ -14,13 +14,14 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  IconButton,
+  InputAdornment,
   Pagination,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
-
-const PAGE_SIZE = 10;
+import CloseIcon from "@mui/icons-material/Close";
 
 interface User {
   id: string;
@@ -43,6 +44,10 @@ export default function UsersManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [keyword, setKeyword] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   // 编辑权限对话框
   const [editOpen, setEditOpen] = useState(false);
@@ -72,14 +77,16 @@ export default function UsersManager() {
 
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (q: string, p: number) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/users");
+      const res = await fetch(`/api/users?q=${encodeURIComponent(q)}&page=${p}`);
       if (!res.ok) throw new Error("获取用户列表失败");
       const data = await res.json();
       setUsers(data.users);
+      setTotal(data.pagination?.total ?? 0);
+      setTotalPages(data.pagination?.totalPages ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "未知错误");
     } finally {
@@ -88,17 +95,23 @@ export default function UsersManager() {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  const totalPages = Math.ceil(users.length / PAGE_SIZE);
-  const paginatedUsers = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return users.slice(start, start + PAGE_SIZE);
-  }, [users, page]);
+    fetchUsers(keyword, page);
+  }, [fetchUsers, keyword, page]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("zh-CN");
+  };
+
+  const handleSearch = () => {
+    const q = inputValue.trim();
+    setKeyword(q);
+    setPage(1);
+  };
+
+  const handleClear = () => {
+    setInputValue("");
+    setKeyword("");
+    setPage(1);
   };
 
   const getPermissionLabels = (permissions: number) => {
@@ -136,7 +149,7 @@ export default function UsersManager() {
       }
       setEditOpen(false);
       setEditTarget(null);
-      fetchUsers();
+      fetchUsers(keyword, page);
     } catch (err) {
       alert(err instanceof Error ? err.message : "更新失败");
     } finally {
@@ -155,7 +168,7 @@ export default function UsersManager() {
       }
       setDeleteOpen(false);
       setDeleteTarget(null);
-      fetchUsers();
+      fetchUsers(keyword, page);
     } catch (err) {
       alert(err instanceof Error ? err.message : "删除失败");
     } finally {
@@ -187,7 +200,7 @@ export default function UsersManager() {
       setCreateDisplayName("");
       setCreatePassword("");
       setCreatePermissions(1);
-      fetchUsers();
+      fetchUsers(keyword, page);
     } catch (err) {
       alert(err instanceof Error ? err.message : "创建失败");
     } finally {
@@ -237,7 +250,7 @@ export default function UsersManager() {
       setEditNameOpen(false);
       setEditNameTarget(null);
       setEditDisplayName("");
-      fetchUsers();
+      fetchUsers(keyword, page);
     } catch (err) {
       alert(err instanceof Error ? err.message : "更新失败");
     } finally {
@@ -257,11 +270,38 @@ export default function UsersManager() {
               justifyContent="space-between"
             >
               <Typography variant="h6">
-                用户 ({users.length})
+                用户 ({total})
               </Typography>
-              <Button variant="contained" onClick={() => setCreateOpen(true)}>
-                新建用户
-              </Button>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <TextField
+                  size="small"
+                  placeholder="搜索用户"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSearch();
+                  }}
+                  slotProps={{
+                    input: {
+                      endAdornment: inputValue ? (
+                        <InputAdornment position="end">
+                          <IconButton
+                            size="small"
+                            onClick={handleClear}
+                            aria-label="clear search"
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </InputAdornment>
+                      ) : undefined,
+                    },
+                  }}
+                  sx={{ minWidth: { xs: "100%", md: 220 } }}
+                />
+                <Button variant="contained" onClick={() => setCreateOpen(true)}>
+                  新建用户
+                </Button>
+              </Stack>
             </Stack>
 
             {loading ? (
@@ -276,7 +316,7 @@ export default function UsersManager() {
               </Typography>
             ) : (
               <>
-                {paginatedUsers.map((user) => (
+                {users.map((user) => (
                   <Box key={user.id}>
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                       <Box flex={1}>

@@ -1,26 +1,63 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { Block } from "@/app/editor/ast/types";
 import { buildPlainText } from "@/app/editor/ast/plainText";
 
+const PAGE_SIZE = 10;
+
 // GET - 获取所有歌曲列表
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await auth();
   const permissions = session?.user?.permissions ?? 0;
   if (!session?.user || !hasPermission(permissions, PERMISSIONS.ADMIN)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const songs = await prisma.song.findMany({
-    orderBy: { updatedAt: "desc" },
-    include: {
-      _count: {
-        select: { lyrics: true },
-      },
-    },
-  });
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const keyword = searchParams.get("q")?.trim();
+  const offset = (page - 1) * PAGE_SIZE;
+
+  let songIds: string[] = [];
+  let total = 0;
+
+  if (keyword) {
+    const like = `%${keyword}%`;
+    const countRows = (await prisma.$queryRaw<
+      { count: number }[]
+    >`SELECT COUNT(*)::int AS count FROM "Song" WHERE "title" ILIKE ${like} OR "description" ILIKE ${like} OR "staff"::text ILIKE ${like}`) as { count: number }[];
+    total = countRows[0]?.count ?? 0;
+
+    const idRows = (await prisma.$queryRaw<
+      { id: string }[]
+    >`SELECT id FROM "Song" WHERE "title" ILIKE ${like} OR "description" ILIKE ${like} OR "staff"::text ILIKE ${like} ORDER BY "updatedAt" DESC LIMIT ${PAGE_SIZE} OFFSET ${offset}`) as { id: string }[];
+    songIds = idRows.map((row) => row.id);
+  } else {
+    total = await prisma.song.count();
+    const idRows = await prisma.song.findMany({
+      select: { id: true },
+      orderBy: { updatedAt: "desc" },
+      skip: offset,
+      take: PAGE_SIZE,
+    });
+    songIds = idRows.map((row) => row.id);
+  }
+
+  const songs = songIds.length
+    ? await prisma.song.findMany({
+        where: { id: { in: songIds } },
+        include: {
+          _count: {
+            select: { lyrics: true },
+          },
+        },
+      })
+    : [];
+
+  const orderMap = new Map(songIds.map((id, index) => [id, index]));
+  songs.sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
 
   return NextResponse.json({
     songs: songs.map((s) => ({
@@ -35,6 +72,12 @@ export async function GET() {
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
     })),
+    pagination: {
+      page,
+      pageSize: PAGE_SIZE,
+      total,
+      totalPages: Math.ceil(total / PAGE_SIZE),
+    },
   });
 }
 

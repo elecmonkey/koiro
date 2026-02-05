@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { auth } from "@/auth";
 import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+
+const PAGE_SIZE = 10;
 
 function hashPassword(password: string) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -11,15 +13,33 @@ function hashPassword(password: string) {
 }
 
 // GET - 获取所有用户
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await auth();
   const permissions = session?.user?.permissions ?? 0;
   if (!session?.user || !hasPermission(permissions, PERMISSIONS.ADMIN)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const keyword = searchParams.get("q")?.trim();
+
+  const where = keyword
+    ? {
+        OR: [
+          { email: { contains: keyword, mode: "insensitive" as const } },
+          { displayName: { contains: keyword, mode: "insensitive" as const } },
+        ],
+      }
+    : undefined;
+
+  const total = await prisma.user.count({ where });
+
   const users = await prisma.user.findMany({
+    where,
     orderBy: { createdAt: "desc" },
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
     select: {
       id: true,
       email: true,
@@ -39,6 +59,12 @@ export async function GET() {
       createdAt: u.createdAt.toISOString(),
       updatedAt: u.updatedAt.toISOString(),
     })),
+    pagination: {
+      page,
+      pageSize: PAGE_SIZE,
+      total,
+      totalPages: Math.ceil(total / PAGE_SIZE),
+    },
   });
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Alert,
   Box,
@@ -13,15 +13,16 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  IconButton,
+  InputAdornment,
   Pagination,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import Link from "next/link";
 import ImageUploadField from "../components/ImageUploadField";
-
-const PAGE_SIZE = 10;
 
 interface Playlist {
   id: string;
@@ -43,6 +44,10 @@ export default function PlaylistsManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [keyword, setKeyword] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -63,14 +68,16 @@ export default function PlaylistsManager() {
     description: "",
   });
 
-  const fetchPlaylists = useCallback(async () => {
+  const fetchPlaylists = useCallback(async (q: string, p: number) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/playlists");
+      const res = await fetch(`/api/playlists?q=${encodeURIComponent(q)}&page=${p}`);
       if (!res.ok) throw new Error("获取播放列表失败");
       const data = await res.json();
       setPlaylists(data.playlists);
+      setTotal(data.pagination?.total ?? 0);
+      setTotalPages(data.pagination?.totalPages ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "未知错误");
     } finally {
@@ -79,17 +86,23 @@ export default function PlaylistsManager() {
   }, []);
 
   useEffect(() => {
-    fetchPlaylists();
-  }, [fetchPlaylists]);
-
-  const totalPages = Math.ceil(playlists.length / PAGE_SIZE);
-  const paginatedPlaylists = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return playlists.slice(start, start + PAGE_SIZE);
-  }, [playlists, page]);
+    fetchPlaylists(keyword, page);
+  }, [fetchPlaylists, keyword, page]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("zh-CN");
+  };
+
+  const handleSearch = () => {
+    const q = inputValue.trim();
+    setKeyword(q);
+    setPage(1);
+  };
+
+  const handleClear = () => {
+    setInputValue("");
+    setKeyword("");
+    setPage(1);
   };
 
   const handleCreate = async () => {
@@ -107,7 +120,7 @@ export default function PlaylistsManager() {
       }
       setDraft({ name: "", coverObjectId: "", description: "" });
       setCreateOpen(false);
-      fetchPlaylists();
+      fetchPlaylists(keyword, page);
     } catch (err) {
       alert(err instanceof Error ? err.message : "创建失败");
     } finally {
@@ -140,7 +153,7 @@ export default function PlaylistsManager() {
       }
       setEditOpen(false);
       setEditingPlaylist(null);
-      fetchPlaylists();
+      fetchPlaylists(keyword, page);
     } catch (err) {
       alert(err instanceof Error ? err.message : "保存失败");
     } finally {
@@ -159,7 +172,7 @@ export default function PlaylistsManager() {
       }
       setDeleteOpen(false);
       setDeleteTarget(null);
-      fetchPlaylists();
+      fetchPlaylists(keyword, page);
     } catch (err) {
       alert(err instanceof Error ? err.message : "删除失败");
     } finally {
@@ -179,11 +192,38 @@ export default function PlaylistsManager() {
               justifyContent="space-between"
             >
               <Typography variant="h6">
-                播放列表 ({playlists.length})
+                播放列表 ({total})
               </Typography>
-              <Button variant="contained" onClick={() => setCreateOpen(true)}>
-                新建播放列表
-              </Button>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <TextField
+                  size="small"
+                  placeholder="搜索播放列表"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSearch();
+                  }}
+                  slotProps={{
+                    input: {
+                      endAdornment: inputValue ? (
+                        <InputAdornment position="end">
+                          <IconButton
+                            size="small"
+                            onClick={handleClear}
+                            aria-label="clear search"
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </InputAdornment>
+                      ) : undefined,
+                    },
+                  }}
+                  sx={{ minWidth: { xs: "100%", md: 220 } }}
+                />
+                <Button variant="contained" onClick={() => setCreateOpen(true)}>
+                  新建播放列表
+                </Button>
+              </Stack>
             </Stack>
 
             {loading ? (
@@ -198,7 +238,7 @@ export default function PlaylistsManager() {
               </Typography>
             ) : (
               <>
-                {paginatedPlaylists.map((list) => (
+                {playlists.map((list) => (
                   <Box key={list.id}>
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                       <Box flex={1}>
