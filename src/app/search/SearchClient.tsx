@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   Card,
-  CardActionArea,
   Chip,
   CircularProgress,
   Container,
@@ -15,18 +14,21 @@ import {
   Typography,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import SearchResultCard from "@/app/components/SearchResultCard";
 
 type SearchResult = {
   id: string;
   title: string;
   description: string | null;
-  staff: { role: string; name: string }[];
-  coverObjectId: string | null;
+  staff: { role: string; name: string | string[] }[];
+  coverUrl: string | null;
   score: number;
   matchType: ("title" | "staff" | "lyrics")[];
   matchSnippet?: string;
+  titleHighlights?: { text: string; highlight?: boolean }[];
+  staffHighlights?: { role: string; name: { text: string; highlight?: boolean }[] }[];
+  matchSnippetHighlights?: { text: string; highlight?: boolean }[];
 };
 
 type SearchResponse = {
@@ -35,12 +37,6 @@ type SearchResponse = {
   page: number;
   pageSize: number;
   totalPages: number;
-};
-
-const matchTypeLabels: Record<string, string> = {
-  title: "标题",
-  staff: "Staff",
-  lyrics: "歌词",
 };
 
 export default function SearchClient() {
@@ -178,49 +174,7 @@ export default function SearchClient() {
                 ) : (
                   <Stack spacing={2}>
                     {results.map((item) => (
-                      <Card key={item.id} variant="outlined" sx={{ "&:hover": { bgcolor: "action.hover" } }}>
-                        <CardActionArea component={Link} href={`/songs/${item.id}`}>
-                          <Box sx={{ p: 2 }}>
-                              <Stack spacing={1}>
-                                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                                  <Typography variant="subtitle1" fontWeight={500}>
-                                    {item.title}
-                                  </Typography>
-                                  {item.matchType.map((type) => (
-                                    <Chip
-                                      key={type}
-                                      size="small"
-                                      label={matchTypeLabels[type]}
-                                      color={type === "title" ? "primary" : type === "staff" ? "secondary" : "default"}
-                                      variant="outlined"
-                                      sx={{ height: 20, fontSize: 11 }}
-                                    />
-                                  ))}
-                                </Stack>
-                                {item.matchSnippet && (
-                                  <Typography variant="body2" color="text.secondary">
-                                    {item.matchSnippet}
-                                  </Typography>
-                                )}
-                                {item.staff && item.staff.length > 0 && (
-                                  <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                                    {item.staff.slice(0, 3).map((s, idx) => (
-                                      <Typography key={idx} variant="caption" color="text.secondary">
-                                        {s.role}: {s.name}
-                                        {idx < Math.min(item.staff.length, 3) - 1 && " · "}
-                                      </Typography>
-                                    ))}
-                                    {item.staff.length > 3 && (
-                                      <Typography variant="caption" color="text.secondary">
-                                        等 {item.staff.length} 人
-                                      </Typography>
-                                    )}
-                                  </Stack>
-                                )}
-                              </Stack>
-                            </Box>
-                          </CardActionArea>
-                        </Card>
+                      <SearchResultCard key={item.id} result={item} />
                     ))}
                   </Stack>
                 )}

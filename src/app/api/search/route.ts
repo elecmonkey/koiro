@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { PERMISSIONS, checkApiPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
 
 // 搜索权重配置
 const WEIGHTS = {
@@ -16,9 +17,13 @@ type SearchResult = {
   description: string | null;
   staff: { role: string; name: string | string[] }[];
   coverObjectId: string | null;
+  coverUrl?: string | null;
   score: number;
   matchType: ("title" | "staff" | "lyrics")[];
   matchSnippet?: string;
+  titleHighlights?: { text: string; highlight?: boolean }[];
+  staffHighlights?: { role: string; name: { text: string; highlight?: boolean }[] }[];
+  matchSnippetHighlights?: { text: string; highlight?: boolean }[];
 };
 
 // GET - 搜索歌曲
@@ -57,6 +62,9 @@ export async function GET(request: NextRequest) {
     let score = 0;
     const matchType: ("title" | "staff" | "lyrics")[] = [];
     let matchSnippet: string | undefined;
+    let matchSnippetHighlights: { text: string; highlight?: boolean }[] | undefined;
+    let titleHighlights: { text: string; highlight?: boolean }[] | undefined;
+    let staffHighlights: { role: string; name: { text: string; highlight?: boolean }[] }[] | undefined;
 
     // 1. 标题匹配
     const titleLower = song.title.toLowerCase();
@@ -71,6 +79,7 @@ export async function GET(request: NextRequest) {
         score += WEIGHTS.title * 0.3;
       }
       matchType.push("title");
+      titleHighlights = buildHighlights(song.title, keyword);
     }
 
     // 2. Staff 值匹配（只匹配 name，不匹配 role 键）
@@ -89,12 +98,20 @@ export async function GET(request: NextRequest) {
             matchType.push("staff");
             if (!matchSnippet) {
               matchSnippet = `${item.role}: ${name}`;
+              matchSnippetHighlights = buildHighlights(matchSnippet, keyword);
             }
             break; // 每首歌只计算一次 staff 匹配
           }
         }
         if (matchType.includes("staff")) break;
       }
+      staffHighlights = staffArray.map((item) => ({
+        role: item.role,
+        name: buildHighlights(
+          Array.isArray(item.name) ? item.name.join("、") : item.name || "",
+          keyword
+        ),
+      }));
     }
 
     // 3. 歌词内容匹配
@@ -112,6 +129,7 @@ export async function GET(request: NextRequest) {
           const end = Math.min(lyr.plainText.length, index + keyword.length + 15);
           const snippet = lyr.plainText.slice(start, end);
           matchSnippet = (start > 0 ? "..." : "") + snippet + (end < lyr.plainText.length ? "..." : "");
+          matchSnippetHighlights = buildHighlights(matchSnippet, keyword);
         }
         break; // 每首歌只计算一次歌词匹配
       }
@@ -128,6 +146,9 @@ export async function GET(request: NextRequest) {
         score,
         matchType,
         matchSnippet,
+        titleHighlights,
+        staffHighlights,
+        matchSnippetHighlights,
       });
     }
   }
@@ -140,11 +161,51 @@ export async function GET(request: NextRequest) {
   const startIndex = (page - 1) * pageSize;
   const paginatedResults = scoredResults.slice(startIndex, startIndex + pageSize);
 
+  const resultsWithCovers = await Promise.all(
+    paginatedResults.map(async (item) => ({
+      ...item,
+      coverUrl: item.coverObjectId ? await signObjectUrl(item.coverObjectId) : null,
+    }))
+  );
+
   return NextResponse.json({
-    results: paginatedResults,
+    results: resultsWithCovers,
     total,
     page,
     pageSize,
     totalPages: Math.ceil(total / pageSize),
   });
+}
+
+function buildHighlights(text: string, keyword: string) {
+  if (!text) return [{ text: "" }];
+  const lowerText = text.toLowerCase();
+  const lowerKeyword = keyword.toLowerCase();
+  if (!lowerKeyword || !lowerText.includes(lowerKeyword)) {
+    return [{ text }];
+  }
+
+  const segments: { text: string; highlight?: boolean }[] = [];
+  let cursor = 0;
+  while (cursor < text.length) {
+    const index = lowerText.indexOf(lowerKeyword, cursor);
+    if (index === -1) {
+      segments.push({ text: text.slice(cursor) });
+      break;
+    }
+    if (index > cursor) {
+      segments.push({ text: text.slice(cursor, index) });
+    }
+    segments.push({ text: text.slice(index, index + lowerKeyword.length), highlight: true });
+    cursor = index + lowerKeyword.length;
+  }
+  return segments;
+}
+
+async function signObjectUrl(objectId: string) {
+  const command = new GetObjectCommand({
+    Bucket: process.env.S3_BUCKET_ENDPOINT === "true" ? process.env.S3_ENDPOINT : process.env.S3_BUCKET,
+    Key: objectId,
+  });
+  return getSignedUrl(s3Client, command, { expiresIn: 60 * 5 });
 }
