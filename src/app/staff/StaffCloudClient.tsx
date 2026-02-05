@@ -13,6 +13,7 @@ import {
   Switch,
   Typography,
 } from "@mui/material";
+import Link from "next/link";
 
 type StaffEntry = {
   name: string;
@@ -132,6 +133,8 @@ export default function StaffCloudClient() {
                   return (
                     <Box
                       key={item.name}
+                      component={Link}
+                      href={`/staff/${encodeURIComponent(item.name)}`}
                       sx={{
                         display: "inline-flex",
                         flexDirection: "column",
@@ -144,6 +147,13 @@ export default function StaffCloudClient() {
                         borderColor: "divider",
                         minWidth: 140,
                         textAlign: "center",
+                        textDecoration: "none",
+                        color: "inherit",
+                        transition: "border-color 0.2s, background-color 0.2s",
+                        "&:hover": {
+                          borderColor: "primary.main",
+                          bgcolor: "action.hover",
+                        },
                       }}
                     >
                       <Box
