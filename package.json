@@ -20,7 +20,8 @@
     "prisma:push": "pnpm --filter @koiro/db prisma:push",
     "auth:secret": "pnpx auth secret",
     "user:add": "tsx scripts/add-user.ts",
-    "songs:dedupe": "tsx scripts/find-duplicate-songs.ts"
+    "songs:dedupe": "tsx scripts/find-duplicate-songs.ts",
+    "songs:missing-lyrics": "tsx scripts/find-missing-lyrics.ts"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
