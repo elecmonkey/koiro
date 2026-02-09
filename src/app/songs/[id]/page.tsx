@@ -9,7 +9,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import CoverArt from "@/app/components/CoverArt";
 import { AudioControls, LyricsDisplay, type AudioVersion, type LyricsVersion } from "./SongDetailClient";
-import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
+import { GetObjectCommand, getSignedUrl, getDefaultS3Client } from "@/lib/s3";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
 import { PERMISSIONS, hasPermission } from "@/lib/permissions";
@@ -21,6 +21,7 @@ type PageProps = {
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+const s3Client = getDefaultS3Client();
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
@@ -98,23 +99,17 @@ export default async function SongDetailPage({ params }: PageProps) {
         (item) => item && typeof item === "object"
       )
     : [];
-  const audioVersionsRaw = (song.audioVersions ?? {}) as Record<string, string | { objectId: string; lyricsId?: string | null }>;
+  const audioVersionsRaw = (song.audioVersions ?? {}) as Record<string, { objectId: string; lyricsId?: string | null }>;
   const coverUrl = song.coverObjectId ? await signObjectUrl(song.coverObjectId) : null;
   const canDownload = hasPermission(permissions, PERMISSIONS.DOWNLOAD);
 
   // 构建音频版本列表
-  const audioVersions: AudioVersion[] = Object.entries(audioVersionsRaw).map(([key, value]) => {
-    // 兼容旧格式（直接是objectId字符串）和新格式（对象）
-    const objectId = typeof value === 'string' ? value : value.objectId;
-    const lyricsId = typeof value === 'string' ? null : (value.lyricsId ?? null);
-    
-    return {
-      key,
-      objectId,
-      isDefault: key === song.audioDefaultName,
-      lyricsId,
-    };
-  });
+  const audioVersions: AudioVersion[] = Object.entries(audioVersionsRaw).map(([key, value]) => ({
+    key,
+    objectId: value.objectId,
+    isDefault: key === song.audioDefaultName,
+    lyricsId: value.lyricsId ?? null,
+  }));
 
   // 构建歌词版本列表
   type LyricsContent = {

@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { PERMISSIONS, checkApiPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
+import { GetObjectCommand, getSignedUrl, getDefaultS3Client } from "@/lib/s3";
+
+const s3Client = getDefaultS3Client();
 
 // GET - 获取随机歌曲
 export async function GET() {
@@ -40,7 +42,8 @@ export async function GET() {
       title: song.title,
       description: song.description ?? "",
       staff: (song.staff as { role: string; name: string | string[] }[]) ?? [],
-      audioVersions: (song.audioVersions as Record<string, string>) ?? {},
+      audioVersions: (song.audioVersions as Record<string, { objectId: string; lyricsId?: string | null }>) ?? {},
+      audioDefaultName: song.audioDefaultName ?? null,
       coverUrl: song.coverObjectId ? await signObjectUrl(song.coverObjectId) : null,
       lyrics: song.lyrics[0]?.content ?? null,
     }))

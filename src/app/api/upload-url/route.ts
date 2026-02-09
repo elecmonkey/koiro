@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { PutObjectCommand, getSignedUrl, buildObjectKey, s3Client } from "@/lib/s3";
+import { PutObjectCommand, getSignedUrl, buildObjectKey, getDefaultS3Client } from "@/lib/s3";
 import { auth } from "@/auth";
 import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
@@ -8,6 +8,7 @@ const bucket = process.env.S3_BUCKET;
 const endpoint = process.env.S3_ENDPOINT;
 const bucketEndpoint = process.env.S3_BUCKET_ENDPOINT === "true";
 const prefix = process.env.S3_PREFIX ?? "";
+const s3Client = getDefaultS3Client();
 
 if (!bucket && !bucketEndpoint) {
   throw new Error("S3_BUCKET is not set");

@@ -18,7 +18,8 @@ type Song = {
   description: string | null;
   staff: { role: string; name: string | string[] }[];
   coverUrl: string | null;
-  audioVersions: Record<string, string> | null;
+  audioVersions: Record<string, { objectId: string; lyricsId?: string | null }> | null;
+  audioDefaultName?: string | null;
   lyrics: any | null;
   updatedAt: string;
 };

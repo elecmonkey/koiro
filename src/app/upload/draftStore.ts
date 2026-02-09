@@ -27,15 +27,6 @@ export function loadDraft(): UploadDraft | null {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const draft = JSON.parse(raw) as UploadDraft;
-    
-    // 向后兼容：为旧草稿数据添加 languages 字段
-    if (draft.lyricsVersions) {
-      draft.lyricsVersions = draft.lyricsVersions.map((lyr) => ({
-        ...lyr,
-        languages: lyr.languages ?? ["ja"],
-      }));
-    }
-    
     return draft;
   } catch {
     return null;

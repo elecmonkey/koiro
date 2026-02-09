@@ -22,7 +22,8 @@ export type SongCardData = {
   description?: string | null;
   staff: { role: string; name: string | string[] }[];
   coverUrl: string | null;
-  audioVersions?: Record<string, string | { objectId: string; lyricsId?: string | null }> | null;
+  audioVersions?: Record<string, { objectId: string; lyricsId?: string | null }> | null;
+  audioDefaultName?: string | null;
   lyrics?: LyricsDocument | null;
 };
 
@@ -37,14 +38,12 @@ export default function SongCard({ song, showPlayButton = true }: SongCardProps)
   // 获取默认音频版本
   const audioVersions = song.audioVersions ?? {};
   const versionNames = Object.keys(audioVersions);
-  const defaultVersionKey = versionNames[0];
-  const defaultVersionValue = versionNames.length > 0 ? audioVersions[defaultVersionKey] : null;
-  // 兼容旧格式（字符串）和新格式（对象）
-  const defaultAudioObjectId = defaultVersionValue 
-    ? (typeof defaultVersionValue === 'string' ? defaultVersionValue : defaultVersionValue.objectId)
-    : null;
-  // 只有当音频版本明确绑定了歌词时才传递歌词（新格式且有lyricsId）
-  const hasLyricsBinding = defaultVersionValue && typeof defaultVersionValue !== 'string' && defaultVersionValue.lyricsId;
+  const defaultVersionKey = song.audioDefaultName && audioVersions[song.audioDefaultName]
+    ? song.audioDefaultName
+    : versionNames[0];
+  const defaultVersionValue = defaultVersionKey ? audioVersions[defaultVersionKey] : null;
+  const defaultAudioObjectId = defaultVersionValue?.objectId ?? null;
+  const hasLyricsBinding = !!defaultVersionValue?.lyricsId;
   const artist = (song.staff ?? []).map((s) => (Array.isArray(s.name) ? s.name.join("、") : s.name)).join("、");
 
   const track: Track | null = defaultAudioObjectId

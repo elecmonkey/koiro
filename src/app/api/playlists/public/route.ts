@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { PERMISSIONS, checkApiPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
+import { GetObjectCommand, getSignedUrl, getDefaultS3Client } from "@/lib/s3";
 
 const PAGE_SIZE = 10;
+const s3Client = getDefaultS3Client();
 
 // GET - 获取公开播放列表（支持分页）
 export async function GET(request: NextRequest) {

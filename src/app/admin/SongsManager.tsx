@@ -30,7 +30,7 @@ interface Song {
   description: string;
   staff: { role?: string; name?: string | string[] }[];
   coverObjectId: string | null;
-  audioVersions: Record<string, string>;
+  audioVersions: Record<string, { objectId: string; lyricsId?: string | null }>;
   lyricsCount: number;
   updatedAt: string;
 }

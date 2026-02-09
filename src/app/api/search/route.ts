@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { PERMISSIONS, checkApiPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
+import { GetObjectCommand, getSignedUrl, getDefaultS3Client } from "@/lib/s3";
 
 // 搜索权重配置
 const WEIGHTS = {
@@ -10,6 +10,7 @@ const WEIGHTS = {
   staff: 50,       // Staff 值匹配
   lyrics: 20,      // 歌词内容匹配
 };
+const s3Client = getDefaultS3Client();
 
 type SearchResult = {
   id: string;

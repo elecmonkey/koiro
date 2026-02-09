@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { PERMISSIONS, checkApiPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
+import { GetObjectCommand, getSignedUrl, getDefaultS3Client } from "@/lib/s3";
 
 const PAGE_SIZE = 10;
+const s3Client = getDefaultS3Client();
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -93,7 +94,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         description: sp.song.description,
         staff: sp.song.staff as { role: string; name: string | string[] }[],
         coverUrl: songCoverUrl,
-        audioVersions: sp.song.audioVersions as Record<string, string> | null,
+        audioVersions: sp.song.audioVersions as Record<string, { objectId: string; lyricsId?: string | null }> | null,
+        audioDefaultName: sp.song.audioDefaultName ?? null,
         order: sp.order,
         lyrics: defaultLyrics,
       };

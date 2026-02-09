@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { GetObjectCommand, getSignedUrl, s3Client } from "@/lib/s3";
+import { GetObjectCommand, getSignedUrl, getDefaultS3Client } from "@/lib/s3";
 import { auth } from "@/auth";
 import { PERMISSIONS, checkApiPermission } from "@/lib/permissions";
 
 const bucket = process.env.S3_BUCKET;
 const endpoint = process.env.S3_ENDPOINT;
 const bucketEndpoint = process.env.S3_BUCKET_ENDPOINT === "true";
+const s3Client = getDefaultS3Client();
 
 if (!bucket && !bucketEndpoint) {
   throw new Error("S3_BUCKET is not set");

@@ -71,18 +71,14 @@ export default async function EditSongPage({ params }: PageProps) {
   }
 
   // 转换数据格式以匹配 SongForm
-  const audioVersionsRaw = (song.audioVersions ?? {}) as Record<string, string | { objectId: string; lyricsId?: string | null }>;
+  const audioVersionsRaw = (song.audioVersions ?? {}) as Record<string, { objectId: string; lyricsId?: string | null }>;
   const versions = Object.entries(audioVersionsRaw).map(([key, value], index) => {
-    // 兼容旧格式（直接是objectId字符串）和新格式（对象）
-    const objectId = typeof value === 'string' ? value : value.objectId;
-    const lyricsId = typeof value === 'string' ? null : (value.lyricsId ?? null);
-    
     return {
       id: `ver_${index}`,
       key,
-      objectId,
+      objectId: value.objectId,
       isDefault: key === song.audioDefaultName,
-      lyricsId,
+      lyricsId: value.lyricsId ?? null,
     };
   });
 
