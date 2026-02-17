@@ -72,25 +72,23 @@ const STAFF_TEMPLATE: StaffItem[] = [
   { id: "staff_2", role: "演唱", name: "" },
 ];
 
-const VERSION_TEMPLATE: VersionItem[] = [
-  { id: "ver_1", key: "主版本", objectId: "", isDefault: true, lyricsId: null },
-];
-
 const DEFAULT_LINES: LineDraft[] = [
   { id: "line_1", startMs: 10500, endMs: 14200, text: "君/の声が" },
   { id: "line_2", startMs: 16800, text: "世界を変える" },
 ];
 
-const EMPTY_FORM_DATA: SongFormData = {
+const buildEmptyFormData = (): SongFormData => ({
   title: "",
   description: "",
   staff: STAFF_TEMPLATE,
-  versions: VERSION_TEMPLATE,
-  audioDefaultName: VERSION_TEMPLATE[0].key,
-  lyricsVersions: [{ id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES, languages: ["zh"] }],
+  versions: [{ id: makeId("ver"), key: "主版本", objectId: "", isDefault: true, lyricsId: null }],
+  audioDefaultName: "主版本",
+  lyricsVersions: [
+    { id: makeId("lyr"), key: "原文", isDefault: true, lines: DEFAULT_LINES, languages: ["zh"] },
+  ],
   coverObjectId: null,
   coverFilename: null,
-};
+});
 
 type SongFormProps = {
   /** 编辑模式时传入歌曲 ID */
@@ -103,6 +101,7 @@ type SongFormProps = {
 
 export default function SongForm({ songId, initialData, mode }: SongFormProps) {
   const router = useRouter();
+  const emptyFormData = useMemo(() => buildEmptyFormData(), []);
   
   // 仅在创建模式下从草稿加载
   const draftData = useMemo(() => {
@@ -125,31 +124,35 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
   };
 
   const [staff, setStaff] = useState<StaffItem[]>(
-    () => getInitialValue("staff", EMPTY_FORM_DATA.staff)
+    () => getInitialValue("staff", emptyFormData.staff)
   );
   const [versions, setVersions] = useState<VersionItem[]>(
-    () => getInitialValue("versions", EMPTY_FORM_DATA.versions)
+    () => getInitialValue("versions", emptyFormData.versions)
   );
   const [audioDefaultName, setAudioDefaultName] = useState<string | null>(
-    () => getInitialValue("audioDefaultName", EMPTY_FORM_DATA.audioDefaultName)
+    () => getInitialValue("audioDefaultName", emptyFormData.audioDefaultName)
   );
   const [title, setTitle] = useState(
-    () => getInitialValue("title", EMPTY_FORM_DATA.title)
+    () => getInitialValue("title", emptyFormData.title)
   );
   const [description, setDescription] = useState(
-    () => getInitialValue("description", EMPTY_FORM_DATA.description)
+    () => getInitialValue("description", emptyFormData.description)
   );
   const [coverObjectId, setCoverObjectId] = useState<string | null>(
-    () => getInitialValue("coverObjectId", EMPTY_FORM_DATA.coverObjectId)
+    () => getInitialValue("coverObjectId", emptyFormData.coverObjectId)
   );
   const [coverFilename, setCoverFilename] = useState<string | null>(
-    () => getInitialValue("coverFilename", EMPTY_FORM_DATA.coverFilename)
+    () => getInitialValue("coverFilename", emptyFormData.coverFilename)
   );
   const [lyricsVersions, setLyricsVersions] = useState<LyricsVersion[]>(
-    () => getInitialValue("lyricsVersions", EMPTY_FORM_DATA.lyricsVersions)
+    () => getInitialValue("lyricsVersions", emptyFormData.lyricsVersions)
   );
   const [activeLyricsId, setActiveLyricsId] = useState<string>(
-    () => (initialData?.lyricsVersions?.[0]?.id ?? draftData?.lyricsVersions?.[0]?.id ?? "lyr_1")
+    () =>
+      initialData?.lyricsVersions?.[0]?.id ??
+      draftData?.lyricsVersions?.[0]?.id ??
+      emptyFormData.lyricsVersions[0]?.id ??
+      ""
   );
 
   // 播放列表相关状态
@@ -428,15 +431,14 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
   };
 
   const resetForm = () => {
+    const nextEmpty = buildEmptyFormData();
     setTitle("");
     setDescription("");
     setStaff(STAFF_TEMPLATE);
-    setVersions([{ id: "ver_1", key: "主版本", objectId: "", isDefault: true, lyricsId: null }]);
-    setAudioDefaultName("主版本");
-    setLyricsVersions([
-      { id: "lyr_1", key: "原文", isDefault: true, lines: DEFAULT_LINES, languages: ["zh"] },
-    ]);
-    setActiveLyricsId("lyr_1");
+    setVersions(nextEmpty.versions);
+    setAudioDefaultName(nextEmpty.audioDefaultName);
+    setLyricsVersions(nextEmpty.lyricsVersions);
+    setActiveLyricsId(nextEmpty.lyricsVersions[0]?.id ?? "");
     setLyricsEditorKey((prev) => prev + 1);
     setUploadComponentKey((prev) => prev + 1);
     setCoverObjectId(null);
