@@ -166,6 +166,8 @@ export async function POST(request: Request) {
             };
             const plainText = buildPlainText(blocks as Block[]);
             return {
+              // Preserve client-provided id so audioVersions.lyricsId can bind immediately.
+              ...(lyr.id ? { id: lyr.id } : {}),
               versionKey: lyr.key.trim(),
               isDefault: !!lyr.isDefault,
               format: "KOIRO_AST_V1",
