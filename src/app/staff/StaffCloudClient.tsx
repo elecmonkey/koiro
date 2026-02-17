@@ -91,7 +91,7 @@ export default function StaffCloudClient() {
           <Typography variant="h4">Staff 云</Typography>
           <Stack direction="row" spacing={1} alignItems="center">
             <Typography variant="body2" color="text.secondary">
-              显示只出现一次
+              显示出现 1-2 次
             </Typography>
             <Switch
               size="small"

@@ -54,7 +54,7 @@ export async function GET(request: Request) {
         .map(([role, count]) => ({ role, count }))
         .sort((a, b) => b.count - a.count),
     }))
-    .filter((item) => includeSingles || item.count > 1)
+    .filter((item) => includeSingles || item.count > 2)
     .sort((a, b) => b.count - a.count);
 
   return NextResponse.json({ staff });
