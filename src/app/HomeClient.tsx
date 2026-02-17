@@ -16,6 +16,8 @@ import {
   Typography,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import ShuffleIcon from "@mui/icons-material/Shuffle";
+import QueueMusicIcon from "@mui/icons-material/QueueMusic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SongCard, { type SongCardData } from "@/app/components/SongCard";
@@ -205,11 +207,9 @@ export default function HomeClient() {
           <Box sx={{ p: 3 }}>
             <Stack spacing={2}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Stack spacing={0.3}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <QueueMusicIcon sx={{ fontSize: 24, color: "text.secondary" }} />
                   <Typography variant="h6">随机歌单</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {featuredPlaylists.length} 个
-                  </Typography>
                 </Stack>
                 <Stack direction="row" spacing={1}>
                   <Button component={Link} href="/playlists" size="small" variant="text">
@@ -283,9 +283,6 @@ export default function HomeClient() {
                             <Typography variant="subtitle2" noWrap title={playlist.name}>
                               {playlist.name}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {playlist.songCount} 首
-                            </Typography>
                           </CardContent>
                         </CardActionArea>
                       </Card>
@@ -303,11 +300,9 @@ export default function HomeClient() {
           <Box sx={{ p: 3 }}>
             <Stack spacing={2}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Stack spacing={0.3}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <ShuffleIcon sx={{ fontSize: 24, color: "text.secondary" }} />
                   <Typography variant="h6">随机音乐</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {featuredSongs.length} 首
-                  </Typography>
                 </Stack>
                 <Stack direction="row" spacing={1}>
                   <Button component={Link} href="/songs" size="small" variant="text">
