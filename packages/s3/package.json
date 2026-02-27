@@ -16,14 +16,14 @@
     "dev": "tsdown --watch"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.980.0",
-    "@aws-sdk/lib-storage": "^3.980.0",
-    "@aws-sdk/s3-request-presigner": "^3.980.0",
-    "dotenv": "^16.5.0"
+    "@aws-sdk/client-s3": "^3.999.0",
+    "@aws-sdk/lib-storage": "^3.999.0",
+    "@aws-sdk/s3-request-presigner": "^3.999.0",
+    "dotenv": "^17.3.1"
   },
   "devDependencies": {
-    "@types/node": "^25.1.0",
-    "tsdown": "^0.20.1",
+    "@types/node": "^25.3.2",
+    "tsdown": "^0.20.3",
     "typescript": "^5.9.3"
   }
 }
