@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import SongCard, { type SongCardData } from "@/app/components/SongCard";
 
-type Song = {
+type Song = SongCardData & {
   id: string;
   title: string;
   description: string | null;
@@ -20,7 +20,6 @@ type Song = {
   coverUrl: string | null;
   audioVersions: Record<string, { objectId: string; lyricsId?: string | null }> | null;
   audioDefaultName?: string | null;
-  lyrics: any | null;
   updatedAt: string;
 };
 
