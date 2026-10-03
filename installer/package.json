@@ -1,0 +1,23 @@
+{
+  "name": "@koiro/installer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "koiro-installer": "dist/install.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "pnpm --filter @koiro/cli build && rs lib && pnpm pack --out dist/koiro-installer.tgz",
+    "test": "rs test run"
+  },
+  "devDependencies": {
+    "@clack/prompts": "^1.8.1",
+    "@types/node": "^26.6.4"
+  }
+}

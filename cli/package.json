@@ -1,0 +1,13 @@
+{
+  "name": "@koiro/cli",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rs lib",
+    "dev": "rs lib --watch",
+    "test": "rs test run"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4"
+  }
+}
