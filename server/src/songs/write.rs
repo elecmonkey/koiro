@@ -8,6 +8,7 @@ use uuid::Uuid;
 
 use super::StaffEntry;
 use crate::{
+    api::Language,
     error::{AppError, AppResult},
     lyrics::{self, LineInput},
     state::AppState,
@@ -62,7 +63,7 @@ pub struct LyricsInput {
     #[serde(default)]
     pub is_default: bool,
     #[serde(default)]
-    pub languages: Vec<String>,
+    pub languages: Vec<Language>,
     #[serde(default)]
     pub lines: Vec<LineInput>,
 }
@@ -144,8 +145,10 @@ fn validate(state: &AppState, input: SongInput) -> AppResult<Validated> {
         if !lyrics_keys.insert(key.clone()) {
             return Err(bad(format!("歌词版本名重复：{key}")));
         }
-        let doc = lyrics::build(&item.lines, &item.languages)
-            .map_err(|err| bad(format!("歌词「{key}」：{err}")))?;
+        let mut seen = HashSet::new();
+        let languages: Vec<Language> = item.languages.into_iter().filter(|l| seen.insert(*l)).collect();
+        let doc =
+            lyrics::build(&item.lines, &languages).map_err(|err| bad(format!("歌词「{key}」：{err}")))?;
         lyrics.push(ValidLyrics {
             key,
             is_default: item.is_default,

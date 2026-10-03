@@ -1,3 +1,4 @@
+import { languageName } from '@koiro/shared';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
@@ -151,7 +152,7 @@ export default function SongDetailPage() {
     versionKey: lyr.versionKey,
     isDefault: lyr.isDefault,
     content: lyr.content,
-    languages: lyr.content?.meta?.languages ?? ['ja'],
+    languages: lyr.content?.meta?.languages ?? [],
   }));
 
   // 艺术家信息：优先取演唱相关的 staff
@@ -211,7 +212,7 @@ export default function SongDetailPage() {
                 {lyricsVersions[0]?.languages?.map((lang) => (
                   <Chip
                     key={lang}
-                    label={lang.toUpperCase()}
+                    label={languageName(lang)}
                     size="small"
                     color="primary"
                     variant="outlined"

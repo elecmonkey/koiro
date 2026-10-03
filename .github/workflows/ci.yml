@@ -30,8 +30,10 @@ jobs:
             server:
               - 'Cargo.toml'
               - 'Cargo.lock'
+              - '.cargo/**'
               - '.sqlx/**'
               - 'server/**'
+              - 'packages/shared/src/generated/**'
             web:
               - '.node-version'
               - 'package.json'
@@ -42,6 +44,7 @@ jobs:
               - 'cli/**'
               - 'installer/**'
               - 'skill/**'
+              - 'packages/**'
             workflow:
               - '.github/workflows/**'
 
@@ -117,6 +120,12 @@ jobs:
 
       - name: Test
         run: cargo test --workspace --locked
+
+      # 测试会从 server/src/api 重新导出 TS 类型，结果必须与提交的一致
+      - name: Check generated types
+        run: |
+          git add --intent-to-add packages/shared/src/generated
+          git diff --exit-code -- packages/shared/src/generated
 
   deploy-server:
     name: Backend Deploy

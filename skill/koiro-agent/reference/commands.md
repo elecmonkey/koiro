@@ -251,7 +251,7 @@ koiro playlist reorder <PLAYLIST> <ID3> <ID1> <ID2> …
 
 ### `koiro language view CODE [--page N | --all]`
 
-需要 VIEW。输出 `{language: {code, total}, songs: <分页的歌曲摘要>}`。
+需要 VIEW。输出 `{language: {code, total}, songs: <分页的歌曲摘要>}`。`CODE` 不是站点定义的语种时退出码 `2`，`details.languages` 列出可选代码。
 
 ## 本地工具
 

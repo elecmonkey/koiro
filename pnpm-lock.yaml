@@ -175,6 +175,9 @@ importers:
 
   cli:
     devDependencies:
+      '@koiro/shared':
+        specifier: workspace:*
+        version: link:../packages/shared
       '@types/node':
         specifier: ^26.6.4
         version: 26.6.4
@@ -187,6 +190,8 @@ importers:
       '@types/node':
         specifier: ^26.6.4
         version: 26.6.4
+
+  packages/shared: {}
 
   server: {}
 
@@ -210,6 +215,9 @@ importers:
       '@fontsource/zen-kaku-gothic-new':
         specifier: ^5.3.0
         version: 5.3.0
+      '@koiro/shared':
+        specifier: workspace:*
+        version: link:../packages/shared
       '@mui/icons-material':
         specifier: ^9.4.0
         version: 9.4.0(@mui/material@9.4.0(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.0))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.0))(@types/react@19.3.0)(react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@types/react@19.3.0)(react@19.3.0)

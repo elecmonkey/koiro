@@ -1,3 +1,4 @@
+import type { Language } from '@koiro/shared';
 import { useEffect, useMemo, useReducer, useRef } from 'react';
 import type { Block, Inline, LyricsDocument } from '../ast/types';
 import { buildPlainText } from '../ast/plainText';
@@ -18,7 +19,7 @@ const initialLines: LineDraft[] = [
 type UseLyricsEditorOptions = {
   initial?: LineDraft[];
   onChange?: (lines: LineDraft[]) => void;
-  languages?: string[];
+  languages?: Language[];
 };
 
 type EditorState = {

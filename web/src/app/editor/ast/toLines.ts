@@ -1,7 +1,8 @@
+import type { Language } from '@koiro/shared';
 import type { LineDraft } from '../state/useLyricsEditor';
 
 export type LyricsContent = {
-  meta?: { languages?: string[] };
+  meta?: { languages?: Language[] };
   blocks?: {
     type: string;
     time?: { startMs?: number; endMs?: number };

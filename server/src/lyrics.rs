@@ -5,6 +5,8 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use crate::api::Language;
+
 pub const FORMAT: &str = "KOIRO_AST_V1";
 
 /// 编辑器中的一行：`text` 用 `/` 分词，`ruby_by_index` 按分词序号标注读音
@@ -31,7 +33,7 @@ pub struct BuiltDocument {
     pub plain_text: String,
 }
 
-pub fn build(lines: &[LineInput], languages: &[String]) -> Result<BuiltDocument, String> {
+pub fn build(lines: &[LineInput], languages: &[Language]) -> Result<BuiltDocument, String> {
     let mut blocks = Vec::with_capacity(lines.len());
     let mut plain_lines = Vec::new();
 
@@ -41,6 +43,11 @@ pub fn build(lines: &[LineInput], languages: &[String]) -> Result<BuiltDocument,
         }
         if line.end_ms.is_some_and(|end| end < line.start_ms) {
             return Err(format!("第 {} 行结束时间不能早于开始时间", index + 1));
+        }
+        // 一行歌词就是一个带时间的行，行内不能再换行
+        let has_newline = |s: &str| s.contains(['\n', '\r']);
+        if has_newline(&line.text) || line.ruby_by_index.values().any(|ruby| has_newline(ruby)) {
+            return Err(format!("第 {} 行不能包含换行", index + 1));
         }
         let children = inlines(&line.text, &line.ruby_by_index);
         let plain = plain_text_of(&children);
@@ -118,7 +125,7 @@ mod tests {
                 line(16800, "", &[]),
                 line(20000, "  世界を  変える ", &[]),
             ],
-            &["ja".into()],
+            &[Language::Ja],
         )
         .unwrap();
         assert_eq!(doc.plain_text, "君の声が\n世界を 変える");
@@ -132,6 +139,13 @@ mod tests {
             json!([{ "type": "text", "text": "" }])
         );
         assert_eq!(doc.content["meta"]["languages"], json!(["ja"]));
+    }
+
+    #[test]
+    fn rejects_newlines_inside_a_line() {
+        assert!(build(&[line(0, "a\nb", &[])], &[]).is_err());
+        assert!(build(&[line(0, "a\r", &[])], &[]).is_err());
+        assert!(build(&[line(0, "君", &[(0, "き\nみ")])], &[]).is_err());
     }
 
     #[test]

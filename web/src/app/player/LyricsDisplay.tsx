@@ -1,5 +1,7 @@
 import { Box, Stack, Typography } from '@mui/material';
+import type { Language } from '@koiro/shared';
 import type { Inline } from '@/app/editor/ast/types';
+import { lyricsFontFamily } from '@/lib/lyricsFont';
 import type { LyricLine } from './useLyricsSync';
 
 interface LyricsDisplayProps {
@@ -9,7 +11,7 @@ interface LyricsDisplayProps {
   /** 是否处于预览模式（第一句歌词开始前） */
   isPreview?: boolean;
   /** 歌词语言列表，用于判断字体优先级 */
-  languages?: string[];
+  languages?: Language[];
 }
 
 /**
@@ -48,20 +50,14 @@ function LyricLineView({
   line: LyricLine | null;
   variant: 'prev' | 'current' | 'next';
   isPreview?: boolean;
-  languages?: string[];
+  languages?: Language[];
 }) {
   // 预览模式下 current 也不高亮
   const effectiveVariant = isPreview ? 'prev' : variant;
 
-  // 判断是否为日文歌词（ja 或 jp）
-  const isJapanese = languages.some(
-    (lang) => lang.toLowerCase() === 'ja' || lang.toLowerCase() === 'jp',
-  );
-
-  // 根据语言动态设置字体
-  const fontFamily = isJapanese
-    ? 'var(--font-jp-sans), var(--font-jp-serif), "Noto Sans SC", "Noto Serif SC", sans-serif'
-    : 'var(--font-body), var(--font-jp-sans), "Noto Sans SC", sans-serif';
+  const fontFamily =
+    lyricsFontFamily(languages) ??
+    'var(--font-body), var(--font-jp-sans), "Noto Sans SC", sans-serif';
 
   const baseStyles = {
     prev: {

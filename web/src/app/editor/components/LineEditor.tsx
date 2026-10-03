@@ -43,8 +43,6 @@ export default function LineEditor({ line, onChange }: LineEditorProps) {
         onChange={(event) =>
           onChange(line.id, { text: event.target.value, rubyByIndex: {} })
         }
-        multiline
-        minRows={4}
         fullWidth
         helperText="用斜线 / 分词后，可在下方为分词添加注音。"
       />

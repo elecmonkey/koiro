@@ -1,3 +1,5 @@
+import { languageList } from './languages';
+
 export const help = `koiro — a personal music library, for people and agents
 
 Usage:
@@ -46,8 +48,10 @@ and additionally accept local inputs, resolved relative to the document:
   coverFile or coverUrl instead of coverObjectId,
   versions[].audioFile instead of objectId, lyrics[].lrcFile instead of lines.
 update replaces the whole song: export first, edit, then update.
+languages[] codes: ${languageList}.
 In lines, text splits tokens with "/" and rubyByIndex maps a token index
 ("0", "1", ...) to its reading; e.g. text "君/の声" with {"0": "きみ"}.
+Each line is one timed line: text and readings cannot contain line breaks.
 
 Global: --web-url URL, --json, --help
 Site precedence: --web-url > KOIRO_WEB_URL > config set > the site that served

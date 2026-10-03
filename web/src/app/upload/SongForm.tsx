@@ -1,3 +1,4 @@
+import { LANGUAGES, LANGUAGE_NAMES, type Language } from '@koiro/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Autocomplete,
@@ -44,7 +45,7 @@ type LyricsVersion = {
   key: string;
   isDefault: boolean;
   lines: LineDraft[];
-  languages: string[];
+  languages: Language[];
 };
 
 type PlaylistOption = {
@@ -327,7 +328,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
       '未命名',
       lyricsVersions.map((v) => v.key),
     );
-    const next = [
+    const next: LyricsVersion[] = [
       ...lyricsVersions,
       {
         id: makeId('lyr'),
@@ -352,7 +353,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     setLyricsVersions(next);
   };
 
-  const updateLyricsLanguages = (id: string, languages: string[]) => {
+  const updateLyricsLanguages = (id: string, languages: Language[]) => {
     const next = lyricsVersions.map((item) =>
       item.id === id ? { ...item, languages } : item,
     );
@@ -746,12 +747,14 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
                         />
                         <Autocomplete
                           multiple
-                          options={['zh', 'ja', 'en', 'ko']}
+                          options={LANGUAGES}
+                          getOptionLabel={(code) =>
+                            `${LANGUAGE_NAMES[code]} (${code})`
+                          }
                           value={activeLyrics.languages}
                           onChange={(_, value) =>
                             updateLyricsLanguages(activeLyrics.id, value)
                           }
-                          freeSolo
                           renderValue={(value, getItemProps) =>
                             value.map((option, index) => {
                               const { key, ...tagProps } = getItemProps({
@@ -760,7 +763,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
                               return (
                                 <Chip
                                   key={key}
-                                  label={option}
+                                  label={LANGUAGE_NAMES[option]}
                                   size="small"
                                   {...tagProps}
                                 />
@@ -771,7 +774,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
                             <TextField
                               {...params}
                               label="语言标签"
-                              placeholder="选择或输入语言"
+                              placeholder="选择语言"
                             />
                           )}
                           sx={{ minWidth: 240 }}

@@ -3,6 +3,7 @@ packages:
   - server
   - cli
   - installer
+  - packages/shared
 
 allowBuilds:
   esbuild: true

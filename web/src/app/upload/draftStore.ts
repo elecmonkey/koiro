@@ -1,3 +1,4 @@
+import { isLanguage, type Language } from '@koiro/shared';
 export type UploadDraft = {
   title: string;
   description: string;
@@ -21,7 +22,7 @@ export type UploadDraft = {
       text: string;
       rubyByIndex?: Record<number, string>;
     }[];
-    languages: string[];
+    languages: Language[];
   }[];
   coverObjectId: string | null;
   coverPreviewUrl?: string | null;
@@ -38,6 +39,10 @@ export function loadDraft(): UploadDraft | null {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const draft = JSON.parse(raw) as UploadDraft;
+    // 旧草稿里的语种可能是自由输入的，只保留认识的
+    for (const lyrics of draft.lyricsVersions) {
+      lyrics.languages = lyrics.languages.filter(isLanguage);
+    }
     return draft;
   } catch {
     return null;

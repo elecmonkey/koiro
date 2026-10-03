@@ -69,6 +69,7 @@ define.fmt({
     'server/**',
     'target/**',
     '.sqlx/**',
+    'packages/shared/src/generated/**',
     '**/dist/**',
     'pnpm-lock.yaml',
   ],

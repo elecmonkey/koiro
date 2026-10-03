@@ -54,7 +54,7 @@ function toFormData(song: SongEditData): SongFormData {
       key: l.key,
       isDefault: l.isDefault,
       lines: toLines(l.id, l.content),
-      languages: l.content.meta?.languages ?? ['ja'],
+      languages: l.content.meta?.languages ?? [],
     })),
     coverObjectId: song.coverObjectId,
     coverPreviewUrl: song.cover?.url ?? null,

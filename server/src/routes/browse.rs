@@ -13,6 +13,7 @@ use uuid::Uuid;
 
 use super::common::{PageQuery, Pagination};
 use crate::{
+    api::Language,
     auth::CanView,
     error::{AppError, AppResult},
     media::{Cover, cover},
@@ -170,7 +171,7 @@ async fn staff_detail(
 
 #[derive(Serialize)]
 struct LanguageCount {
-    language: String,
+    language: Language,
     count: i64,
 }
 
@@ -181,21 +182,29 @@ struct LanguageCloud {
 
 /// 每个语种覆盖的歌曲数（一首歌任一歌词版本标注了该语种即计入）
 async fn language_cloud(State(state): State<AppState>, _view: CanView) -> AppResult<Json<LanguageCloud>> {
-    let languages = sqlx::query_as!(
-        LanguageCount,
+    let rows = sqlx::query!(
         r#"SELECT lang AS "language!", count(DISTINCT l.song_id) AS "count!"
            FROM lyrics_documents l, jsonb_array_elements_text(l.content->'meta'->'languages') lang
-           WHERE lang <> ''
            GROUP BY lang ORDER BY 2 DESC, 1"#
     )
     .fetch_all(&state.pool)
     .await?;
+    // 写入时已限定为 Language；万一库里有别的值，不让它出现在接口里
+    let languages = rows
+        .into_iter()
+        .filter_map(|row| {
+            Some(LanguageCount {
+                language: Language::from_code(&row.language)?,
+                count: row.count,
+            })
+        })
+        .collect();
     Ok(Json(LanguageCloud { languages }))
 }
 
 #[derive(Serialize)]
 struct LanguageInfo {
-    code: String,
+    code: Language,
     total: i64,
 }
 
@@ -212,6 +221,8 @@ async fn language_detail(
     Path(code): Path<String>,
     Query(query): Query<PageQuery>,
 ) -> AppResult<Json<LanguageDetail>> {
+    let language = Language::from_code(&code).ok_or(AppError::NotFound)?;
+    let code = language.code();
     let total = sqlx::query_scalar!(
         r#"SELECT count(*) AS "n!" FROM songs s
            WHERE EXISTS (SELECT 1 FROM lyrics_documents l
@@ -232,7 +243,10 @@ async fn language_detail(
     .fetch_all(&state.pool)
     .await?;
     Ok(Json(LanguageDetail {
-        language: LanguageInfo { code, total },
+        language: LanguageInfo {
+            code: language,
+            total,
+        },
         songs: songs::summaries(&state, &ids).await?,
         pagination: Pagination::new(query.page(), LANGUAGE_PAGE_SIZE, total),
     }))

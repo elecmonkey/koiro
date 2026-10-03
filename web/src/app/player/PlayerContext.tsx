@@ -1,3 +1,4 @@
+import type { Language } from '@koiro/shared';
 import {
   createContext,
   useContext,
@@ -19,7 +20,7 @@ export interface Track {
   versionId: string;
   versionKey?: string; // 音频版本名称
   lyrics?: LyricsDocument | null;
-  languages?: string[]; // 歌词语言列表
+  languages?: Language[]; // 歌词语言列表
 }
 
 interface PlayerState {

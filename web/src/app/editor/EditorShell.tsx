@@ -1,3 +1,4 @@
+import type { Language } from '@koiro/shared';
 import { Box, Card, CardContent, Stack, Typography } from '@mui/material';
 import { useLyricsEditor, type LineDraft } from './state/useLyricsEditor';
 import LineList from './components/LineList';
@@ -8,7 +9,7 @@ import { validateBlocks } from './ast/validate';
 type EditorShellProps = {
   initialLines?: LineDraft[];
   onLinesChange?: (lines: LineDraft[]) => void;
-  languages?: string[];
+  languages?: Language[];
 };
 
 export default function EditorShell({

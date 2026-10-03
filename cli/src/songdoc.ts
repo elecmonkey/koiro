@@ -3,6 +3,8 @@ import { basename, dirname, extname, resolve } from 'node:path';
 import { usage } from './errors';
 import type { ApiClient } from './http';
 import { object, string, type Json, type JsonObject } from './json';
+import { LANGUAGES, isLanguage } from '@koiro/shared';
+import { languageList } from './languages';
 import { parseLrc } from './lyrics';
 
 const MAX_IMAGE_BYTES = 30 * 1024 * 1024;
@@ -121,6 +123,18 @@ export async function songInput(
   const doc = parsed as JsonObject;
   const base = documentPath === '-' ? cwd : dirname(resolve(cwd, documentPath));
   const local = (path: string) => resolve(base, path);
+
+  // 语种写错时，在上传任何文件之前就报错
+  for (const item of list(doc, 'lyrics')) {
+    const languages = item.languages;
+    if (
+      languages !== undefined &&
+      (!Array.isArray(languages) || !languages.every(isLanguage))
+    )
+      usage(`lyrics[].languages may only contain: ${languageList}.`, {
+        languages: LANGUAGES,
+      });
+  }
 
   const coverFile = field(doc, 'coverFile');
   const coverUrl = field(doc, 'coverUrl');

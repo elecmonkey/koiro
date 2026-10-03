@@ -1,7 +1,9 @@
+import type { Language } from '@koiro/shared';
+
 export type LyricsDocument = {
   type: 'doc';
   meta?: {
-    languages?: string[];
+    languages?: Language[];
   };
   blocks: Block[];
 };

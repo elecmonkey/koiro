@@ -36,3 +36,7 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 url = "2.5.8"
 uuid = { version = "1.26.1", features = ["serde", "v4"] }
+
+[dev-dependencies]
+# 测试时把 crate::api 的类型导出成 TypeScript
+ts-rs = "12.0.1"

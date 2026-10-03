@@ -1,3 +1,4 @@
+import { LANGUAGES, isLanguage } from '@koiro/shared';
 import { lstat, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
@@ -17,6 +18,7 @@ import {
   type Json,
   type JsonObject,
 } from './json';
+import { languageList } from './languages';
 import { parseLrc, toLines, toReadableLines } from './lyrics';
 import { songInput, uploadImage } from './songdoc';
 import type { Runtime } from './run';
@@ -457,6 +459,10 @@ async function browseCommand(
       required(args.positionals[2], command === 'staff' ? 'NAME' : 'CODE'),
       kind,
     );
+    if (command === 'language' && !isLanguage(key))
+      usage(`Unknown language code. Use one of: ${languageList}.`, {
+        languages: LANGUAGES,
+      });
     const path = `/${kind}/${encodeURIComponent(key)}`;
     let info: Json = null;
     const result = await paged(args, async (page) => {

@@ -29,7 +29,7 @@ type ResponseData = {
   };
 };
 
-import { getLanguageName } from '@/lib/languages';
+import { languageName as nameOf } from '@koiro/shared';
 
 export default function LanguageDetailClient({
   language,
@@ -46,10 +46,7 @@ export default function LanguageDetailClient({
   const [error, setError] = useState<string | null>(null);
 
   const languageCode = useMemo(() => decodeURIComponent(language), [language]);
-  const languageName = useMemo(
-    () => getLanguageName(languageCode),
-    [languageCode],
-  );
+  const languageName = useMemo(() => nameOf(languageCode), [languageCode]);
 
   useEffect(() => {
     let active = true;

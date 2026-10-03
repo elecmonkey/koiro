@@ -13,7 +13,7 @@ import {
 import { Link } from 'react-router';
 
 type LanguageEntry = {
-  language: string;
+  language: Language;
   count: number;
 };
 
@@ -21,7 +21,7 @@ type LanguageResponse = {
   languages: LanguageEntry[];
 };
 
-import { getLanguageName } from '@/lib/languages';
+import { languageName, type Language } from '@koiro/shared';
 import { api } from '@/lib/api';
 
 function hashString(input: string) {
@@ -170,7 +170,7 @@ export default function LanguageCloudClient() {
                         }}
                       >
                         <Box component="span">
-                          {getLanguageName(item.language)}
+                          {languageName(item.language)}
                         </Box>
                         <Box
                           component="span"

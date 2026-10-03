@@ -404,6 +404,26 @@ test('export maps lyrics bindings to keys, and update uploads local files then r
   expect(storagePut?.body.toString()).toBe('flac');
 });
 
+test('unknown languages are rejected before anything is uploaded or requested', async () => {
+  const fixture = await server(() => ({ body: { objectId: 'img/x.webp' } }));
+  const io = await runtime(fixture.origin);
+  await writeFile(join(io.io.cwd, 'cover.png'), 'png');
+  await writeFile(
+    join(io.io.cwd, 'song.json'),
+    JSON.stringify({
+      title: 'x',
+      coverFile: 'cover.png',
+      versions: [],
+      lyrics: [{ key: '原文', languages: ['jp'], lines: [] }],
+    }),
+  );
+
+  expect(await io.call('song', 'create', '--file', 'song.json')).toBe(2);
+  expect(io.error().message).toContain('ja 日本語');
+  expect(await io.call('language', 'view', 'jp')).toBe(2);
+  expect(fixture.received).toHaveLength(0);
+});
+
 test('reorder must name every song in the playlist exactly once', async () => {
   const fixture = await server((url, request): Reply => {
     if (request.method === 'GET')

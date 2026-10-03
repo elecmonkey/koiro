@@ -10,7 +10,9 @@ import {
 } from '@mui/material';
 import { PlayButton } from '@/app/components/PlayButton';
 import { Download } from '@mui/icons-material';
+import type { Language } from '@koiro/shared';
 import type { LyricsDocument, Block, Inline } from '@/app/editor/ast/types';
+import { lyricsFontFamily } from '@/lib/lyricsFont';
 import { audioDownloadUrl } from '@/lib/api';
 
 export interface AudioVersion {
@@ -25,7 +27,7 @@ export interface LyricsVersion {
   versionKey: string;
   isDefault: boolean;
   content: LyricsDocument;
-  languages?: string[];
+  languages?: Language[];
 }
 
 export interface SongDetailClientProps {
@@ -192,7 +194,10 @@ export function LyricsDisplay({ lyrics }: LyricsDisplayProps) {
   );
 }
 
-function renderLyricsBlocks(content: LyricsDocument, languages: string[] = []) {
+function renderLyricsBlocks(
+  content: LyricsDocument,
+  languages: Language[] = [],
+) {
   if (!content || content.type !== 'doc' || !Array.isArray(content.blocks)) {
     return (
       <Typography
@@ -215,17 +220,9 @@ function BlockView({
   languages = [],
 }: {
   block: Block;
-  languages?: string[];
+  languages?: Language[];
 }) {
-  // 判断是否为日文歌词（ja 或 jp）
-  const isJapanese = languages.some(
-    (lang) => lang.toLowerCase() === 'ja' || lang.toLowerCase() === 'jp',
-  );
-
-  // 根据语言动态设置字体
-  const fontFamily = isJapanese
-    ? 'var(--font-jp-sans), var(--font-jp-serif), "Noto Sans SC", "Noto Serif SC", sans-serif'
-    : undefined; // 使用默认字体
+  const fontFamily = lyricsFontFamily(languages);
 
   return (
     <Typography variant="body1" sx={{ lineHeight: 1.9, fontFamily }}>
