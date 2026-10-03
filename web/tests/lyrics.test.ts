@@ -15,7 +15,6 @@ describe('toLines', () => {
             { type: 'text', text: 'の声が' },
           ],
         },
-        { type: 'p', children: [{ type: 'text', text: '注释段落' }] },
         {
           type: 'line',
           time: { startMs: 16800 },
@@ -70,7 +69,6 @@ describe('buildPlainText', () => {
         ],
       },
       { type: 'line', children: [{ type: 'text', text: '   ' }] },
-      { type: 'p', children: [{ type: 'text', text: '段落不计入' }] },
     ];
     expect(buildPlainText(blocks)).toBe('君の 声');
   });

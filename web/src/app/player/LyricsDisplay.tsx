@@ -31,24 +31,6 @@ function renderInlines(inlines: Inline[]): React.ReactNode {
             <rp>)</rp>
           </ruby>
         );
-      case 'annotation':
-        return (
-          <span
-            key={index}
-            title={inline.note}
-            style={{ textDecoration: 'underline dotted' }}
-          >
-            {inline.text}
-          </span>
-        );
-      case 'em':
-        return <em key={index}>{renderInlines(inline.children)}</em>;
-      case 'strong':
-        return <strong key={index}>{renderInlines(inline.children)}</strong>;
-      case 'br':
-        return <br key={index} />;
-      default:
-        return null;
     }
   });
 }

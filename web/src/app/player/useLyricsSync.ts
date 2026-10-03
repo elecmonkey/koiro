@@ -29,8 +29,8 @@ function extractLines(doc: LyricsDocument | null | undefined): LyricLine[] {
   let index = 0;
 
   for (const block of doc.blocks) {
-    // 只处理有时间轴的 line block
-    if (block.type === 'line' && block.time) {
+    // 只处理有时间轴的行
+    if (block.time) {
       lines.push({
         index,
         startMs: block.time.startMs,

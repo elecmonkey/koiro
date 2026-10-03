@@ -4,9 +4,6 @@ export function buildPlainText(blocks: Block[]) {
   const lines: string[] = [];
 
   for (const block of blocks) {
-    if (block.type !== 'line') {
-      continue;
-    }
     const parts: string[] = [];
     collectInlineText(block.children, parts);
     const lineText = parts.join('').replace(/\s+/g, ' ').trim();
@@ -28,18 +25,6 @@ function collectInlineText(inlines: Inline[], parts: string[]) {
         if (inline.base.length > 0) {
           parts.push(inline.base);
         }
-        break;
-      case 'em':
-      case 'strong':
-        collectInlineText(inline.children, parts);
-        break;
-      case 'annotation':
-        if (inline.text.length > 0) {
-          parts.push(inline.text);
-        }
-        break;
-      case 'br':
-      default:
         break;
     }
   }

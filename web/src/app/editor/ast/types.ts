@@ -6,7 +6,7 @@ export type LyricsDocument = {
   blocks: Block[];
 };
 
-export type Block = LineBlock | ParagraphBlock;
+export type Block = LineBlock;
 
 export type LineBlock = {
   type: 'line';
@@ -17,18 +17,7 @@ export type LineBlock = {
   children: Inline[];
 };
 
-export type ParagraphBlock = {
-  type: 'p';
-  children: Inline[];
-};
-
-export type Inline =
-  | TextInline
-  | RubyInline
-  | EmInline
-  | StrongInline
-  | AnnotationInline
-  | BreakInline;
+export type Inline = TextInline | RubyInline;
 
 export type TextInline = {
   type: 'text';
@@ -39,24 +28,4 @@ export type RubyInline = {
   type: 'ruby';
   base: string;
   ruby: string;
-};
-
-export type EmInline = {
-  type: 'em';
-  children: Inline[];
-};
-
-export type StrongInline = {
-  type: 'strong';
-  children: Inline[];
-};
-
-export type AnnotationInline = {
-  type: 'annotation';
-  text: string;
-  note: string;
-};
-
-export type BreakInline = {
-  type: 'br';
 };

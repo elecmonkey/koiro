@@ -39,19 +39,6 @@ export default function PreviewPanel({ doc, plainText }: PreviewPanelProps) {
 }
 
 function BlockView({ block }: { block: Block }) {
-  if (block.type === 'p') {
-    return (
-      <Typography
-        variant="body2"
-        sx={{
-          color: 'text.secondary',
-        }}
-      >
-        {renderInline(block.children)}
-      </Typography>
-    );
-  }
-
   return (
     <Stack
       direction="row"
@@ -86,20 +73,6 @@ function renderInline(inlines: Inline[]): React.ReactNode {
             <rt style={{ fontSize: '0.7em' }}>{inline.ruby}</rt>
           </ruby>
         );
-      case 'annotation':
-        return (
-          <span key={index} title={inline.note}>
-            {inline.text}
-          </span>
-        );
-      case 'em':
-        return <em key={index}>{renderInline(inline.children)}</em>;
-      case 'strong':
-        return <strong key={index}>{renderInline(inline.children)}</strong>;
-      case 'br':
-        return <br key={index} />;
-      default:
-        return null;
     }
   });
 }

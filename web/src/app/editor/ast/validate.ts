@@ -10,9 +10,6 @@ export function validateBlocks(blocks: Block[]): ValidationResult {
   let lastStart = -1;
 
   blocks.forEach((block, index) => {
-    if (block.type !== 'line') {
-      return;
-    }
     if (!block.time) {
       errors.push(`第 ${index + 1} 行缺少时间信息`);
       return;

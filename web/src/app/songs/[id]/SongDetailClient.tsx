@@ -227,32 +227,13 @@ function BlockView({
     ? 'var(--font-jp-sans), var(--font-jp-serif), "Noto Sans SC", "Noto Serif SC", sans-serif'
     : undefined; // 使用默认字体
 
-  if (block.type === 'line') {
-    return (
-      <Typography variant="body1" sx={{ lineHeight: 1.9, fontFamily }}>
-        {block.children.map((node, idx) => (
-          <InlineView key={idx} node={node} />
-        ))}
-      </Typography>
-    );
-  }
-  if (block.type === 'p') {
-    return (
-      <Typography
-        variant="body2"
-        sx={{
-          color: 'text.secondary',
-          lineHeight: 1.9,
-          fontFamily,
-        }}
-      >
-        {block.children.map((node, idx) => (
-          <InlineView key={idx} node={node} />
-        ))}
-      </Typography>
-    );
-  }
-  return null;
+  return (
+    <Typography variant="body1" sx={{ lineHeight: 1.9, fontFamily }}>
+      {block.children.map((node, idx) => (
+        <InlineView key={idx} node={node} />
+      ))}
+    </Typography>
+  );
 }
 
 function InlineView({ node }: { node: Inline }): React.ReactNode {
@@ -266,31 +247,5 @@ function InlineView({ node }: { node: Inline }): React.ReactNode {
           <rt style={{ fontSize: '0.7em' }}>{node.ruby}</rt>
         </ruby>
       );
-    case 'em':
-      return (
-        <em>
-          {node.children.map((child, idx) => (
-            <InlineView key={idx} node={child} />
-          ))}
-        </em>
-      );
-    case 'strong':
-      return (
-        <strong>
-          {node.children.map((child, idx) => (
-            <InlineView key={idx} node={child} />
-          ))}
-        </strong>
-      );
-    case 'annotation':
-      return (
-        <span title={node.note} style={{ textDecoration: 'underline dotted' }}>
-          {node.text}
-        </span>
-      );
-    case 'br':
-      return <br />;
-    default:
-      return null;
   }
 }

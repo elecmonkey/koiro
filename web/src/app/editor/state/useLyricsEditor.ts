@@ -105,7 +105,7 @@ export function useLyricsEditor(options: UseLyricsEditorOptions = {}) {
         startMs: line.startMs,
         endMs: line.endMs,
       },
-      children: textToInlines(line.text, line.rubyByIndex),
+      children: buildInlinesFromText(line.text, line.rubyByIndex),
     }));
   }, [state.lines]);
 
@@ -151,25 +151,7 @@ export function useLyricsEditor(options: UseLyricsEditorOptions = {}) {
   };
 }
 
-function textToInlines(
-  text: string,
-  rubyByIndex?: Record<number, string>,
-): Inline[] {
-  if (!text) {
-    return [{ type: 'text', text: '' }];
-  }
-
-  const parts = text.split(/\n/);
-  const inlines: Inline[] = [];
-  parts.forEach((part, lineIndex) => {
-    inlines.push(...buildInlinesFromText(part, rubyByIndex));
-    if (lineIndex < parts.length - 1) {
-      inlines.push({ type: 'br' });
-    }
-  });
-  return inlines;
-}
-
+/** 与服务端构建歌词的规则一致：只按 "/" 分词，换行等字符原样保留在正文里 */
 function buildInlinesFromText(
   text: string,
   rubyByIndex: Record<number, string> | undefined,
