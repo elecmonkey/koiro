@@ -1,0 +1,45 @@
+:root {
+  --background: #f6f3ef;
+  --foreground: #1f1a16;
+  /* 字体由 Fontsource 自托管（见 fonts.ts） */
+  --font-body: 'Noto Sans SC Variable';
+  --font-display: 'Noto Serif SC Variable';
+  --font-jp-sans: 'Zen Kaku Gothic New';
+  /* 原先的 Shippori Mincho 只作为 Zen Kaku 之后的备用字体、实际不会生效，已移除 */
+  --font-jp-serif: 'Noto Serif SC Variable';
+  --font-jp-display: 'Noto Serif JP Variable';
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family:
+    var(--font-body), var(--font-jp-sans), 'Noto Sans SC', sans-serif;
+}
+
+.float-in {
+  animation: floatIn 0.7s ease both;
+}
+
+.stagger-1 {
+  animation-delay: 0.05s;
+}
+
+.stagger-2 {
+  animation-delay: 0.15s;
+}
+
+.stagger-3 {
+  animation-delay: 0.25s;
+}
+
+@keyframes floatIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

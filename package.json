@@ -1,6 +1,6 @@
 {
   "name": "koiro",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Koiro - 个人音乐库管理系统",
   "author": "Elecmonkey <elecmonkey@hotmail.com>",
   "repository": {
@@ -9,49 +9,19 @@
   },
   "license": "MIT",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev -p 3720",
-    "build": "pnpm -r run build && next build",
-    "start": "next start -p 3720",
-    "lint": "eslint",
-    "type-check": "tsc --noEmit",
-    "prisma:generate": "pnpm --filter @koiro/db prisma:generate",
-    "prisma:migrate": "pnpm --filter @koiro/db prisma:migrate",
-    "prisma:studio": "pnpm --filter @koiro/db prisma:studio",
-    "prisma:push": "pnpm --filter @koiro/db prisma:push",
-    "auth:secret": "pnpx auth secret",
-    "user:add": "tsx scripts/add-user.ts",
-    "songs:dedupe": "tsx scripts/find-duplicate-songs.ts",
-    "songs:missing-lyrics": "tsx scripts/find-missing-lyrics.ts"
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "check": "rs check --type-check && pnpm --filter @koiro/server check",
+    "lint": "rs lint",
+    "format": "rs fmt",
+    "staged": "rs staged"
   },
-  "dependencies": {
-    "@emotion/cache": "^11.14.0",
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@koiro/db": "workspace:*",
-    "@koiro/s3": "workspace:*",
-    "@mui/icons-material": "^7.3.8",
-    "@mui/material": "^7.3.8",
-    "@prisma/adapter-pg": "^7.8.0",
-    "axios": "^1.17.0",
-    "next": "16.1.6",
-    "next-auth": "5.0.0-beta.30",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
-  },
+  "packageManager": "pnpm@12.6.0",
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.0",
-    "@types/node": "^25.9.1",
-    "@types/pg": "^8.20.0",
-    "@types/react": "^19.2.16",
-    "@types/react-dom": "^19.2.3",
-    "babel-plugin-react-compiler": "1.0.0",
-    "eslint": "^9.39.1",
-    "eslint-config-next": "16.1.6",
-    "tailwindcss": "^4.3.0",
-    "tsdown": "^0.22.2",
-    "tsx": "^4.22.4",
-    "typescript": "^5.9.3"
-  },
-  "packageManager": "pnpm@12.6.0"
+    "rstack": "^0.8.0",
+    "typescript": "^7.0.2"
+  }
 }
