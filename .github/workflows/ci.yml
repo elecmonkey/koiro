@@ -116,7 +116,8 @@ jobs:
 
   deploy-server:
     name: Backend Deploy
-    runs-on: ubuntu-latest
+    # 服务器是 Debian 12（glibc 2.36），在 glibc 更老的 22.04（2.35）上编译才能在服务器上运行
+    runs-on: ubuntu-22.04
     needs:
       - changes
       - server
