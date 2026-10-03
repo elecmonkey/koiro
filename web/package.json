@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "rs dev",
-    "build": "rs build",
+    "build": "pnpm --filter @koiro/installer build && rs build",
     "preview": "rs preview",
     "test": "rs test"
   },

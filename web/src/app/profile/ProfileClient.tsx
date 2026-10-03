@@ -15,6 +15,7 @@ import {
 import { useNavigate } from 'react-router';
 import { useAuth, type CurrentUser } from '@/auth/AuthContext';
 import { api } from '@/lib/api';
+import AgentSkillCard from './AgentSkillCard';
 
 interface UserProfile {
   id: string;
@@ -309,6 +310,8 @@ export default function ProfileClient() {
           </Stack>
         </CardContent>
       </Card>
+
+      <AgentSkillCard />
 
       {/* 密码修改卡片 */}
       <Card>

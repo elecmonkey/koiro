@@ -128,6 +128,10 @@ export const router = createBrowserRouter([
         lazy: lazyPage(() => import('./app/admin/playlists/[id]/page'), admin),
       },
       {
+        path: '/auth/cli',
+        lazy: lazyPage(() => import('./app/auth/cli/page'), loggedIn),
+      },
+      {
         path: '/profile',
         lazy: lazyPage(() => import('./app/profile/page'), loggedIn),
       },

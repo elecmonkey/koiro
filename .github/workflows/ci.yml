@@ -39,6 +39,9 @@ jobs:
               - 'pnpm-workspace.yaml'
               - 'rstack.config.ts'
               - 'web/**'
+              - 'cli/**'
+              - 'installer/**'
+              - 'skill/**'
             workflow:
               - '.github/workflows/**'
 
@@ -79,8 +82,9 @@ jobs:
         run: pnpm exec rs check --type-check
 
       - name: Test
-        run: pnpm --filter @koiro/web test
+        run: pnpm --filter @koiro/web --filter @koiro/cli --filter @koiro/installer test
 
+      # 前端构建会先构建命令行和 Agent Skill 安装包
       - name: Build
         run: pnpm --filter @koiro/web build
 
@@ -229,7 +233,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # 前端用相对路径 /api 请求后端，产物与域名无关
+      # 前端用相对路径 /api 请求后端，产物与域名无关；Agent Skill 的站点地址在安装时由命令传入
       - name: Build web
         env:
           PUBLIC_SITE_NAME: ${{ vars.KOIRO_SITE_NAME }}
