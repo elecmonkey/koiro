@@ -6,6 +6,7 @@
 //! - [`MaybeUser`]：不做要求，只取当前用户
 
 pub mod cli_codes;
+pub mod login_limit;
 mod password;
 pub mod session;
 
@@ -13,7 +14,7 @@ use std::{marker::PhantomData, ops::Deref, sync::Arc};
 
 use axum::{extract::FromRequestParts, http::request::Parts};
 
-pub use password::{hash_password, verify_dummy, verify_password};
+pub use password::{Hasher, hash_password};
 
 use crate::{error::AppError, state::AppState, users::UserInfo};
 

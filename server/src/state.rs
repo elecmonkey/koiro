@@ -3,7 +3,12 @@ use std::sync::Arc;
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use sqlx::PgPool;
 
-use crate::{auth::cli_codes::CliCodes, config::Config, storage::Storage, users::UserCache};
+use crate::{
+    auth::{Hasher, cli_codes::CliCodes, login_limit::LoginLimiter},
+    config::Config,
+    storage::Storage,
+    users::UserCache,
+};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -16,6 +21,10 @@ pub struct AppState {
     pub http: reqwest::Client,
     /// 命令行登录的一次性授权码
     pub cli_codes: CliCodes,
+    /// 密码哈希：限制并发
+    pub hasher: Hasher,
+    /// 登录失败计数
+    pub login_limit: LoginLimiter,
 }
 
 pub struct JwtKeys {
@@ -37,6 +46,8 @@ impl AppState {
             config: Arc::new(config),
             http: crate::remote::client()?,
             cli_codes: CliCodes::default(),
+            hasher: Hasher::default(),
+            login_limit: LoginLimiter::default(),
         })
     }
 }

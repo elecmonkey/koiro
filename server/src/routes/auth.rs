@@ -1,14 +1,16 @@
+use std::net::SocketAddr;
+
 use axum::{
     Json, Router,
-    extract::State,
+    extract::{ConnectInfo, State},
+    http::HeaderMap,
     routing::{get, post},
 };
 use axum_extra::extract::CookieJar;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::{
-    auth::{MaybeUser, session, verify_dummy, verify_password},
+    auth::{MaybeUser, login_limit::client_ip, session},
     error::{AppError, AppResult},
     state::AppState,
     users::UserInfo,
@@ -43,6 +45,8 @@ struct MeResponse {
 
 async fn login(
     State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     jar: CookieJar,
     Json(body): Json<LoginBody>,
 ) -> AppResult<(CookieJar, Json<MeResponse>)> {
@@ -50,22 +54,19 @@ async fn login(
         return Err(AppError::BadRequest("Invalid ttlDays".into()));
     }
     let email = body.email.trim().to_owned();
+    // 失败过多时在查库、哈希之前就拒绝
+    let ip = client_ip(peer, &headers);
+    state.login_limit.begin(ip).await?;
 
     let row = sqlx::query!("SELECT id, password_hash FROM users WHERE email = $1", email)
         .fetch_optional(&state.pool)
         .await?;
-
-    // scrypt 是 CPU/内存密集运算，放到阻塞线程池
-    let password = body.password;
-    let user_id: Option<Uuid> = tokio::task::spawn_blocking(move || match row {
-        Some(row) => verify_password(&password, &row.password_hash).then_some(row.id),
-        None => {
-            verify_dummy(&password);
-            None
-        }
-    })
-    .await
-    .map_err(anyhow::Error::from)?;
+    let (id, stored) = row.map(|row| (row.id, row.password_hash)).unzip();
+    let valid = state.hasher.verify_login(body.password, stored).await?;
+    let user_id = id.filter(|_| valid);
+    if user_id.is_some() {
+        state.login_limit.succeeded(ip).await;
+    }
 
     let user_id = user_id.ok_or(AppError::Unauthorized("邮箱或密码错误"))?;
     let user = state

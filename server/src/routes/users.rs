@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use super::common::{OK, Ok, Pagination, SearchPageQuery};
 use crate::{
-    auth::{Admin, Auth, LoggedIn, hash_password, verify_password},
+    auth::{Admin, Auth, LoggedIn},
     error::{AppError, AppResult},
     state::AppState,
     users::UserInfo,
@@ -101,13 +101,6 @@ fn normalize_display_name(name: &str) -> AppResult<String> {
     Ok(name.to_owned())
 }
 
-/// scrypt 很耗 CPU，放到阻塞线程池
-async fn hash(password: String) -> AppResult<String> {
-    Ok(tokio::task::spawn_blocking(move || hash_password(&password))
-        .await
-        .map_err(anyhow::Error::from)?)
-}
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CreateBody {
@@ -137,7 +130,7 @@ async fn create(
         Some(name) if !name.is_empty() => normalize_display_name(name)?,
         _ => email.clone(),
     };
-    let password_hash = hash(body.password).await?;
+    let password_hash = state.hasher.hash(body.password).await?;
 
     // 新用户不在缓存中，首次访问时按需加载
     let user = sqlx::query_as!(
@@ -179,7 +172,7 @@ async fn update(
     let password_hash = match body.password {
         Some(password) => {
             check_password(&password)?;
-            Some(hash(password).await?)
+            Some(state.hasher.hash(password).await?)
         }
         None => None,
     };
@@ -297,14 +290,12 @@ async fn update_profile(
             let stored = sqlx::query_scalar!("SELECT password_hash FROM users WHERE id = $1", id)
                 .fetch_one(&state.pool)
                 .await?;
-            let valid = tokio::task::spawn_blocking(move || verify_password(&current, &stored))
-                .await
-                .map_err(anyhow::Error::from)?;
+            let valid = state.hasher.verify(current, stored).await?;
             if !valid {
                 return Err(AppError::BadRequest("当前密码错误".into()));
             }
             check_password(&new_password)?;
-            Some(hash(new_password).await?)
+            Some(state.hasher.hash(new_password).await?)
         }
         None => None,
     };

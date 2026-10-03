@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{net::SocketAddr, time::Duration};
 
 use axum::Router;
 use clap::{Parser, Subcommand};
@@ -84,7 +84,8 @@ async fn serve(state: AppState) -> anyhow::Result<()> {
 
     let listener = TcpListener::bind(&state.config.bind).await?;
     tracing::info!("listening on {}", listener.local_addr()?);
-    axum::serve(listener, app)
+    // 登录限流需要对端地址
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(shutdown_signal())
         .await?;
     Ok(())
