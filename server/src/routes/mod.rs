@@ -1,6 +1,7 @@
 mod audio;
 mod auth;
 mod browse;
+mod cli_auth;
 mod common;
 mod playlists;
 mod songs;
@@ -16,6 +17,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
         .merge(auth::router())
+        .merge(cli_auth::router())
         .merge(audio::router())
         .merge(uploads::router())
         .merge(songs::router())

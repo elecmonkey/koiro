@@ -3,7 +3,7 @@ use std::sync::Arc;
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use sqlx::PgPool;
 
-use crate::{config::Config, storage::Storage, users::UserCache};
+use crate::{auth::cli_codes::CliCodes, config::Config, storage::Storage, users::UserCache};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -14,6 +14,8 @@ pub struct AppState {
     pub storage: Storage,
     /// 拉取远程资源用（带 SSRF 防护）
     pub http: reqwest::Client,
+    /// 命令行登录的一次性授权码
+    pub cli_codes: CliCodes,
 }
 
 pub struct JwtKeys {
@@ -34,6 +36,7 @@ impl AppState {
             pool,
             config: Arc::new(config),
             http: crate::remote::client()?,
+            cli_codes: CliCodes::default(),
         })
     }
 }

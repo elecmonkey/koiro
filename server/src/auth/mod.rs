@@ -5,6 +5,7 @@
 //! - [`CanView`]：VIEW 权限；开启匿名访问时未登录也放行
 //! - [`MaybeUser`]：不做要求，只取当前用户
 
+pub mod cli_codes;
 mod password;
 pub mod session;
 

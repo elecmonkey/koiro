@@ -1,8 +1,9 @@
-//! 会话 = 存在 HttpOnly cookie 里的 JWT（HS256，claims 只有 sub / iat / exp）
+//! 会话 = JWT（HS256，claims 只有 sub / iat / exp）。
+//! 浏览器放在 HttpOnly cookie 里；命令行用 `Authorization: Bearer` 携带同一种 token。
 
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, header};
 use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Duration, Utc};
 use jsonwebtoken::{Algorithm, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -21,17 +22,27 @@ struct Claims {
     exp: i64,
 }
 
-pub fn issue_cookie(state: &AppState, user_id: Uuid, ttl_days: i64) -> anyhow::Result<Cookie<'static>> {
+pub struct IssuedToken {
+    pub token: String,
+    pub expires_at: DateTime<Utc>,
+}
+
+pub fn issue_token(state: &AppState, user_id: Uuid, ttl_days: i64) -> anyhow::Result<IssuedToken> {
     let now = Utc::now();
-    let ttl = Duration::days(ttl_days);
+    let expires_at = now + Duration::days(ttl_days);
     let claims = Claims {
         sub: user_id,
         iat: now.timestamp(),
-        exp: (now + ttl).timestamp(),
+        exp: expires_at.timestamp(),
     };
     let token = encode(&Header::new(Algorithm::HS256), &claims, &state.jwt.encoding)?;
-    let mut cookie = build_cookie(state, token);
-    cookie.set_max_age(time::Duration::seconds(ttl.num_seconds()));
+    Ok(IssuedToken { token, expires_at })
+}
+
+pub fn issue_cookie(state: &AppState, user_id: Uuid, ttl_days: i64) -> anyhow::Result<Cookie<'static>> {
+    let issued = issue_token(state, user_id, ttl_days)?;
+    let mut cookie = build_cookie(state, issued.token);
+    cookie.set_max_age(time::Duration::days(ttl_days));
     Ok(cookie)
 }
 
@@ -50,10 +61,21 @@ fn build_cookie(state: &AppState, value: String) -> Cookie<'static> {
         .build()
 }
 
-/// 从请求的 cookie 中解出用户 id；token 缺失、签名不符或已过期都视为未登录
+/// 从 `Authorization: Bearer` 或会话 cookie 中解出用户 id（Bearer 优先）；
+/// token 缺失、签名不符或已过期都视为未登录
 pub fn user_id_from_headers(headers: &HeaderMap, state: &AppState) -> Option<Uuid> {
-    let jar = CookieJar::from_headers(headers);
-    let token = jar.get(COOKIE_NAME)?.value();
+    let bearer = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "));
+    let jar;
+    let token = match bearer {
+        Some(token) => token,
+        None => {
+            jar = CookieJar::from_headers(headers);
+            jar.get(COOKIE_NAME)?.value()
+        }
+    };
     let validation = Validation::new(Algorithm::HS256);
     decode::<Claims>(token, &state.jwt.decoding, &validation)
         .ok()

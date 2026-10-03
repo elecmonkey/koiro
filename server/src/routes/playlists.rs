@@ -304,6 +304,14 @@ async fn add_songs(
     if body.song_ids.is_empty() {
         return Err(AppError::BadRequest("需要提供歌曲 ID".into()));
     }
+    // 同一首歌重复出现时只追加一次，保持首次出现的顺序
+    let mut seen = std::collections::HashSet::new();
+    let song_ids: Vec<Uuid> = body
+        .song_ids
+        .iter()
+        .copied()
+        .filter(|id| seen.insert(*id))
+        .collect();
     let mut tx = state.pool.begin().await?;
     // 锁住歌单行，避免并发追加算出相同的位置
     sqlx::query!("SELECT id FROM playlists WHERE id = $1 FOR UPDATE", id)
@@ -318,7 +326,7 @@ async fn add_songs(
            JOIN songs s ON s.id = t.song_id
            WHERE NOT EXISTS (SELECT 1 FROM song_playlists sp WHERE sp.playlist_id = $1 AND sp.song_id = s.id)"#,
         id,
-        &body.song_ids
+        &song_ids
     )
     .execute(&mut *tx)
     .await?
@@ -331,7 +339,7 @@ async fn add_songs(
     }))
 }
 
-/// 按给定顺序重排（未列出的歌曲排在之后）
+/// 按给定顺序重排：列出的歌曲依次占据位置 0..n，未列出的歌曲位置不变
 async fn reorder_songs(
     State(state): State<AppState>,
     _auth: Auth<Admin>,
