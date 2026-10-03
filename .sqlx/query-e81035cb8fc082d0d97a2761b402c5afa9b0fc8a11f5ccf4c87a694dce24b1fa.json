@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE audio_versions SET is_default = false WHERE song_id = $1 AND is_default",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e81035cb8fc082d0d97a2761b402c5afa9b0fc8a11f5ccf4c87a694dce24b1fa"
+}

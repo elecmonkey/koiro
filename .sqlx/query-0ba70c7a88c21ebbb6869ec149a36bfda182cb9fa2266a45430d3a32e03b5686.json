@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE songs SET title = $2, description = $3, staff = $4, cover_object_id = $5 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0ba70c7a88c21ebbb6869ec149a36bfda182cb9fa2266a45430d3a32e03b5686"
+}

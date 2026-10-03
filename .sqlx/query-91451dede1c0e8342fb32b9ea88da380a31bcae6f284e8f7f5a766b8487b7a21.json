@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, version_key AS key, is_default, content\n           FROM lyrics_documents WHERE song_id = $1 ORDER BY is_default DESC, created_at, version_key",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "lyrics_documents",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "lyrics_documents",
+            "name": "version_key"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "is_default",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "lyrics_documents",
+            "name": "is_default"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "content",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "lyrics_documents",
+            "name": "content"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "91451dede1c0e8342fb32b9ea88da380a31bcae6f284e8f7f5a766b8487b7a21"
+}

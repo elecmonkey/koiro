@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO audio_versions (song_id, name, object_id, lyrics_id, is_default, position)\n               VALUES ($1, $2, $3, $4, $5, $6)\n               ON CONFLICT (song_id, name) DO UPDATE\n               SET object_id = EXCLUDED.object_id, lyrics_id = EXCLUDED.lyrics_id,\n                   is_default = EXCLUDED.is_default, position = EXCLUDED.position",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Uuid",
+        "Bool",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bc18ca27320070ca3c67bdf9359b65f732ee86beba1874a7998d73ec85cef06b"
+}

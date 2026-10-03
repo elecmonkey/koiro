@@ -1,0 +1,12 @@
+{
+  "name": "@koiro/server",
+  "private": true,
+  "scripts": {
+    "dev": "watchexec -r -e rs,toml -w src -w Cargo.toml -- cargo run",
+    "build": "cargo build --release",
+    "test": "cargo test",
+    "check": "cargo clippy --all-targets -- -D warnings && cargo fmt --check",
+    "migrate": "cargo run -- migrate",
+    "sqlx:prepare": "cargo sqlx prepare --workspace"
+  }
+}

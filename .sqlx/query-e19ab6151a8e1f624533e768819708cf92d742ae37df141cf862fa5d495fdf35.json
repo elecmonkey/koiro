@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM audio_versions WHERE song_id = $1 AND name <> ALL($2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e19ab6151a8e1f624533e768819708cf92d742ae37df141cf862fa5d495fdf35"
+}

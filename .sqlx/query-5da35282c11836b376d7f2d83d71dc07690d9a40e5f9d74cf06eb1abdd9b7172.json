@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"n!\" FROM songs s\n               WHERE s.title ILIKE $1 OR s.description ILIKE $1 OR s.staff::text ILIKE $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "5da35282c11836b376d7f2d83d71dc07690d9a40e5f9d74cf06eb1abdd9b7172"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE song_playlists sp SET position = t.ord - 1\n           FROM unnest($2::uuid[]) WITH ORDINALITY AS t(song_id, ord)\n           WHERE sp.playlist_id = $1 AND sp.song_id = t.song_id",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0a27cf3e5b5ed90926890e2f940b16cc8915b6b3e146c571f90667e8941b87a8"
+}

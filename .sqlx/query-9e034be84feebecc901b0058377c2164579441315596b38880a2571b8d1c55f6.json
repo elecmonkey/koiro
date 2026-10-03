@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM song_playlists WHERE playlist_id = $1 AND song_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9e034be84feebecc901b0058377c2164579441315596b38880a2571b8d1c55f6"
+}

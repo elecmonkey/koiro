@@ -1,0 +1,14 @@
+pub mod auth;
+pub mod cli;
+pub mod config;
+pub mod db;
+pub mod error;
+pub mod images;
+pub mod lyrics;
+pub mod media;
+pub mod remote;
+pub mod routes;
+pub mod songs;
+pub mod state;
+pub mod storage;
+pub mod users;

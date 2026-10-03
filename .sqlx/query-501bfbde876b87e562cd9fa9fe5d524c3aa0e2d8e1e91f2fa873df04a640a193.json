@@ -1,0 +1,67 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE users SET\n                       permissions = COALESCE($2, permissions),\n                       password_hash = COALESCE($3, password_hash),\n                       display_name = COALESCE($4, display_name)\n                   WHERE id = $1\n                   RETURNING id, email, display_name, permissions",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "email",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "email"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "display_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "display_name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "permissions",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "permissions"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "501bfbde876b87e562cd9fa9fe5d524c3aa0e2d8e1e91f2fa873df04a640a193"
+}

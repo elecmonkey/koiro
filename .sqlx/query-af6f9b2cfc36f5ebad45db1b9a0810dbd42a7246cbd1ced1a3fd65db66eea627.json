@@ -1,0 +1,113 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH scored AS (\n               SELECT s.id, s.title, s.description, s.cover_object_id, s.updated_at,\n                      s.staff AS staff,\n                      CASE WHEN strpos(lower(s.title), $1) > 0\n                           THEN 100 + CASE WHEN lower(s.title) = $1 THEN 50 ELSE 0 END\n                                    + CASE WHEN starts_with(lower(s.title), $1) THEN 30 ELSE 0 END\n                           ELSE 0 END AS title_score,\n                      (SELECT max(CASE WHEN lower(btrim(n)) = $1 THEN 75 ELSE 50 END)\n                       FROM jsonb_array_elements(s.staff) x, jsonb_array_elements_text(x->'name') n\n                       WHERE strpos(lower(n), $1) > 0) AS staff_score,\n                      (SELECT l.plain_text FROM lyrics_documents l\n                       WHERE l.song_id = s.id AND strpos(lower(l.plain_text), $1) > 0\n                       ORDER BY l.is_default DESC, l.created_at LIMIT 1) AS lyrics_match\n               FROM songs s\n           )\n           SELECT id AS \"id!\", title AS \"title!\", description AS \"description!\", cover_object_id,\n                  staff AS \"staff!: SqlJson<Vec<StaffEntry>>\",\n                  title_score AS \"title_score!\", staff_score, lyrics_match,\n                  (title_score + COALESCE(staff_score, 0) + CASE WHEN lyrics_match IS NULL THEN 0 ELSE 20 END) AS \"score!\",\n                  count(*) OVER () AS \"total!\"\n           FROM scored\n           WHERE title_score > 0 OR staff_score IS NOT NULL OR lyrics_match IS NOT NULL\n           ORDER BY 9 DESC, updated_at DESC, id\n           LIMIT $2 OFFSET $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "description!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "cover_object_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "cover_object_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "staff!: SqlJson<Vec<StaffEntry>>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "staff"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "title_score!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "staff_score",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "lyrics_match",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "score!",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "af6f9b2cfc36f5ebad45db1b9a0810dbd42a7246cbd1ced1a3fd65db66eea627"
+}
