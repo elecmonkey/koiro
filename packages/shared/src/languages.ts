@@ -1,4 +1,4 @@
-import type { Language } from './generated/Language';
+import type { Language } from './generated/api';
 
 /**
  * 语种的显示名称，顺序即界面上的顺序。

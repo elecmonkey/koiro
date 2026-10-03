@@ -6,25 +6,66 @@
 
 use std::{future::Future, sync::Arc};
 
+use chrono::{DateTime, Utc};
 use moka::{future::Cache, ops::compute::Op};
-use serde::Serialize;
 use sqlx::PgPool;
-use uuid::Uuid;
 
-use crate::error::AppError;
+use crate::{
+    api::{User, UserId},
+    auth::Permissions,
+    error::AppError,
+};
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct UserInfo {
-    pub id: Uuid,
+/// 用户账号（不含密码）
+#[derive(Debug, Clone)]
+pub struct Account {
+    pub id: UserId,
+    pub email: String,
+    pub display_name: String,
+    pub permissions: Permissions,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl Account {
+    pub fn to_api(&self) -> User {
+        User {
+            id: self.id,
+            email: self.email.clone(),
+            display_name: self.display_name.clone(),
+            permissions: self.permissions.to_list(),
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+        }
+    }
+}
+
+/// `SELECT` / `RETURNING` 读出的账号行；`permissions` 是位掩码
+pub struct AccountRow {
+    pub id: UserId,
     pub email: String,
     pub display_name: String,
     pub permissions: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl From<AccountRow> for Account {
+    fn from(row: AccountRow) -> Self {
+        Self {
+            id: row.id,
+            email: row.email,
+            display_name: row.display_name,
+            permissions: Permissions::from_bits(row.permissions),
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        }
+    }
 }
 
 #[derive(Clone)]
 pub struct UserCache {
-    cache: Cache<Uuid, Arc<UserInfo>>,
+    cache: Cache<UserId, Arc<Account>>,
     pool: PgPool,
 }
 
@@ -36,7 +77,7 @@ impl UserCache {
         }
     }
 
-    pub async fn get(&self, id: Uuid) -> Result<Option<Arc<UserInfo>>, AppError> {
+    pub async fn get(&self, id: UserId) -> Result<Option<Arc<Account>>, AppError> {
         if let Some(user) = self.cache.get(&id).await {
             return Ok(Some(user));
         }
@@ -58,12 +99,12 @@ impl UserCache {
         Ok(result.into_entry().map(|e| e.into_value()))
     }
 
-    /// 在该用户的 key 锁内执行数据库写操作，并用其返回值更新缓存（`None` 表示用户已删除）。
+    /// 在该用户的 key 锁内执行数据库写操作，并用其返回值更新缓存（`None` 表示用户已删除或不存在）。
     /// 所有修改用户的接口都必须经由此方法。
-    pub async fn write<F, Fut>(&self, id: Uuid, f: F) -> Result<Option<Arc<UserInfo>>, AppError>
+    pub async fn write<F, Fut>(&self, id: UserId, f: F) -> Result<Option<Arc<Account>>, AppError>
     where
         F: FnOnce() -> Fut,
-        Fut: Future<Output = Result<Option<UserInfo>, AppError>>,
+        Fut: Future<Output = Result<Option<Account>, AppError>>,
     {
         let result = self
             .cache
@@ -79,13 +120,14 @@ impl UserCache {
     }
 }
 
-async fn load(pool: &PgPool, id: Uuid) -> Result<Option<UserInfo>, AppError> {
-    let user = sqlx::query_as!(
-        UserInfo,
-        "SELECT id, email, display_name, permissions FROM users WHERE id = $1",
-        id
+async fn load(pool: &PgPool, id: UserId) -> Result<Option<Account>, AppError> {
+    let row = sqlx::query_as!(
+        AccountRow,
+        r#"SELECT id AS "id: UserId", email, display_name, permissions, created_at, updated_at
+           FROM users WHERE id = $1"#,
+        id as UserId
     )
     .fetch_optional(pool)
     .await?;
-    Ok(user)
+    Ok(row.map(Account::from))
 }

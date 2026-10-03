@@ -5,7 +5,7 @@
 //! 3. CLI 用授权码 + code_verifier 调 exchange，换取与网页登录同一种 JWT
 
 use axum::{
-    Json, Router,
+    Router,
     extract::{DefaultBodyLimit, State},
     http::{HeaderValue, header},
     middleware,
@@ -13,16 +13,15 @@ use axum::{
     routing::post,
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use url::Url;
 
+use super::extract::Json;
 use crate::{
+    api::{CliAuthorization, CliAuthorizeRequest, CliExchangeRequest, CliToken, UserId},
     auth::{Auth, LoggedIn, cli_codes::CliGrant, session},
     error::{AppError, AppResult},
     state::AppState,
-    users::UserInfo,
 };
 
 /// 命令行登录的有效期（天）
@@ -73,27 +72,13 @@ fn redirect_uri(value: &str) -> AppResult<Url> {
     Ok(url)
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct AuthorizeBody {
-    redirect_uri: String,
-    state: String,
-    code_challenge: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AuthorizeResponse {
-    callback_url: String,
-}
-
 async fn authorize(
     State(state): State<AppState>,
     auth: Auth<LoggedIn>,
-    Json(body): Json<AuthorizeBody>,
-) -> AppResult<Json<AuthorizeResponse>> {
-    // 停用的账号（权限为 0）不签发命令行登录
-    if auth.permissions == 0 {
+    Json(body): Json<CliAuthorizeRequest>,
+) -> AppResult<Json<CliAuthorization>> {
+    // 停用的账号不签发命令行登录
+    if auth.permissions.is_disabled() {
         return Err(AppError::Forbidden);
     }
     let mut callback = redirect_uri(&body.redirect_uri)?;
@@ -105,10 +90,11 @@ async fn authorize(
     {
         return Err(AppError::BadRequest("无效的 state 或 code_challenge".into()));
     }
-    let password_hash = sqlx::query_scalar!("SELECT password_hash FROM users WHERE id = $1", auth.id)
-        .fetch_optional(&state.pool)
-        .await?
-        .ok_or(AppError::Unauthorized("Unauthorized"))?;
+    let password_hash =
+        sqlx::query_scalar!("SELECT password_hash FROM users WHERE id = $1", auth.id as UserId)
+            .fetch_optional(&state.pool)
+            .await?
+            .ok_or(AppError::Unauthorized("请先登录"))?;
 
     let code = hex::encode(rand::random::<[u8; 32]>());
     state.cli_codes.insert(
@@ -124,31 +110,15 @@ async fn authorize(
         .query_pairs_mut()
         .append_pair("code", &code)
         .append_pair("state", &body.state);
-    Ok(Json(AuthorizeResponse {
+    Ok(Json(CliAuthorization {
         callback_url: callback.into(),
     }))
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ExchangeBody {
-    code: String,
-    code_verifier: String,
-    redirect_uri: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ExchangeResponse {
-    token: String,
-    expires_at: DateTime<Utc>,
-    user: UserInfo,
-}
-
 async fn exchange(
     State(state): State<AppState>,
-    Json(body): Json<ExchangeBody>,
-) -> AppResult<Json<ExchangeResponse>> {
+    Json(body): Json<CliExchangeRequest>,
+) -> AppResult<Json<CliToken>> {
     let invalid = || AppError::Unauthorized("授权码无效或已过期");
     redirect_uri(&body.redirect_uri)?;
     if !is_random_hex(&body.code)
@@ -167,22 +137,25 @@ async fn exchange(
         &body.redirect_uri,
     )?;
 
-    let password_hash = sqlx::query_scalar!("SELECT password_hash FROM users WHERE id = $1", grant.user_id)
-        .fetch_optional(&state.pool)
-        .await?
-        .ok_or_else(invalid)?;
+    let password_hash = sqlx::query_scalar!(
+        "SELECT password_hash FROM users WHERE id = $1",
+        grant.user_id as UserId
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(invalid)?;
     if digest(&password_hash) != grant.credential_fingerprint {
         return Err(invalid());
     }
     let user = state.users.get(grant.user_id).await?.ok_or_else(invalid)?;
-    if user.permissions == 0 {
+    if user.permissions.is_disabled() {
         return Err(AppError::Forbidden);
     }
     let issued = session::issue_token(&state, grant.user_id, CLI_TOKEN_TTL_DAYS)?;
-    Ok(Json(ExchangeResponse {
+    Ok(Json(CliToken {
         token: issued.token,
         expires_at: issued.expires_at,
-        user: UserInfo::clone(&user),
+        user: user.to_api(),
     }))
 }
 

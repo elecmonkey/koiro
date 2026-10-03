@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO lyrics (song_id, name, position, is_default, languages, lines, plain_text)\n               VALUES ($1, $2, $3, $4, $5, $6, $7)\n               ON CONFLICT (song_id, name) DO UPDATE\n               SET position = EXCLUDED.position, is_default = EXCLUDED.is_default,\n                   languages = EXCLUDED.languages, lines = EXCLUDED.lines, plain_text = EXCLUDED.plain_text\n               RETURNING id AS \"id: LyricsId\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: LyricsId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "lyrics",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int4",
+        "Bool",
+        "TextArray",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e8584004b41f75c215ad6c0d93713470127695d14259ff7985f7d202aee2e9b9"
+}

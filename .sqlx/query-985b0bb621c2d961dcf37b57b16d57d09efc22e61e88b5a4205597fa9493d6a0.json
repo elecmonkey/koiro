@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT av.name, av.object_id, av.is_default, l.name AS \"lyrics_name?\"\n           FROM audio_versions av LEFT JOIN lyrics l ON l.id = av.lyrics_id\n           WHERE av.song_id = $1 ORDER BY av.position",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_versions",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "object_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_versions",
+            "name": "object_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "is_default",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "audio_versions",
+            "name": "is_default"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "lyrics_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "lyrics",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "985b0bb621c2d961dcf37b57b16d57d09efc22e61e88b5a4205597fa9493d6a0"
+}

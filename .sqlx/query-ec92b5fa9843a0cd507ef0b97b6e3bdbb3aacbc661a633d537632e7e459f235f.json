@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO song_playlists (song_id, playlist_id, position)\n           SELECT $1, p.id,\n                  (SELECT COALESCE(max(position), -1) + 1 FROM song_playlists sp WHERE sp.playlist_id = p.id)\n           FROM unnest($2::uuid[]) AS p(id)\n           ON CONFLICT (song_id, playlist_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ec92b5fa9843a0cd507ef0b97b6e3bdbb3aacbc661a633d537632e7e459f235f"
+}

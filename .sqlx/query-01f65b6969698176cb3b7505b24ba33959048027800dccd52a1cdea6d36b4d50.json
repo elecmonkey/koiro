@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO song_playlists (song_id, playlist_id, position)\n           SELECT s.id, $1,\n                  (SELECT COALESCE(max(position), -1) FROM song_playlists WHERE playlist_id = $1)\n                  + row_number() OVER (ORDER BY t.ord)\n           FROM unnest($2::uuid[]) WITH ORDINALITY AS t(song_id, ord)\n           JOIN songs s ON s.id = t.song_id\n           WHERE NOT EXISTS (SELECT 1 FROM song_playlists sp WHERE sp.playlist_id = $1 AND sp.song_id = s.id)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "01f65b6969698176cb3b7505b24ba33959048027800dccd52a1cdea6d36b4d50"
+}

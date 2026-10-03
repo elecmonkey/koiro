@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 /// 歌词的语种
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[cfg_attr(test, derive(ts_rs::TS), ts(export))]
+#[cfg_attr(test, derive(ts_rs::TS), ts(export, export_to = "api.ts"))]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
     /// 普通话
@@ -36,6 +36,15 @@ impl Language {
     pub fn from_code(code: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|language| language.code() == code)
     }
+}
+
+/// 一个语种覆盖的歌曲数（任一份歌词标注了该语种即计入）
+#[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(ts_rs::TS), ts(export, export_to = "api.ts"))]
+#[serde(rename_all = "camelCase")]
+pub struct LanguageStat {
+    pub language: Language,
+    pub song_count: i64,
 }
 
 #[cfg(test)]

@@ -1,17 +1,18 @@
 use axum::{
-    Json, Router,
+    Router,
     body::Bytes,
     extract::{DefaultBodyLimit, State},
+    http::StatusCode,
     routing::post,
 };
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
+use super::extract::Json;
 use crate::{
+    api::{AudioUpload, AudioUploadRequest, ImageUrl, UploadedImage},
     auth::{Auth, Upload},
     error::{AppError, AppResult},
     images::MAX_IMAGE_BYTES,
-    media::{StoredImage, store_image},
+    media::store_image,
     remote,
     state::AppState,
     storage::AUDIO_CACHE_CONTROL,
@@ -19,36 +20,43 @@ use crate::{
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/uploads/audio", post(presign_audio))
         .route(
-            "/uploads/image",
+            "/uploads/images",
             post(upload_image).layer(DefaultBodyLimit::max(MAX_IMAGE_BYTES)),
         )
-        .route("/uploads/image-from-url", post(image_from_url))
+        .route("/uploads/images/from-url", post(image_from_url))
+        .route("/uploads/audio", post(presign_audio))
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PresignAudioBody {
-    filename: String,
-    content_type: String,
+/// 请求体即图片原始字节
+async fn upload_image(
+    State(state): State<AppState>,
+    _auth: Auth<Upload>,
+    body: Bytes,
+) -> AppResult<(StatusCode, Json<UploadedImage>)> {
+    Ok((
+        StatusCode::CREATED,
+        Json(store_image(&state, body.to_vec()).await?),
+    ))
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PresignAudioResponse {
-    url: String,
-    object_id: String,
-    /// 上传时必须原样携带的请求头
-    headers: BTreeMap<&'static str, String>,
+async fn image_from_url(
+    State(state): State<AppState>,
+    _auth: Auth<Upload>,
+    Json(body): Json<ImageUrl>,
+) -> AppResult<(StatusCode, Json<UploadedImage>)> {
+    let (bytes, _) = remote::fetch(&state.http, body.url.trim(), MAX_IMAGE_BYTES)
+        .await
+        .map_err(|err| AppError::BadRequest(format!("下载图片失败：{err}")))?;
+    Ok((StatusCode::CREATED, Json(store_image(&state, bytes).await?)))
 }
 
-/// 音频文件较大，由浏览器直传 S3
+/// 音频文件较大，由客户端直传对象存储
 async fn presign_audio(
     State(state): State<AppState>,
     _auth: Auth<Upload>,
-    Json(body): Json<PresignAudioBody>,
-) -> AppResult<Json<PresignAudioResponse>> {
+    Json(body): Json<AudioUploadRequest>,
+) -> AppResult<Json<AudioUpload>> {
     if !body.content_type.starts_with("audio/") {
         return Err(AppError::BadRequest("只支持音频文件".into()));
     }
@@ -58,36 +66,15 @@ async fn presign_audio(
         .storage
         .presign_put(key, &body.content_type, AUDIO_CACHE_CONTROL)
         .await?;
-    Ok(Json(PresignAudioResponse {
+    Ok(Json(AudioUpload {
         url: presigned.url,
+        headers: presigned
+            .headers
+            .into_iter()
+            .map(|(name, value)| (name.to_owned(), value))
+            .collect(),
         object_id: presigned.key,
-        headers: presigned.headers.into_iter().collect(),
     }))
-}
-
-/// 请求体即图片原始字节
-async fn upload_image(
-    State(state): State<AppState>,
-    _auth: Auth<Upload>,
-    body: Bytes,
-) -> AppResult<Json<StoredImage>> {
-    Ok(Json(store_image(&state, body.to_vec()).await?))
-}
-
-#[derive(Deserialize)]
-struct ImageFromUrlBody {
-    url: String,
-}
-
-async fn image_from_url(
-    State(state): State<AppState>,
-    _auth: Auth<Upload>,
-    Json(body): Json<ImageFromUrlBody>,
-) -> AppResult<Json<StoredImage>> {
-    let (bytes, _) = remote::fetch(&state.http, body.url.trim(), MAX_IMAGE_BYTES)
-        .await
-        .map_err(|err| AppError::BadRequest(format!("拉取失败：{err}")))?;
-    Ok(Json(store_image(&state, bytes).await?))
 }
 
 /// 取文件扩展名（仅保留 1–8 位字母数字）

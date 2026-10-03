@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT n AS \"name!\", x->>'role' AS role, GROUPING(x->>'role') = 1 AS \"is_total!\",\n                  count(DISTINCT s.id) AS \"song_count!\"\n           FROM songs s, jsonb_array_elements(s.staff) x, jsonb_array_elements_text(x->'names') n\n           WHERE $1::text IS NULL OR n = $1\n           GROUP BY GROUPING SETS ((n), (n, x->>'role'))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "role",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "is_total!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "song_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "c7989ff3e760919631dc392e0fba7a959f34bda9f92e85494dc11afc74a730e8"
+}

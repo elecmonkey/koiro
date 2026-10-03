@@ -6,12 +6,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-use uuid::Uuid;
-
-use crate::error::AppError;
+use crate::{api::UserId, error::AppError};
 
 pub struct CliGrant {
-    pub user_id: Uuid,
+    pub user_id: UserId,
     /// 授权时密码哈希的摘要；兑换前改过密码则作废
     pub credential_fingerprint: String,
     pub code_challenge: String,
@@ -109,11 +107,13 @@ impl CliCodes {
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
+
     use super::*;
 
     const CALLBACK: &str = "http://127.0.0.1:56333/callback";
 
-    fn grant(user_id: Uuid) -> CliGrant {
+    fn grant(user_id: UserId) -> CliGrant {
         CliGrant {
             user_id,
             credential_fingerprint: "fingerprint".into(),
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn mismatched_bindings_do_not_consume() {
         let store = CliCodes::default();
-        let user = Uuid::new_v4();
+        let user = UserId(Uuid::new_v4());
         store.insert("code".into(), grant(user)).unwrap();
         assert!(store.consume("code", "wrong", CALLBACK).is_err());
         assert!(
@@ -145,10 +145,12 @@ mod tests {
         let now = Instant::now();
         let ttl = Duration::from_secs(120);
         let store = CliCodes::new(1, ttl);
-        store.insert_at("old".into(), grant(Uuid::new_v4()), now).unwrap();
+        store
+            .insert_at("old".into(), grant(UserId(Uuid::new_v4())), now)
+            .unwrap();
         assert!(store.consume_at("old", "challenge", CALLBACK, now + ttl).is_err());
         store
-            .insert_at("fresh".into(), grant(Uuid::new_v4()), now + ttl * 2)
+            .insert_at("fresh".into(), grant(UserId(Uuid::new_v4())), now + ttl * 2)
             .unwrap();
         assert!(
             store
@@ -160,9 +162,13 @@ mod tests {
     #[test]
     fn capacity_allows_replacing_own_grant() {
         let store = CliCodes::new(1, Duration::from_secs(120));
-        let user = Uuid::new_v4();
+        let user = UserId(Uuid::new_v4());
         store.insert("first".into(), grant(user)).unwrap();
-        assert!(store.insert("other".into(), grant(Uuid::new_v4())).is_err());
+        assert!(
+            store
+                .insert("other".into(), grant(UserId(Uuid::new_v4())))
+                .is_err()
+        );
         store.insert("replacement".into(), grant(user)).unwrap();
         assert!(store.consume("first", "challenge", CALLBACK).is_err());
         assert!(store.consume("replacement", "challenge", CALLBACK).is_ok());

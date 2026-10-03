@@ -9,7 +9,10 @@ use anyhow::{Context, bail};
 use clap::Subcommand;
 use sqlx::PgPool;
 
-use crate::auth::hash_password;
+use crate::{
+    api::Permission,
+    auth::{Permissions, hash_password},
+};
 
 #[derive(Subcommand)]
 pub enum UserCommand {
@@ -55,12 +58,13 @@ async fn add(pool: &PgPool) -> anyhow::Result<()> {
         name => name,
     };
     let password = ask_password()?;
-    let mut permissions = 0;
-    for (name, bit) in [("VIEW", 1), ("DOWNLOAD", 2), ("UPLOAD", 4), ("ADMIN", 8)] {
-        if ask(&format!("授予 {name} 权限？(y/N): "))?.eq_ignore_ascii_case("y") {
-            permissions |= bit;
+    let mut granted = Vec::new();
+    for permission in Permission::ALL {
+        if ask(&format!("授予 {permission:?} 权限？(y/N): "))?.eq_ignore_ascii_case("y") {
+            granted.push(permission);
         }
     }
+    let permissions = Permissions::from_list(&granted);
 
     let password_hash = hash_password(&password);
     let id = sqlx::query_scalar!(
@@ -69,12 +73,12 @@ async fn add(pool: &PgPool) -> anyhow::Result<()> {
         email,
         display_name,
         password_hash,
-        permissions
+        permissions.bits()
     )
     .fetch_optional(pool)
     .await?
     .context("该邮箱已被注册")?;
-    println!("用户已创建：{id} {email}（{display_name}），权限 {permissions}");
+    println!("用户已创建：{id} {email}（{display_name}），权限 {granted:?}");
     Ok(())
 }
 

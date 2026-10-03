@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH scored AS (\n               SELECT s.id, s.title, s.staff, s.updated_at,\n                      CASE WHEN strpos(lower(s.title), $1) > 0\n                           THEN 100 + CASE WHEN lower(s.title) = $1 THEN 50 ELSE 0 END\n                                    + CASE WHEN starts_with(lower(s.title), $1) THEN 30 ELSE 0 END\n                           ELSE 0 END AS title_score,\n                      (SELECT max(CASE WHEN lower(n) = $1 THEN 75 ELSE 50 END)\n                       FROM jsonb_array_elements(s.staff) x, jsonb_array_elements_text(x->'names') n\n                       WHERE strpos(lower(n), $1) > 0) AS staff_score,\n                      (SELECT l.plain_text FROM lyrics l\n                       WHERE l.song_id = s.id AND strpos(lower(l.plain_text), $1) > 0\n                       ORDER BY l.is_default DESC, l.position LIMIT 1) AS lyrics_match\n               FROM songs s\n           )\n           SELECT id AS \"id!: SongId\", title AS \"title!\", staff AS \"staff!: SqlJson<Vec<StaffCredit>>\",\n                  title_score > 0 AS \"title_matched!\", staff_score IS NOT NULL AS \"staff_matched!\",\n                  lyrics_match, count(*) OVER () AS \"total!\"\n           FROM scored\n           WHERE title_score > 0 OR staff_score IS NOT NULL OR lyrics_match IS NOT NULL\n           ORDER BY title_score + COALESCE(staff_score, 0) + CASE WHEN lyrics_match IS NULL THEN 0 ELSE 20 END DESC,\n                    updated_at DESC, id\n           LIMIT $2 OFFSET $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: SongId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "staff!: SqlJson<Vec<StaffCredit>>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "staff"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "title_matched!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "staff_matched!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "lyrics_match",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "542245a167ad6327cffe876e9e3e73dba1c7da3c785d5c547cb239ee2a1d4675"
+}

@@ -1,15 +1,18 @@
+//! HTTP 层：每个 handler 只负责提取参数、声明权限、读写数据库，并以 [`crate::api`] 的类型响应
+
 mod audio;
 mod auth;
-mod browse;
 mod cli_auth;
-mod common;
+mod extract;
+mod languages;
 mod playlists;
+mod search;
 mod songs;
+mod staff;
 mod uploads;
 mod users;
 
-use axum::{Json, Router, routing::get};
-use serde_json::{Value, json};
+use axum::{Router, http::StatusCode, routing::get};
 
 use crate::state::AppState;
 
@@ -22,10 +25,12 @@ pub fn router() -> Router<AppState> {
         .merge(uploads::router())
         .merge(songs::router())
         .merge(playlists::router())
+        .merge(staff::router())
+        .merge(languages::router())
+        .merge(search::router())
         .merge(users::router())
-        .merge(browse::router())
 }
 
-async fn health() -> Json<Value> {
-    Json(json!({ "ok": true }))
+async fn health() -> StatusCode {
+    StatusCode::NO_CONTENT
 }

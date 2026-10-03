@@ -1,0 +1,131 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT s.id AS \"id: SongId\", s.title, s.description, s.cover_object_id, s.updated_at,\n                  s.staff AS \"staff: Json<Vec<StaffCredit>>\",\n                  av.id AS \"version_id: AudioVersionId\", av.name AS version_name,\n                  av.lyrics_id AS \"lyrics_id: LyricsId\",\n                  (SELECT count(*) FROM audio_versions x WHERE x.song_id = s.id) AS \"version_count!\"\n           FROM songs s JOIN audio_versions av ON av.song_id = s.id AND av.is_default\n           WHERE s.id = ANY($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: SongId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "cover_object_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "cover_object_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "staff: Json<Vec<StaffCredit>>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "staff"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "version_id: AudioVersionId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "audio_versions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "version_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "audio_versions",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "lyrics_id: LyricsId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "audio_versions",
+            "name": "lyrics_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "version_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "a31c753290d714ba733211636a777e0239274219dd6ac7351ccbca66ca42569c"
+}

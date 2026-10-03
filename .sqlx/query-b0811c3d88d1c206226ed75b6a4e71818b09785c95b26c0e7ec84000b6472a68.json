@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM lyrics WHERE song_id = $1 AND name <> ALL($2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b0811c3d88d1c206226ed75b6a4e71818b09785c95b26c0e7ec84000b6472a68"
+}

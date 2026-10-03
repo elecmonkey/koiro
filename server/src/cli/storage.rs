@@ -61,7 +61,7 @@ async fn backfill(storage: &Storage, dry_run: bool) -> anyhow::Result<()> {
 
 async fn orphans(storage: &Storage, pool: &PgPool, delete: bool) -> anyhow::Result<()> {
     let referenced: HashSet<String> = sqlx::query_scalar!(
-        r#"SELECT cover_object_id AS "key!" FROM songs WHERE cover_object_id IS NOT NULL
+        r#"SELECT cover_object_id AS "key!" FROM songs
            UNION SELECT cover_object_id FROM playlists
            UNION SELECT object_id FROM audio_versions"#
     )

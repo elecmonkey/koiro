@@ -44,3 +44,13 @@ pub async fn ensure_migrated(pool: &PgPool) -> anyhow::Result<()> {
     }
     Ok(())
 }
+
+/// 「包含这段文字」的 ILIKE 模式：去掉首尾空白，转义通配符
+pub fn like_pattern(text: &str) -> String {
+    let escaped = text
+        .trim()
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_");
+    format!("%{escaped}%")
+}

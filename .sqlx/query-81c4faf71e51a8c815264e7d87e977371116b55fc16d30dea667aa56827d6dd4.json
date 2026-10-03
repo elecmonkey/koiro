@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT lang AS \"code!\", count(DISTINCT l.song_id) AS \"song_count!\"\n           FROM lyrics l, unnest(l.languages) lang\n           GROUP BY lang ORDER BY 2 DESC, 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "code!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "song_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "81c4faf71e51a8c815264e7d87e977371116b55fc16d30dea667aa56827d6dd4"
+}

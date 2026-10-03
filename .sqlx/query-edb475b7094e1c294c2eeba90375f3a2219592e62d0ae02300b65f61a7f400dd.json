@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id AS \"id: SongId\", title FROM songs ORDER BY title, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: SongId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "title"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "edb475b7094e1c294c2eeba90375f3a2219592e62d0ae02300b65f61a7f400dd"
+}

@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT name, is_default, languages, lines AS \"lines: Json<Vec<LyricLine>>\"\n           FROM lyrics WHERE song_id = $1 ORDER BY position",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "lyrics",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "is_default",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "lyrics",
+            "name": "is_default"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "languages",
+        "type_info": "TextArray",
+        "origin": {
+          "Table": {
+            "table": "lyrics",
+            "name": "languages"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "lines: Json<Vec<LyricLine>>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "lyrics",
+            "name": "lines"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9a33d9d22a5092c80f1553d9726d74d2a3a1e132c0f64a874e617125df7fbe70"
+}

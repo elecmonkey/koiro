@@ -16,39 +16,83 @@ use axum::{extract::FromRequestParts, http::request::Parts};
 
 pub use password::{Hasher, hash_password};
 
-use crate::{error::AppError, state::AppState, users::UserInfo};
+use crate::{api::Permission, error::AppError, state::AppState, users::Account};
 
-pub trait Permission: Send + Sync + 'static {
-    const BIT: i32;
+/// 数据库中的权限位掩码
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Permissions(i32);
+
+impl Permissions {
+    pub fn from_bits(bits: i32) -> Self {
+        Self(bits)
+    }
+
+    pub fn bits(self) -> i32 {
+        self.0
+    }
+
+    fn bit(permission: Permission) -> i32 {
+        match permission {
+            Permission::View => 1,
+            Permission::Download => 2,
+            Permission::Upload => 4,
+            Permission::Admin => 8,
+        }
+    }
+
+    pub fn contains(self, permission: Permission) -> bool {
+        self.0 & Self::bit(permission) != 0
+    }
+
+    /// 没有任何权限的账号视为停用
+    pub fn is_disabled(self) -> bool {
+        self.0 == 0
+    }
+
+    pub fn to_list(self) -> Vec<Permission> {
+        Permission::ALL
+            .into_iter()
+            .filter(|&permission| self.contains(permission))
+            .collect()
+    }
+
+    pub fn from_list(list: &[Permission]) -> Self {
+        Self(
+            list.iter()
+                .fold(0, |bits, &permission| bits | Self::bit(permission)),
+        )
+    }
 }
 
-macro_rules! permissions {
-    ($($(#[$meta:meta])* $name:ident = $bit:expr),* $(,)?) => {
+/// handler 要求的权限
+pub trait Requirement: Send + Sync + 'static {
+    /// `None` 表示只要求登录（停用账号也满足）
+    const PERMISSION: Option<Permission>;
+}
+
+macro_rules! requirements {
+    ($($(#[$meta:meta])* $name:ident = $permission:expr),* $(,)?) => {
         $(
             $(#[$meta])*
             pub struct $name;
-            impl Permission for $name {
-                const BIT: i32 = $bit;
+            impl Requirement for $name {
+                const PERMISSION: Option<Permission> = $permission;
             }
         )*
     };
 }
 
-permissions! {
-    /// 只要求登录（权限为 0 的停用账号也满足）
-    LoggedIn = 0,
-    View = 1,
-    Download = 2,
-    Upload = 4,
-    Admin = 8,
-}
-
-pub fn has_permission(mask: i32, bit: i32) -> bool {
-    mask & bit == bit
+requirements! {
+    /// 只要求登录
+    LoggedIn = None,
+    View = Some(Permission::View),
+    Download = Some(Permission::Download),
+    Upload = Some(Permission::Upload),
+    Admin = Some(Permission::Admin),
 }
 
 /// 当前请求的用户（未登录、token 无效或用户已删除时为 `None`）
-pub struct MaybeUser(pub Option<Arc<UserInfo>>);
+pub struct MaybeUser(pub Option<Arc<Account>>);
 
 impl FromRequestParts<AppState> for MaybeUser {
     type Rejection = AppError;
@@ -61,39 +105,39 @@ impl FromRequestParts<AppState> for MaybeUser {
     }
 }
 
-/// 必须登录且具备权限 `P`；否则 401（未登录）/ 403（权限不足）
-pub struct Auth<P: Permission> {
-    pub user: Arc<UserInfo>,
-    _permission: PhantomData<P>,
+/// 必须登录且具备 `R` 要求的权限；否则 401（未登录）/ 403（权限不足）
+pub struct Auth<R: Requirement> {
+    pub user: Arc<Account>,
+    _requirement: PhantomData<R>,
 }
 
-impl<P: Permission> Deref for Auth<P> {
-    type Target = UserInfo;
+impl<R: Requirement> Deref for Auth<R> {
+    type Target = Account;
 
-    fn deref(&self) -> &UserInfo {
+    fn deref(&self) -> &Account {
         &self.user
     }
 }
 
-impl<P: Permission> FromRequestParts<AppState> for Auth<P> {
+impl<R: Requirement> FromRequestParts<AppState> for Auth<R> {
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
         let MaybeUser(user) = MaybeUser::from_request_parts(parts, state).await?;
-        let user = user.ok_or(AppError::Unauthorized("Unauthorized"))?;
-        if !has_permission(user.permissions, P::BIT) {
+        let user = user.ok_or(AppError::Unauthorized("请先登录"))?;
+        if R::PERMISSION.is_some_and(|permission| !user.permissions.contains(permission)) {
             return Err(AppError::Forbidden);
         }
         Ok(Self {
             user,
-            _permission: PhantomData,
+            _requirement: PhantomData,
         })
     }
 }
 
 /// 浏览权限。全局开启匿名访问（`KOIRO_ALLOW_ANON`）时未登录也放行，此时为 `None`；
 /// 已登录但没有 VIEW 权限（如被停用）的用户始终 403。
-pub struct CanView(pub Option<Arc<UserInfo>>);
+pub struct CanView(pub Option<Arc<Account>>);
 
 impl FromRequestParts<AppState> for CanView {
     type Rejection = AppError;
@@ -101,10 +145,33 @@ impl FromRequestParts<AppState> for CanView {
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
         let MaybeUser(user) = MaybeUser::from_request_parts(parts, state).await?;
         match user {
-            Some(user) if has_permission(user.permissions, View::BIT) => Ok(Self(Some(user))),
+            Some(user) if user.permissions.contains(Permission::View) => Ok(Self(Some(user))),
             Some(_) => Err(AppError::Forbidden),
             None if state.config.allow_anonymous => Ok(Self(None)),
-            None => Err(AppError::Unauthorized("Unauthorized")),
+            None => Err(AppError::Unauthorized("请先登录")),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn permission_bits_round_trip() {
+        let all = Permissions::from_bits(15);
+        assert_eq!(
+            all.to_list(),
+            [
+                Permission::View,
+                Permission::Download,
+                Permission::Upload,
+                Permission::Admin
+            ]
+        );
+        assert_eq!(Permissions::from_list(&all.to_list()), all);
+        let some = Permissions::from_list(&[Permission::Upload, Permission::View, Permission::View]);
+        assert_eq!(some.bits(), 5);
+        assert!(Permissions::from_bits(0).is_disabled());
     }
 }

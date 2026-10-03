@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT song_id AS \"id: SongId\" FROM song_playlists WHERE playlist_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: SongId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "song_playlists",
+            "name": "song_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c33b56ef194cf76072c5484fbfe9e6f1edb03356be0e6c81a0b2999b644256e0"
+}

@@ -1,22 +1,27 @@
+use std::collections::HashSet;
+
 use axum::{
-    Json, Router,
-    extract::{Path, Query, State},
+    Router,
+    extract::State,
+    http::StatusCode,
     routing::{delete, get},
 };
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use super::common::{OK, Ok, PageQuery, Pagination, SearchPageQuery};
+use super::extract::{Json, Path, Query};
 use crate::{
+    api::{
+        AddedSongs, Page, PageQuery, Playlist, PlaylistFilter, PlaylistId, PlaylistInput, PlaylistOption,
+        PlaylistPatch, PlaylistSongs, SongId,
+    },
     auth::{Admin, Auth, CanView},
+    db::like_pattern,
     error::{AppError, AppResult},
-    media::{Cover, cover},
-    songs::{self, SongSummary},
+    media::{image_url, is_image_key},
     state::AppState,
 };
 
-const PAGE_SIZE: i64 = 10;
+/// 首页随机推荐的数量
 const RANDOM_COUNT: i64 = 4;
 
 pub fn router() -> Router<AppState> {
@@ -24,182 +29,125 @@ pub fn router() -> Router<AppState> {
         .route("/playlists", get(list).post(create))
         .route("/playlists/random", get(random))
         .route("/playlists/options", get(options))
-        .route("/playlists/{id}", get(detail).put(update).delete(remove))
+        .route("/playlists/{id}", get(detail).patch(update).delete(remove))
         .route(
             "/playlists/{id}/songs",
             axum::routing::post(add_songs).put(reorder_songs),
         )
         .route("/playlists/{id}/songs/{song_id}", delete(remove_song))
-        .route("/admin/playlists", get(admin_list))
-        .route("/admin/playlists/{id}", get(admin_detail))
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PlaylistSummary {
-    id: Uuid,
+struct PlaylistRow {
+    id: PlaylistId,
     name: String,
     description: String,
-    cover: Option<Cover>,
+    cover_object_id: String,
     song_count: i64,
     updated_at: DateTime<Utc>,
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PlaylistPage {
-    playlists: Vec<PlaylistSummary>,
-    pagination: Pagination,
+impl PlaylistRow {
+    fn into_api(self, state: &AppState) -> Playlist {
+        Playlist {
+            id: self.id,
+            name: self.name,
+            description: self.description,
+            cover_url: image_url(state, &self.cover_object_id),
+            song_count: self.song_count,
+            updated_at: self.updated_at,
+        }
+    }
 }
 
+async fn find(state: &AppState, id: PlaylistId) -> AppResult<Playlist> {
+    let row = sqlx::query_as!(
+        PlaylistRow,
+        r#"SELECT p.id AS "id: PlaylistId", p.name, p.description, p.cover_object_id, p.updated_at,
+                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!"
+           FROM playlists p WHERE p.id = $1"#,
+        id as PlaylistId
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or(AppError::NotFound)?;
+    Ok(row.into_api(state))
+}
+
+/// 按更新时间从新到旧；`q` 匹配名称或简介
 async fn list(
     State(state): State<AppState>,
     _view: CanView,
-    Query(query): Query<PageQuery>,
-) -> AppResult<Json<PlaylistPage>> {
-    let total = sqlx::query_scalar!(r#"SELECT count(*) AS "n!" FROM playlists"#)
-        .fetch_one(&state.pool)
-        .await?;
-    let rows = sqlx::query!(
-        r#"SELECT p.id, p.name, p.description, p.cover_object_id, p.updated_at,
+    Query(page): Query<PageQuery>,
+    Query(filter): Query<PlaylistFilter>,
+) -> AppResult<Json<Page<Playlist>>> {
+    let pattern = like_pattern(filter.q.as_deref().unwrap_or_default());
+    let total = sqlx::query_scalar!(
+        r#"SELECT count(*) AS "n!" FROM playlists WHERE name ILIKE $1 OR description ILIKE $1"#,
+        pattern
+    )
+    .fetch_one(&state.pool)
+    .await?;
+    let rows = sqlx::query_as!(
+        PlaylistRow,
+        r#"SELECT p.id AS "id: PlaylistId", p.name, p.description, p.cover_object_id, p.updated_at,
                   (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!"
-           FROM playlists p ORDER BY p.updated_at DESC, p.id LIMIT $1 OFFSET $2"#,
-        PAGE_SIZE,
-        query.offset(PAGE_SIZE)
+           FROM playlists p WHERE p.name ILIKE $1 OR p.description ILIKE $1
+           ORDER BY p.updated_at DESC, p.id LIMIT $2 OFFSET $3"#,
+        pattern,
+        page.limit(),
+        page.offset()
     )
     .fetch_all(&state.pool)
     .await?;
-    let playlists = rows
-        .into_iter()
-        .map(|row| PlaylistSummary {
-            id: row.id,
-            name: row.name,
-            description: row.description,
-            cover: cover(&state, Some(&row.cover_object_id)),
-            song_count: row.song_count,
-            updated_at: row.updated_at,
-        })
-        .collect();
-    Ok(Json(PlaylistPage {
-        playlists,
-        pagination: Pagination::new(query.page(), PAGE_SIZE, total),
-    }))
+    let items = rows.into_iter().map(|row| row.into_api(&state)).collect();
+    Ok(Json(Page::new(items, &page, total)))
 }
 
-#[derive(Serialize)]
-struct PlaylistList {
-    playlists: Vec<PlaylistSummary>,
-}
-
-async fn random(State(state): State<AppState>, _view: CanView) -> AppResult<Json<PlaylistList>> {
-    let rows = sqlx::query!(
-        r#"SELECT p.id, p.name, p.description, p.cover_object_id, p.updated_at,
+async fn random(State(state): State<AppState>, _view: CanView) -> AppResult<Json<Vec<Playlist>>> {
+    let rows = sqlx::query_as!(
+        PlaylistRow,
+        r#"SELECT p.id AS "id: PlaylistId", p.name, p.description, p.cover_object_id, p.updated_at,
                   (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!"
            FROM playlists p ORDER BY random() LIMIT $1"#,
         RANDOM_COUNT
     )
     .fetch_all(&state.pool)
     .await?;
-    let playlists = rows
-        .into_iter()
-        .map(|row| PlaylistSummary {
-            id: row.id,
-            name: row.name,
-            description: row.description,
-            cover: cover(&state, Some(&row.cover_object_id)),
-            song_count: row.song_count,
-            updated_at: row.updated_at,
-        })
-        .collect();
-    Ok(Json(PlaylistList { playlists }))
+    Ok(Json(rows.into_iter().map(|row| row.into_api(&state)).collect()))
 }
 
-#[derive(Serialize)]
-struct PlaylistOption {
-    id: Uuid,
-    name: String,
-}
-
-#[derive(Serialize)]
-struct PlaylistOptions {
-    playlists: Vec<PlaylistOption>,
-}
-
-/// 上传 / 编辑歌曲时选择所属歌单
-async fn options(State(state): State<AppState>, _view: CanView) -> AppResult<Json<PlaylistOptions>> {
-    let playlists = sqlx::query_as!(PlaylistOption, "SELECT id, name FROM playlists ORDER BY name")
+/// 全部歌单的精简列表，按名称排序
+async fn options(State(state): State<AppState>, _view: CanView) -> AppResult<Json<Vec<PlaylistOption>>> {
+    Ok(Json(
+        sqlx::query_as!(
+            PlaylistOption,
+            r#"SELECT id AS "id: PlaylistId", name FROM playlists ORDER BY name, id"#
+        )
         .fetch_all(&state.pool)
-        .await?;
-    Ok(Json(PlaylistOptions { playlists }))
+        .await?,
+    ))
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PlaylistDetail {
-    playlist: PlaylistSummary,
-    songs: Vec<SongSummary>,
-    pagination: Pagination,
-}
-
+/// 歌单里的歌曲用 `GET /songs?playlist=<id>` 获取
 async fn detail(
     State(state): State<AppState>,
     _view: CanView,
-    Path(id): Path<Uuid>,
-    Query(query): Query<PageQuery>,
-) -> AppResult<Json<PlaylistDetail>> {
-    let row = sqlx::query!(
-        r#"SELECT p.id, p.name, p.description, p.cover_object_id, p.updated_at,
-                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!"
-           FROM playlists p WHERE p.id = $1"#,
-        id
-    )
-    .fetch_optional(&state.pool)
-    .await?
-    .ok_or(AppError::NotFound)?;
-    let ids = sqlx::query_scalar!(
-        r#"SELECT song_id FROM song_playlists WHERE playlist_id = $1
-           ORDER BY position NULLS LAST, song_id LIMIT $2 OFFSET $3"#,
-        id,
-        PAGE_SIZE,
-        query.offset(PAGE_SIZE)
-    )
-    .fetch_all(&state.pool)
-    .await?;
-    Ok(Json(PlaylistDetail {
-        pagination: Pagination::new(query.page(), PAGE_SIZE, row.song_count),
-        playlist: PlaylistSummary {
-            id: row.id,
-            name: row.name,
-            description: row.description,
-            cover: cover(&state, Some(&row.cover_object_id)),
-            song_count: row.song_count,
-            updated_at: row.updated_at,
-        },
-        songs: songs::summaries(&state, &ids).await?,
-    }))
+    Path(id): Path<PlaylistId>,
+) -> AppResult<Json<Playlist>> {
+    Ok(Json(find(&state, id).await?))
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct CreateBody {
-    name: String,
-    #[serde(default)]
-    description: String,
-    cover_object_id: String,
-}
-
-#[derive(Serialize)]
-struct Created {
-    ok: bool,
-    id: Uuid,
+fn checked_name(name: &str) -> AppResult<String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(AppError::BadRequest("歌单名称不能为空".into()));
+    }
+    Ok(name.to_owned())
 }
 
 fn check_cover(state: &AppState, key: &str) -> AppResult<()> {
-    if key.is_empty() {
-        return Err(AppError::BadRequest("必须上传封面".into()));
-    }
-    if !key.starts_with(&format!("{}img/", state.storage.prefix())) {
-        return Err(AppError::BadRequest("无效的封面".into()));
+    if !is_image_key(state, key) {
+        return Err(AppError::BadRequest("请上传封面".into()));
     }
     Ok(())
 }
@@ -207,44 +155,35 @@ fn check_cover(state: &AppState, key: &str) -> AppResult<()> {
 async fn create(
     State(state): State<AppState>,
     _auth: Auth<Admin>,
-    Json(body): Json<CreateBody>,
-) -> AppResult<Json<Created>> {
-    let name = body.name.trim();
-    if name.is_empty() {
-        return Err(AppError::BadRequest("歌单名称不能为空".into()));
-    }
+    Json(body): Json<PlaylistInput>,
+) -> AppResult<(StatusCode, Json<Playlist>)> {
+    let name = checked_name(&body.name)?;
     check_cover(&state, &body.cover_object_id)?;
     let id = sqlx::query_scalar!(
-        "INSERT INTO playlists (name, description, cover_object_id) VALUES ($1, $2, $3) RETURNING id",
+        r#"INSERT INTO playlists (name, description, cover_object_id) VALUES ($1, $2, $3)
+           RETURNING id AS "id: PlaylistId""#,
         name,
         body.description.trim(),
         body.cover_object_id
     )
     .fetch_one(&state.pool)
     .await?;
-    Ok(Json(Created { ok: true, id }))
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct UpdateBody {
-    name: Option<String>,
-    description: Option<String>,
-    cover_object_id: Option<String>,
+    Ok((StatusCode::CREATED, Json(find(&state, id).await?)))
 }
 
 async fn update(
     State(state): State<AppState>,
     _auth: Auth<Admin>,
-    Path(id): Path<Uuid>,
-    Json(body): Json<UpdateBody>,
-) -> AppResult<Json<Created>> {
-    let name = body.name.as_deref().map(str::trim);
-    if name.is_some_and(str::is_empty) {
-        return Err(AppError::BadRequest("歌单名称不能为空".into()));
-    }
+    Path(id): Path<PlaylistId>,
+    Json(body): Json<PlaylistPatch>,
+) -> AppResult<Json<Playlist>> {
+    let name = body.name.as_deref().map(checked_name).transpose()?;
     if let Some(key) = &body.cover_object_id {
         check_cover(&state, key)?;
+    }
+    // 什么都不改时不写库，避免无意义地刷新 updated_at
+    if name.is_none() && body.description.is_none() && body.cover_object_id.is_none() {
+        return Ok(Json(find(&state, id).await?));
     }
     let updated = sqlx::query!(
         r#"UPDATE playlists SET
@@ -252,7 +191,7 @@ async fn update(
                description = COALESCE($3, description),
                cover_object_id = COALESCE($4, cover_object_id)
            WHERE id = $1"#,
-        id,
+        id as PlaylistId,
         name,
         body.description.as_deref().map(str::trim),
         body.cover_object_id
@@ -263,238 +202,128 @@ async fn update(
     if updated == 0 {
         return Err(AppError::NotFound);
     }
-    Ok(Json(Created { ok: true, id }))
+    Ok(Json(find(&state, id).await?))
 }
 
 async fn remove(
     State(state): State<AppState>,
     _auth: Auth<Admin>,
-    Path(id): Path<Uuid>,
-) -> AppResult<Json<Ok>> {
-    let deleted = sqlx::query!("DELETE FROM playlists WHERE id = $1", id)
+    Path(id): Path<PlaylistId>,
+) -> AppResult<StatusCode> {
+    let deleted = sqlx::query!("DELETE FROM playlists WHERE id = $1", id as PlaylistId)
         .execute(&state.pool)
         .await?
         .rows_affected();
     if deleted == 0 {
         return Err(AppError::NotFound);
     }
-    Ok(Json(OK))
+    Ok(StatusCode::NO_CONTENT)
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct SongIdsBody {
-    song_ids: Vec<Uuid>,
+/// 锁住歌单行：同一歌单的追加、重排串行执行
+async fn lock(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, id: PlaylistId) -> AppResult<()> {
+    sqlx::query!(
+        "SELECT id FROM playlists WHERE id = $1 FOR UPDATE",
+        id as PlaylistId
+    )
+    .fetch_optional(&mut **tx)
+    .await?
+    .ok_or(AppError::NotFound)?;
+    Ok(())
 }
 
-#[derive(Serialize)]
-struct AddResult {
-    ok: bool,
-    added: u64,
-    skipped: u64,
-}
-
-/// 追加到歌单末尾，已在歌单中的跳过
+/// 按给出的顺序追加到末尾；已在歌单里、不存在或重复给出的跳过
 async fn add_songs(
     State(state): State<AppState>,
     _auth: Auth<Admin>,
-    Path(id): Path<Uuid>,
-    Json(body): Json<SongIdsBody>,
-) -> AppResult<Json<AddResult>> {
+    Path(id): Path<PlaylistId>,
+    Json(body): Json<PlaylistSongs>,
+) -> AppResult<Json<AddedSongs>> {
     if body.song_ids.is_empty() {
-        return Err(AppError::BadRequest("需要提供歌曲 ID".into()));
+        return Err(AppError::BadRequest("请选择要加入的歌曲".into()));
     }
-    // 同一首歌重复出现时只追加一次，保持首次出现的顺序
-    let mut seen = std::collections::HashSet::new();
-    let song_ids: Vec<Uuid> = body
+    let mut seen = HashSet::new();
+    let song_ids: Vec<SongId> = body
         .song_ids
         .iter()
         .copied()
         .filter(|id| seen.insert(*id))
         .collect();
     let mut tx = state.pool.begin().await?;
-    // 锁住歌单行，避免并发追加算出相同的位置
-    sqlx::query!("SELECT id FROM playlists WHERE id = $1 FOR UPDATE", id)
-        .fetch_optional(&mut *tx)
-        .await?
-        .ok_or(AppError::NotFound)?;
+    lock(&mut tx, id).await?;
     let added = sqlx::query!(
         r#"INSERT INTO song_playlists (song_id, playlist_id, position)
            SELECT s.id, $1,
-                  (SELECT COALESCE(max(position), -1) FROM song_playlists WHERE playlist_id = $1) + t.ord
+                  (SELECT COALESCE(max(position), -1) FROM song_playlists WHERE playlist_id = $1)
+                  + row_number() OVER (ORDER BY t.ord)
            FROM unnest($2::uuid[]) WITH ORDINALITY AS t(song_id, ord)
            JOIN songs s ON s.id = t.song_id
            WHERE NOT EXISTS (SELECT 1 FROM song_playlists sp WHERE sp.playlist_id = $1 AND sp.song_id = s.id)"#,
-        id,
-        &song_ids
+        id as PlaylistId,
+        &song_ids as &[SongId]
     )
     .execute(&mut *tx)
     .await?
     .rows_affected();
     tx.commit().await?;
-    Ok(Json(AddResult {
-        ok: true,
+    let added = i64::try_from(added).map_err(anyhow::Error::from)?;
+    Ok(Json(AddedSongs {
         added,
-        skipped: body.song_ids.len() as u64 - added,
+        skipped: body.song_ids.len() as i64 - added,
     }))
 }
 
-/// 按给定顺序重排：列出的歌曲依次占据位置 0..n，未列出的歌曲位置不变
+/// 必须恰好给出歌单里的每一首歌各一次
 async fn reorder_songs(
     State(state): State<AppState>,
     _auth: Auth<Admin>,
-    Path(id): Path<Uuid>,
-    Json(body): Json<SongIdsBody>,
-) -> AppResult<Json<Ok>> {
+    Path(id): Path<PlaylistId>,
+    Json(body): Json<PlaylistSongs>,
+) -> AppResult<StatusCode> {
+    let mut tx = state.pool.begin().await?;
+    lock(&mut tx, id).await?;
+    let current: HashSet<SongId> = sqlx::query_scalar!(
+        r#"SELECT song_id AS "id: SongId" FROM song_playlists WHERE playlist_id = $1"#,
+        id as PlaylistId
+    )
+    .fetch_all(&mut *tx)
+    .await?
+    .into_iter()
+    .collect();
+    let given: HashSet<SongId> = body.song_ids.iter().copied().collect();
+    if given.len() != body.song_ids.len() || given != current {
+        return Err(AppError::BadRequest(
+            "请按新顺序给出歌单里的全部歌曲，每首一次".into(),
+        ));
+    }
     sqlx::query!(
         r#"UPDATE song_playlists sp SET position = t.ord - 1
            FROM unnest($2::uuid[]) WITH ORDINALITY AS t(song_id, ord)
            WHERE sp.playlist_id = $1 AND sp.song_id = t.song_id"#,
-        id,
-        &body.song_ids
+        id as PlaylistId,
+        &body.song_ids as &[SongId]
     )
-    .execute(&state.pool)
+    .execute(&mut *tx)
     .await?;
-    Ok(Json(OK))
+    tx.commit().await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn remove_song(
     State(state): State<AppState>,
     _auth: Auth<Admin>,
-    Path((id, song_id)): Path<(Uuid, Uuid)>,
-) -> AppResult<Json<Ok>> {
-    sqlx::query!(
+    Path((id, song_id)): Path<(PlaylistId, SongId)>,
+) -> AppResult<StatusCode> {
+    let removed = sqlx::query!(
         "DELETE FROM song_playlists WHERE playlist_id = $1 AND song_id = $2",
-        id,
-        song_id
+        id as PlaylistId,
+        song_id as SongId
     )
     .execute(&state.pool)
-    .await?;
-    Ok(Json(OK))
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AdminPlaylist {
-    id: Uuid,
-    name: String,
-    description: String,
-    cover_object_id: String,
-    cover: Option<Cover>,
-    song_count: i64,
-    updated_at: DateTime<Utc>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AdminPlaylistPage {
-    playlists: Vec<AdminPlaylist>,
-    pagination: Pagination,
-}
-
-async fn admin_list(
-    State(state): State<AppState>,
-    _auth: Auth<Admin>,
-    Query(query): Query<SearchPageQuery>,
-) -> AppResult<Json<AdminPlaylistPage>> {
-    let pattern = query.like_pattern();
-    let total = sqlx::query_scalar!(
-        r#"SELECT count(*) AS "n!" FROM playlists WHERE name ILIKE $1 OR description ILIKE $1"#,
-        pattern
-    )
-    .fetch_one(&state.pool)
-    .await?;
-    let rows = sqlx::query!(
-        r#"SELECT p.id, p.name, p.description, p.cover_object_id, p.updated_at,
-                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!"
-           FROM playlists p WHERE p.name ILIKE $1 OR p.description ILIKE $1
-           ORDER BY p.updated_at DESC, p.id LIMIT $2 OFFSET $3"#,
-        pattern,
-        PAGE_SIZE,
-        query.offset(PAGE_SIZE)
-    )
-    .fetch_all(&state.pool)
-    .await?;
-    let playlists = rows
-        .into_iter()
-        .map(|row| AdminPlaylist {
-            id: row.id,
-            name: row.name,
-            description: row.description,
-            cover: cover(&state, Some(&row.cover_object_id)),
-            cover_object_id: row.cover_object_id,
-            song_count: row.song_count,
-            updated_at: row.updated_at,
-        })
-        .collect();
-    Ok(Json(AdminPlaylistPage {
-        playlists,
-        pagination: Pagination::new(query.page(), PAGE_SIZE, total),
-    }))
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AdminPlaylistSong {
-    id: Uuid,
-    title: String,
-    description: String,
-    cover: Option<Cover>,
-    position: Option<i32>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AdminPlaylistInfo {
-    id: Uuid,
-    name: String,
-    description: String,
-    cover: Option<Cover>,
-}
-
-#[derive(Serialize)]
-struct AdminPlaylistDetail {
-    playlist: AdminPlaylistInfo,
-    songs: Vec<AdminPlaylistSong>,
-}
-
-/// 管理歌单内歌曲：返回全部歌曲（不分页）
-async fn admin_detail(
-    State(state): State<AppState>,
-    _auth: Auth<Admin>,
-    Path(id): Path<Uuid>,
-) -> AppResult<Json<AdminPlaylistDetail>> {
-    let playlist = sqlx::query!(
-        "SELECT id, name, description, cover_object_id FROM playlists WHERE id = $1",
-        id
-    )
-    .fetch_optional(&state.pool)
     .await?
-    .ok_or(AppError::NotFound)?;
-    let rows = sqlx::query!(
-        r#"SELECT s.id, s.title, s.description, s.cover_object_id, sp.position
-           FROM song_playlists sp JOIN songs s ON s.id = sp.song_id
-           WHERE sp.playlist_id = $1 ORDER BY sp.position NULLS LAST, s.id"#,
-        id
-    )
-    .fetch_all(&state.pool)
-    .await?;
-    Ok(Json(AdminPlaylistDetail {
-        playlist: AdminPlaylistInfo {
-            id: playlist.id,
-            name: playlist.name,
-            description: playlist.description,
-            cover: cover(&state, Some(&playlist.cover_object_id)),
-        },
-        songs: rows
-            .into_iter()
-            .map(|row| AdminPlaylistSong {
-                id: row.id,
-                title: row.title,
-                description: row.description,
-                cover: cover(&state, row.cover_object_id.as_deref()),
-                position: row.position,
-            })
-            .collect(),
-    }))
+    .rows_affected();
+    if removed == 0 {
+        return Err(AppError::NotFound);
+    }
+    Ok(StatusCode::NO_CONTENT)
 }

@@ -1,12 +1,8 @@
-use axum::{
-    Router,
-    extract::{Path, State},
-    response::Redirect,
-    routing::get,
-};
-use uuid::Uuid;
+use axum::{Router, extract::State, response::Redirect, routing::get};
 
+use super::extract::Path;
 use crate::{
+    api::AudioVersionId,
     auth::{Auth, CanView, Download},
     error::{AppError, AppResult},
     state::AppState,
@@ -19,12 +15,19 @@ pub fn router() -> Router<AppState> {
 }
 
 /// 302 到按天对齐的签名 URL，前端直接 `<audio src="/api/audio/<id>">`
-async fn play(State(state): State<AppState>, _view: CanView, Path(id): Path<Uuid>) -> AppResult<Redirect> {
-    let version = sqlx::query!("SELECT object_id FROM audio_versions WHERE id = $1", id)
-        .fetch_optional(&state.pool)
-        .await?
-        .ok_or(AppError::NotFound)?;
-    let url = state.storage.presign_get_daily(&version.object_id, None).await?;
+async fn play(
+    State(state): State<AppState>,
+    _view: CanView,
+    Path(id): Path<AudioVersionId>,
+) -> AppResult<Redirect> {
+    let object_id = sqlx::query_scalar!(
+        "SELECT object_id FROM audio_versions WHERE id = $1",
+        id as AudioVersionId
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or(AppError::NotFound)?;
+    let url = state.storage.presign_get_daily(&object_id, None).await?;
     Ok(Redirect::to(&url))
 }
 
@@ -32,13 +35,13 @@ async fn play(State(state): State<AppState>, _view: CanView, Path(id): Path<Uuid
 async fn download(
     State(state): State<AppState>,
     _auth: Auth<Download>,
-    Path(id): Path<Uuid>,
+    Path(id): Path<AudioVersionId>,
 ) -> AppResult<Redirect> {
     let row = sqlx::query!(
         r#"SELECT av.object_id, av.name, s.title
            FROM audio_versions av JOIN songs s ON s.id = av.song_id
            WHERE av.id = $1"#,
-        id
+        id as AudioVersionId
     )
     .fetch_optional(&state.pool)
     .await?
