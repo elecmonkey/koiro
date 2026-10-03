@@ -131,9 +131,9 @@ jobs:
     timeout-minutes: 30
     env:
       SQLX_OFFLINE: 'true'
-      KOIRO_HOST: ${{ vars.KOIRO_HOST }}
-      KOIRO_USERNAME: ${{ vars.KOIRO_USERNAME }}
-      KOIRO_WORKDIR: ${{ vars.KOIRO_WORKDIR }}
+      KOIRO_HOST: ${{ secrets.KOIRO_HOST }}
+      KOIRO_USERNAME: ${{ secrets.KOIRO_USERNAME }}
+      KOIRO_WORKDIR: ${{ secrets.KOIRO_WORKDIR }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -198,9 +198,9 @@ jobs:
       cancel-in-progress: false
     timeout-minutes: 30
     env:
-      KOIRO_HOST: ${{ vars.KOIRO_HOST }}
-      KOIRO_USERNAME: ${{ vars.KOIRO_USERNAME }}
-      KOIRO_WORKDIR: ${{ vars.KOIRO_WORKDIR }}
+      KOIRO_HOST: ${{ secrets.KOIRO_HOST }}
+      KOIRO_USERNAME: ${{ secrets.KOIRO_USERNAME }}
+      KOIRO_WORKDIR: ${{ secrets.KOIRO_WORKDIR }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
