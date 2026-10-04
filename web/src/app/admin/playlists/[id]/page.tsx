@@ -1,40 +1,40 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { Box, CircularProgress, Container, Typography } from '@mui/material';
-import { api, ApiError } from '@/lib/api';
+import type { Playlist, SongOption, SongSummary } from '@koiro/shared';
+import { api, ApiError, fetchAllPages } from '@/lib/api';
 import { pageTitle } from '@/lib/site-config';
 import PlaylistSongsClient from './PlaylistSongsClient';
-
-type AdminPlaylistDetail = {
-  playlist: { id: string; name: string };
-  songs: {
-    id: string;
-    title: string;
-    description: string;
-    position: number | null;
-  }[];
-};
-
-type SongOption = { id: string; title: string; description: string };
 
 export default function PlaylistManagePage() {
   const { id = '' } = useParams();
   const [state, setState] = useState<
     | { status: 'loading' }
     | { status: 'error'; message: string }
-    | { status: 'ready'; detail: AdminPlaylistDetail; options: SongOption[] }
+    | {
+        status: 'ready';
+        playlist: Playlist;
+        songs: SongOption[];
+        options: SongOption[];
+      }
   >({ status: 'loading' });
 
   useEffect(() => {
     let alive = true;
     Promise.all([
-      api<AdminPlaylistDetail>(`/api/admin/playlists/${id}`),
-      api<{ songs: SongOption[] }>('/api/admin/songs/options'),
+      api<Playlist>(`/api/playlists/${id}`),
+      fetchAllPages<SongSummary>('/api/songs', { playlist: id }),
+      api<SongOption[]>('/api/songs/options'),
     ])
       .then(
-        ([detail, options]) =>
+        ([playlist, songs, options]) =>
           alive &&
-          setState({ status: 'ready', detail, options: options.songs }),
+          setState({
+            status: 'ready',
+            playlist,
+            songs: songs.map(({ id, title }) => ({ id, title })),
+            options,
+          }),
       )
       .catch((err: unknown) => {
         if (!alive) return;
@@ -66,17 +66,14 @@ export default function PlaylistManagePage() {
     );
   }
 
-  const { detail, options } = state;
+  const { playlist, songs, options } = state;
   return (
     <>
-      <title>{pageTitle(`管理 ${detail.playlist.name}`)}</title>
+      <title>{pageTitle(`管理 ${playlist.name}`)}</title>
       <PlaylistSongsClient
         key={id}
-        playlist={{
-          id: detail.playlist.id,
-          name: detail.playlist.name,
-          songs: detail.songs,
-        }}
+        playlist={playlist}
+        initialSongs={songs}
         availableSongs={options}
       />
     </>

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT s.id AS \"id: SongId\", s.title, s.description, s.cover_object_id, s.updated_at,\n                  s.staff AS \"staff: Json<Vec<StaffCredit>>\",\n                  av.id AS \"version_id: AudioVersionId\", av.name AS version_name,\n                  av.lyrics_id AS \"lyrics_id: LyricsId\",\n                  (SELECT count(*) FROM audio_versions x WHERE x.song_id = s.id) AS \"version_count!\"\n           FROM songs s JOIN audio_versions av ON av.song_id = s.id AND av.is_default\n           WHERE s.id = ANY($1)",
+  "query": "SELECT s.id AS \"id: SongId\", s.title, s.description, s.cover_object_id, s.updated_at,\n                  s.staff AS \"staff: Json<Vec<StaffCredit>>\",\n                  av.id AS \"version_id: AudioVersionId\", av.name AS version_name,\n                  av.lyrics_id AS \"lyrics_id: LyricsId\",\n                  (SELECT count(*) FROM audio_versions x WHERE x.song_id = s.id) AS \"version_count!\",\n                  (SELECT count(*) FROM lyrics x WHERE x.song_id = s.id) AS \"lyrics_count!\"\n           FROM songs s JOIN audio_versions av ON av.song_id = s.id AND av.is_default\n           WHERE s.id = ANY($1)",
   "describe": {
     "columns": [
       {
@@ -107,6 +107,12 @@
         "name": "version_count!",
         "type_info": "Int8",
         "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "lyrics_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
       }
     ],
     "parameters": {
@@ -124,8 +130,9 @@
       false,
       false,
       true,
+      null,
       null
     ]
   },
-  "hash": "a31c753290d714ba733211636a777e0239274219dd6ac7351ccbca66ca42569c"
+  "hash": "a7544aa7c48fa9384c481fbc163b73a4fed74b87956d4939acc1bb6568bac2a4"
 }

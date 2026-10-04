@@ -10,34 +10,14 @@ import {
   Typography,
 } from '@mui/material';
 import SongCard from '@/app/components/SongCard';
-import { api, type SongSummary } from '@/lib/api';
-
-type StaffInfo = {
-  name: string;
-  total: number;
-  roles: { role: string; count: number }[];
-};
-
-type Song = SongSummary;
-
-type ResponseData = {
-  staff: StaffInfo;
-  songs: Song[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
-};
+import type { Page, SongSummary, StaffMember } from '@koiro/shared';
+import { api, withQuery } from '@/lib/api';
 
 export default function StaffDetailClient({ name }: { name: string }) {
-  const [staff, setStaff] = useState<StaffInfo | null>(null);
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [staff, setStaff] = useState<StaffMember | null>(null);
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<
-    ResponseData['pagination'] | null
-  >(null);
+  const [pagination, setPagination] = useState<Page<SongSummary> | null>(null);
+  const songs = pagination?.items ?? [];
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,13 +29,15 @@ export default function StaffDetailClient({ name }: { name: string }) {
       setLoading(true);
       setError(null);
       try {
-        const data = await api<ResponseData>(
-          `/api/staff/${encodeURIComponent(staffName)}?page=${page}`,
-        );
+        const [member, songPage] = await Promise.all([
+          api<StaffMember>(`/api/staff/${encodeURIComponent(staffName)}`),
+          api<Page<SongSummary>>(
+            withQuery('/api/songs', { staff: staffName, page }),
+          ),
+        ]);
         if (!active) return;
-        setStaff(data.staff);
-        setSongs(data.songs);
-        setPagination(data.pagination);
+        setStaff(member);
+        setPagination(songPage);
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : '未知错误');
       } finally {
@@ -90,7 +72,7 @@ export default function StaffDetailClient({ name }: { name: string }) {
                   color: 'text.secondary',
                 }}
               >
-                共参与 {staff.total} 首
+                共参与 {staff.songCount} 首
               </Typography>
               {topRoles.map((role) => (
                 <Chip

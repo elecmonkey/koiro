@@ -16,7 +16,6 @@ import { idFrom, nameFrom } from './arguments';
 import { normalizeUrl, readConfig, writeConfig } from './config';
 import { ApiClient } from './http';
 import { object, parseJson, string, type Json } from './json';
-import { parseLrc, toLines, toReadableLines } from './lyrics';
 import { browserLaunchers, browserLogin, listenForCode } from './login';
 import { run, type Runtime } from './run';
 
@@ -144,50 +143,6 @@ test('songs and playlists can be named by UUID or by a site link', () => {
   expect(nameFrom('ja', 'languages')).toBe('ja');
 });
 
-test('LRC becomes editable lines, and stored lyrics round-trip with ruby', () => {
-  expect(
-    parseLrc('[ti:Title]\n[00:01.2][00:05.00]la la\n[00:03.456]next\nuntimed'),
-  ).toEqual([
-    { startMs: 0, text: 'untimed' },
-    { startMs: 1200, text: 'la la' },
-    { startMs: 3456, text: 'next' },
-    { startMs: 5000, text: 'la la' },
-  ]);
-  const content: Json = {
-    type: 'doc',
-    blocks: [
-      {
-        type: 'line',
-        time: { startMs: 10, endMs: 20 },
-        children: [
-          { type: 'ruby', base: '君', ruby: 'きみ' },
-          { type: 'text', text: 'の' },
-          { type: 'ruby', base: '声', ruby: 'こえ' },
-        ],
-      },
-      {
-        type: 'line',
-        time: { startMs: 30 },
-        children: [{ type: 'text', text: '' }],
-      },
-    ],
-  };
-  expect(toLines(content)).toEqual([
-    {
-      startMs: 10,
-      endMs: 20,
-      text: '君/の/声',
-      rubyByIndex: { '0': 'きみ', '2': 'こえ' },
-    },
-    { startMs: 30, text: '' },
-  ]);
-  expect(toReadableLines(content)[0]).toEqual({
-    startMs: 10,
-    endMs: 20,
-    text: '君(きみ)の声(こえ)',
-  });
-});
-
 test('configuration rejects public cleartext sites and unsafe files, and keeps other logins', async () => {
   expect(normalizeUrl('https://music.example.com/')).toBe(
     'https://music.example.com',
@@ -230,13 +185,20 @@ test('the installed site is the default and every override takes precedence', as
   expect(io.output().webUrl).toBe('https://flag.example.com');
 });
 
-test('HTTP failures map to stable exit codes and readable messages', async () => {
+test('HTTP failures map to stable exit codes and show the server message', async () => {
+  const error = (code: string, message: string) => ({ code, message });
   const replies: Record<string, Reply> = {
-    '/api/songs': { status: 401, body: { error: 'x' } },
-    '/api/playlists': { status: 403, body: { error: 'x' } },
-    [`/api/songs/${songId}`]: { status: 404, body: { error: 'x' } },
-    '/api/staff': { status: 422, text: 'missing field `title`' },
-    '/api/languages': { status: 400, body: { error: '歌曲名不能为空' } },
+    '/api/songs': { status: 401, body: error('unauthorized', '请先登录') },
+    '/api/playlists': { status: 403, body: error('forbidden', '没有权限') },
+    [`/api/songs/${songId}`]: {
+      status: 404,
+      body: error('not_found', '不存在'),
+    },
+    '/api/staff': { status: 409, body: error('conflict', '该邮箱已被注册') },
+    '/api/languages': {
+      status: 400,
+      body: error('bad_request', '歌曲名不能为空'),
+    },
     '/api/search': { status: 502, text: '<html>bad gateway</html>' },
   };
   const fixture = await server(
@@ -245,10 +207,10 @@ test('HTTP failures map to stable exit codes and readable messages', async () =>
   const io = await runtime(fixture.origin);
 
   expect(await io.call('song', 'list')).toBe(3);
+  expect(io.error().message).toBe('请先登录');
   expect(await io.call('playlist', 'list')).toBe(4);
   expect(await io.call('song', 'view', songId)).toBe(5);
-  expect(await io.call('staff', 'list')).toBe(8);
-  expect(io.error().message).toBe('missing field `title`');
+  expect(await io.call('staff', 'list')).toBe(6);
   expect(await io.call('language', 'list')).toBe(8);
   expect(io.error().message).toBe('歌曲名不能为空');
   expect(await io.call('song', 'search', 'x')).toBe(8);
@@ -263,7 +225,7 @@ test('HTTP failures map to stable exit codes and readable messages', async () =>
 
 test('without a login, reads go out anonymously and an expired saved login stops before any request', async () => {
   const fixture = await server(() => ({
-    body: { songs: [], pagination: { page: 1, totalPages: 1, total: 0 } },
+    body: { items: [], page: 1, pageSize: 20, total: 0, totalPages: 0 },
   }));
   const anonymous = await runtime(fixture.origin, {});
   expect(await anonymous.call('song', 'list')).toBe(0);
@@ -282,53 +244,45 @@ test('without a login, reads go out anonymously and an expired saved login stops
   expect(fixture.received).toHaveLength(1);
 });
 
-test('export maps lyrics bindings to keys, and update uploads local files then replaces the song', async () => {
-  const edit: Json = {
+test('export returns the song input, and update uploads local files then replaces the song', async () => {
+  const input: Json = {
     title: 'Song',
     description: 'd',
     coverObjectId: 'img/old.webp',
-    staff: [{ role: '作曲', name: ['甲'] }],
+    staff: [{ role: '作曲', names: ['甲'] }],
     versions: [
       {
-        id: 'v1',
         name: '主版本',
         objectId: 'music/a.flac',
         isDefault: true,
-        lyricsId: 'l1',
+        lyricsName: '原文',
       },
       {
-        id: 'v2',
         name: '伴奏',
         objectId: 'music/b.flac',
         isDefault: false,
-        lyricsId: null,
+        lyricsName: null,
       },
     ],
-    lyrics: [
-      {
-        id: 'l1',
-        key: '原文',
-        isDefault: true,
-        content: { type: 'doc', meta: { languages: ['ja'] }, blocks: [] },
-      },
-    ],
+    lyrics: [{ name: '原文', isDefault: true, languages: ['ja'], lines: [] }],
     playlistIds: [playlistId],
   };
   let storage = '';
-  const fixture = await server((url): Reply => {
-    if (url.pathname === `/api/songs/${songId}/edit`) return { body: edit };
-    if (url.pathname === '/api/uploads/image')
-      return { body: { objectId: 'img/new.webp' } };
+  const fixture = await server((url, request): Reply => {
+    if (url.pathname === `/api/songs/${songId}/input`) return { body: input };
+    if (url.pathname === '/api/uploads/images')
+      return { status: 201, body: { objectId: 'img/new.webp', url: 'u' } };
     if (url.pathname === '/api/uploads/audio')
       return {
         body: {
           url: `${storage}/put`,
-          objectId: 'music/new.flac',
           headers: { 'content-type': 'audio/flac' },
+          objectId: 'music/new.flac',
         },
       };
     if (url.pathname === '/put') return { body: null };
-    if (url.pathname === `/api/songs/${songId}`) return { body: { ok: true } };
+    if (url.pathname === `/api/songs/${songId}` && request.method === 'PUT')
+      return { body: { id: songId } };
     return { status: 500 };
   });
   storage = fixture.origin;
@@ -336,23 +290,7 @@ test('export maps lyrics bindings to keys, and update uploads local files then r
 
   expect(await io.call('song', 'export', songId)).toBe(0);
   const doc = io.output();
-  expect(doc.versions).toEqual([
-    {
-      name: '主版本',
-      objectId: 'music/a.flac',
-      isDefault: true,
-      lyricsKey: '原文',
-    },
-    {
-      name: '伴奏',
-      objectId: 'music/b.flac',
-      isDefault: false,
-      lyricsKey: null,
-    },
-  ]);
-  expect(doc.lyrics).toEqual([
-    { key: '原文', isDefault: true, languages: ['ja'], lines: [] },
-  ]);
+  expect(doc).toEqual(input);
 
   const dir = io.io.cwd;
   await writeFile(join(dir, 'cover.png'), 'png');
@@ -361,12 +299,17 @@ test('export maps lyrics bindings to keys, and update uploads local files then r
   const { coverObjectId: _cover, ...rest } = doc;
   const versions = (doc.versions as Json[]).map((item) =>
     object(item).name === '伴奏'
-      ? { name: '伴奏', audioFile: 'inst.flac' }
+      ? {
+          name: '伴奏',
+          audioFile: 'inst.flac',
+          isDefault: false,
+          lyricsName: null,
+        }
       : item,
   );
   const lyrics = [
     ...(doc.lyrics as Json[]),
-    { key: '翻译', languages: ['zh'], lrcFile: 'tr.lrc' },
+    { name: '翻译', isDefault: false, languages: ['zh'], lrcFile: 'tr.lrc' },
   ];
   await writeFile(
     join(dir, 'song.json'),
@@ -386,14 +329,22 @@ test('export maps lyrics bindings to keys, and update uploads local files then r
       name: '主版本',
       objectId: 'music/a.flac',
       isDefault: true,
-      lyricsKey: '原文',
+      lyricsName: '原文',
     },
-    { name: '伴奏', objectId: 'music/new.flac' },
+    {
+      name: '伴奏',
+      objectId: 'music/new.flac',
+      isDefault: false,
+      lyricsName: null,
+    },
   ]);
   expect(object((body.lyrics as Json[])[1])).toEqual({
-    key: '翻译',
+    name: '翻译',
+    isDefault: false,
     languages: ['zh'],
-    lines: [{ startMs: 1000, text: 'hello' }],
+    lines: [
+      { startMs: 1000, endMs: null, spans: [{ type: 'text', text: 'hello' }] },
+    ],
   });
   expect(body.playlistIds).toEqual([playlistId]);
   expect(body.coverFile).toBeUndefined();
@@ -404,7 +355,7 @@ test('export maps lyrics bindings to keys, and update uploads local files then r
   expect(storagePut?.body.toString()).toBe('flac');
 });
 
-test('unknown languages are rejected before anything is uploaded or requested', async () => {
+test('missing fields and unknown languages are rejected before anything is uploaded or requested', async () => {
   const fixture = await server(() => ({ body: { objectId: 'img/x.webp' } }));
   const io = await runtime(fixture.origin);
   await writeFile(join(io.io.cwd, 'cover.png'), 'png');
@@ -414,44 +365,56 @@ test('unknown languages are rejected before anything is uploaded or requested', 
       title: 'x',
       coverFile: 'cover.png',
       versions: [],
-      lyrics: [{ key: '原文', languages: ['jp'], lines: [] }],
+      lyrics: [{ name: '原文', languages: ['jp'], lines: [] }],
     }),
   );
 
+  expect(await io.call('song', 'create', '--file', 'song.json')).toBe(2);
+  expect(io.error().message).toContain(
+    'missing: description, staff, playlistIds',
+  );
+  await writeFile(
+    join(io.io.cwd, 'song.json'),
+    JSON.stringify({
+      title: 'x',
+      description: '',
+      coverFile: 'cover.png',
+      staff: [],
+      versions: [],
+      lyrics: [{ name: '原文', isDefault: true, languages: ['jp'], lines: [] }],
+      playlistIds: [],
+    }),
+  );
   expect(await io.call('song', 'create', '--file', 'song.json')).toBe(2);
   expect(io.error().message).toContain('ja 日本語');
   expect(await io.call('language', 'view', 'jp')).toBe(2);
   expect(fixture.received).toHaveLength(0);
 });
 
-test('reorder must name every song in the playlist exactly once', async () => {
-  const fixture = await server((url, request): Reply => {
-    if (request.method === 'GET')
-      return {
-        body: {
-          playlist: { id: playlistId },
-          songs: [
-            { id: url.searchParams.get('page') === '1' ? songId : otherSong },
-          ],
-          pagination: { page: 1, totalPages: 2, total: 2 },
-        },
-      };
-    return { body: { ok: true } };
+test('reorder sends the full order and reports the server refusing a partial one', async () => {
+  const fixture = await server((_url, _request, body): Reply => {
+    const ids = object(parseJson(body.toString('utf8'))).songIds as Json[];
+    return ids.length === 2
+      ? { status: 204 }
+      : {
+          status: 400,
+          body: {
+            code: 'bad_request',
+            message: '请按新顺序给出歌单里的全部歌曲，每首一次',
+          },
+        };
   });
   const io = await runtime(fixture.origin);
 
-  expect(await io.call('playlist', 'reorder', playlistId, songId)).toBe(2);
-  expect(io.error().details).toEqual({ missing: [otherSong], unknown: [] });
-  expect(await io.call('playlist', 'reorder', playlistId, songId, songId)).toBe(
-    2,
-  );
-  expect(fixture.received.some((entry) => entry.method === 'PUT')).toBe(false);
-
+  expect(await io.call('playlist', 'reorder', playlistId, songId)).toBe(8);
+  expect(io.error().message).toContain('全部歌曲');
   expect(
     await io.call('playlist', 'reorder', playlistId, otherSong, songId),
   ).toBe(0);
-  const put = fixture.received.findIndex((entry) => entry.method === 'PUT');
-  expect(fixture.json(put)).toEqual({ songIds: [otherSong, songId] });
+  expect(fixture.json(1)).toEqual({ songIds: [otherSong, songId] });
+  expect(fixture.received[1]?.url.pathname).toBe(
+    `/api/playlists/${playlistId}/songs`,
+  );
 });
 
 test('download follows the signed address without credentials and refuses to overwrite', async () => {
@@ -460,13 +423,11 @@ test('download follows the signed address without credentials and refuses to ove
     if (url.pathname === `/api/songs/${songId}`)
       return {
         body: {
-          song: {
-            id: songId,
-            versions: [
-              { id: 'v1', name: '主版本', isDefault: true },
-              { id: 'v2', name: '伴奏', isDefault: false },
-            ],
-          },
+          id: songId,
+          versions: [
+            { id: 'v1', name: '主版本', isDefault: true, lyricsId: null },
+            { id: 'v2', name: '伴奏', isDefault: false, lyricsId: null },
+          ],
         },
       };
     if (url.pathname === '/api/audio/v2/download')

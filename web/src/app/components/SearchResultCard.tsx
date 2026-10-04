@@ -8,37 +8,31 @@ import {
   Typography,
 } from '@mui/material';
 import { Link } from 'react-router';
-import type { Cover } from '@/lib/api';
+import type { MatchField, SearchHit, TextSegment } from '@koiro/shared';
 
 type SearchResultCardProps = {
-  result: {
-    id: string;
-    title: string;
-    description: string | null;
-    staff: { role: string; name: string | string[] }[];
-    cover: Cover | null;
-    matchType: ('title' | 'staff' | 'lyrics')[];
-    matchSnippet?: string;
-    titleHighlights?: { text: string; highlight?: boolean }[];
-    staffHighlights?: {
-      role: string;
-      name: { text: string; highlight?: boolean }[];
-    }[];
-    matchSnippetHighlights?: { text: string; highlight?: boolean }[];
-  };
+  hit: SearchHit;
 };
 
-const matchTypeLabels: Record<string, string> = {
+const matchLabels: Record<MatchField, string> = {
   title: '标题',
   staff: 'Staff',
   lyrics: '歌词',
 };
 
-function HighlightText({
-  parts,
-}: {
-  parts: { text: string; highlight?: boolean }[];
-}) {
+/** 显示的 staff 条数，多出的折叠为「+N」 */
+const STAFF_SHOWN = 3;
+
+/** 窄屏时 staff 叠在封面上，加一层半透明底 */
+const staffChipSx = {
+  bgcolor: {
+    xs: 'rgba(255,255,255,0.8)',
+    sm: 'transparent',
+  },
+  backdropFilter: { xs: 'blur(4px)', sm: 'none' },
+};
+
+function HighlightText({ parts }: { parts: readonly TextSegment[] }) {
   return (
     <>
       {parts.map((part, idx) =>
@@ -65,12 +59,8 @@ function HighlightText({
   );
 }
 
-export default function SearchResultCard({ result }: SearchResultCardProps) {
-  const titleParts = result.titleHighlights ?? [{ text: result.title }];
-  const snippetParts =
-    result.matchSnippetHighlights ??
-    (result.matchSnippet ? [{ text: result.matchSnippet }] : []);
-  const staffParts = result.staffHighlights ?? [];
+export default function SearchResultCard({ hit }: SearchResultCardProps) {
+  const { song } = hit;
 
   return (
     <Card
@@ -84,33 +74,31 @@ export default function SearchResultCard({ result }: SearchResultCardProps) {
         },
       }}
     >
-      {result.cover?.url && (
-        <Box
-          sx={{
-            display: { xs: 'block', sm: 'none' },
+      <Box
+        sx={{
+          display: { xs: 'block', sm: 'none' },
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: '45%',
+          background: `url(${song.coverUrl}) center/cover no-repeat`,
+          '&::after': {
+            content: '""',
             position: 'absolute',
-            left: 0,
             top: 0,
+            right: 0,
             bottom: 0,
-            width: '45%',
-            background: `url(${result.cover?.url}) center/cover no-repeat`,
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: '60%',
-              background: (theme) =>
-                `linear-gradient(to right, transparent, ${theme.palette.background.paper})`,
-            },
-          }}
-        />
-      )}
+            width: '60%',
+            background: (theme) =>
+              `linear-gradient(to right, transparent, ${theme.palette.background.paper})`,
+          },
+        }}
+      />
 
       <CardActionArea
         component={Link}
-        to={`/songs/${result.id}`}
+        to={`/songs/${song.id}`}
         sx={{ height: { xs: 'auto', sm: 92 } }}
       >
         <CardContent
@@ -137,17 +125,9 @@ export default function SearchResultCard({ result }: SearchResultCardProps) {
                 width: 92,
                 height: 92,
                 flexShrink: 0,
-                background: result.cover?.url
-                  ? `url(${result.cover?.url}) center/cover no-repeat`
-                  : 'linear-gradient(135deg, #f3efe7, #e8dfd1)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'text.disabled',
-                fontSize: 24,
+                background: `url(${song.coverUrl}) center/cover no-repeat`,
               }}
-            >
-              {!result.cover?.url && '♪'}
-            </Box>
+            />
 
             <Box sx={{ flex: 1, minWidth: 0, pl: { xs: '30%', sm: 0 } }}>
               <Stack spacing={0.75}>
@@ -167,13 +147,13 @@ export default function SearchResultCard({ result }: SearchResultCardProps) {
                       color: 'text.primary',
                     }}
                   >
-                    <HighlightText parts={titleParts} />
+                    <HighlightText parts={hit.title} />
                   </Typography>
-                  {result.matchType.map((type) => (
+                  {hit.matched.map((type) => (
                     <Chip
                       key={type}
                       size="small"
-                      label={matchTypeLabels[type]}
+                      label={matchLabels[type]}
                       color={
                         type === 'title'
                           ? 'primary'
@@ -187,7 +167,7 @@ export default function SearchResultCard({ result }: SearchResultCardProps) {
                   ))}
                 </Stack>
 
-                {result.matchSnippet && snippetParts.length > 0 && (
+                {hit.lyricsExcerpt && (
                   <Typography
                     variant="body2"
                     noWrap
@@ -195,12 +175,11 @@ export default function SearchResultCard({ result }: SearchResultCardProps) {
                       color: 'text.secondary',
                     }}
                   >
-                    <HighlightText parts={snippetParts} />
+                    <HighlightText parts={hit.lyricsExcerpt} />
                   </Typography>
                 )}
 
-                {(result.staff && result.staff.length > 0) ||
-                staffParts.length > 0 ? (
+                {hit.staff.length > 0 && (
                   <Stack
                     direction="row"
                     spacing={0.5}
@@ -209,57 +188,35 @@ export default function SearchResultCard({ result }: SearchResultCardProps) {
                       flexWrap: 'wrap',
                     }}
                   >
-                    {(staffParts.length > 0
-                      ? staffParts
-                      : result.staff.map((s) => ({
-                          role: s.role,
-                          name: [
-                            {
-                              text: Array.isArray(s.name)
-                                ? s.name.join('、')
-                                : s.name || '',
-                            },
-                          ],
-                        }))
-                    )
-                      .slice(0, 3)
-                      .map((s, idx) => (
-                        <Chip
-                          key={idx}
-                          label={
-                            <Box component="span">
-                              {s.role || 'Staff'} ·{' '}
-                              <HighlightText parts={s.name} />
-                            </Box>
-                          }
-                          size="small"
-                          variant="outlined"
-                          sx={{
-                            bgcolor: {
-                              xs: 'rgba(255,255,255,0.8)',
-                              sm: 'transparent',
-                            },
-                            backdropFilter: { xs: 'blur(4px)', sm: 'none' },
-                          }}
-                        />
-                      ))}
-                    {(staffParts.length > 0 ? staffParts : result.staff)
-                      .length > 3 && (
+                    {hit.staff.slice(0, STAFF_SHOWN).map((credit, idx) => (
                       <Chip
-                        label={`+${(staffParts.length > 0 ? staffParts : result.staff).length - 3}`}
+                        key={idx}
+                        label={
+                          <Box component="span">
+                            {credit.role} ·{' '}
+                            {credit.names.map((name, nameIdx) => (
+                              <Box component="span" key={nameIdx}>
+                                {nameIdx > 0 && '、'}
+                                <HighlightText parts={name} />
+                              </Box>
+                            ))}
+                          </Box>
+                        }
                         size="small"
                         variant="outlined"
-                        sx={{
-                          bgcolor: {
-                            xs: 'rgba(255,255,255,0.8)',
-                            sm: 'transparent',
-                          },
-                          backdropFilter: { xs: 'blur(4px)', sm: 'none' },
-                        }}
+                        sx={staffChipSx}
+                      />
+                    ))}
+                    {hit.staff.length > STAFF_SHOWN && (
+                      <Chip
+                        label={`+${hit.staff.length - STAFF_SHOWN}`}
+                        size="small"
+                        variant="outlined"
+                        sx={staffChipSx}
                       />
                     )}
                   </Stack>
-                ) : null}
+                )}
               </Stack>
             </Box>
           </Stack>

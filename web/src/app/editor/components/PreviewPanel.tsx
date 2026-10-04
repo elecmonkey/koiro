@@ -1,12 +1,15 @@
 import { Box, Stack, Typography } from '@mui/material';
-import type { LyricsDocument, Inline, Block } from '../ast/types';
+import type { Language, LyricLine, Span } from '@koiro/shared';
+import { lyricsFontFamily } from '@/lib/lyricsFont';
 
 type PreviewPanelProps = {
-  doc: LyricsDocument;
-  plainText: string;
+  lines: readonly LyricLine[];
+  languages: readonly Language[];
 };
 
-export default function PreviewPanel({ doc, plainText }: PreviewPanelProps) {
+/** 按提交后的样子预览歌词 */
+export default function PreviewPanel({ lines, languages }: PreviewPanelProps) {
+  const fontFamily = lyricsFontFamily(languages);
   return (
     <Stack spacing={2}>
       <Typography variant="subtitle1">预览</Typography>
@@ -18,61 +21,46 @@ export default function PreviewPanel({ doc, plainText }: PreviewPanelProps) {
           background: '#fff',
         }}
       >
-        {doc.blocks.map((block, index) => (
-          <BlockView key={index} block={block} />
+        {lines.map((line, index) => (
+          <Stack
+            key={index}
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: 'baseline',
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+                minWidth: 72,
+              }}
+            >
+              {line.startMs}ms
+            </Typography>
+            <Typography variant="body1" sx={{ fontFamily }}>
+              {line.spans.map((span, spanIndex) => (
+                <SpanView key={spanIndex} span={span} />
+              ))}
+            </Typography>
+          </Stack>
         ))}
       </Box>
-      <Typography variant="subtitle2">plainText</Typography>
-      <Box
-        sx={{
-          border: '1px solid rgba(31, 26, 22, 0.12)',
-          p: 2,
-          background: '#fff',
-          fontSize: 12,
-          whiteSpace: 'pre-wrap',
-        }}
-      >
-        {plainText || '(空)'}
-      </Box>
     </Stack>
   );
 }
 
-function BlockView({ block }: { block: Block }) {
-  return (
-    <Stack
-      direction="row"
-      spacing={2}
-      sx={{
-        alignItems: 'baseline',
-      }}
-    >
-      <Typography
-        variant="caption"
-        sx={{
-          color: 'text.secondary',
-          minWidth: 72,
-        }}
-      >
-        {block.time?.startMs ?? 0}ms
-      </Typography>
-      <Typography variant="body1">{renderInline(block.children)}</Typography>
-    </Stack>
-  );
-}
-
-function renderInline(inlines: Inline[]): React.ReactNode {
-  return inlines.map((inline, index) => {
-    switch (inline.type) {
-      case 'text':
-        return <span key={index}>{inline.text}</span>;
-      case 'ruby':
-        return (
-          <ruby key={index}>
-            {inline.base}
-            <rt style={{ fontSize: '0.7em' }}>{inline.ruby}</rt>
-          </ruby>
-        );
-    }
-  });
+function SpanView({ span }: { span: Span }) {
+  switch (span.type) {
+    case 'text':
+      return <span>{span.text}</span>;
+    case 'ruby':
+      return (
+        <ruby>
+          {span.base}
+          <rt style={{ fontSize: '0.7em' }}>{span.ruby}</rt>
+        </ruby>
+      );
+  }
 }

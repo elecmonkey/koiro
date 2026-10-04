@@ -1,3 +1,4 @@
+import type { Session, User } from '@koiro/shared';
 import {
   createContext,
   use,
@@ -9,75 +10,49 @@ import {
 } from 'react';
 import { api } from '@/lib/api';
 
-export type CurrentUser = {
-  id: string;
-  email: string;
-  displayName: string;
-  permissions: number;
-};
-
-type MeResponse = {
-  user: CurrentUser | null;
-  allowAnonymous: boolean;
-};
-
 type AuthContextValue = {
-  user: CurrentUser | null;
+  user: User | null;
   allowAnonymous: boolean;
-  /** 首次获取 /api/me 完成前为 true */
+  /** 首次获取会话完成前为 true */
   loading: boolean;
   login: (email: string, password: string, ttlDays: number) => Promise<void>;
   logout: () => Promise<void>;
   /** 资料修改后同步本地状态 */
-  setUser: (user: CurrentUser | null) => void;
+  setUser: (user: User | null) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<{
-    user: CurrentUser | null;
-    allowAnonymous: boolean;
-    loading: boolean;
-  }>({
+  const [state, setState] = useState<Session & { loading: boolean }>({
     user: null,
     allowAnonymous: false,
     loading: true,
   });
 
   useEffect(() => {
-    api<MeResponse>('/api/me')
-      .then((me) =>
-        setState({
-          user: me.user,
-          allowAnonymous: me.allowAnonymous,
-          loading: false,
-        }),
-      )
+    api<Session>('/api/auth/session')
+      .then((session) => setState({ ...session, loading: false }))
       .catch(() => setState((prev) => ({ ...prev, loading: false })));
   }, []);
 
   const login = useCallback(
     async (email: string, password: string, ttlDays: number) => {
-      const me = await api<MeResponse>('/api/auth/login', {
+      const session = await api<Session>('/api/auth/login', {
         method: 'POST',
         json: { email, password, ttlDays },
       });
-      setState({
-        user: me.user,
-        allowAnonymous: me.allowAnonymous,
-        loading: false,
-      });
+      setState({ ...session, loading: false });
     },
     [],
   );
 
   const logout = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await api('/api/auth/logout', { method: 'POST' });
     setState((prev) => ({ ...prev, user: null }));
   }, []);
 
-  const setUser = useCallback((user: CurrentUser | null) => {
+  const setUser = useCallback((user: User | null) => {
     setState((prev) => ({ ...prev, user }));
   }, []);
 
@@ -94,9 +69,4 @@ export function useAuth() {
     throw new Error('useAuth must be used within AuthProvider');
   }
   return ctx;
-}
-
-/** 当前用户的权限位（未登录为 0） */
-export function usePermissions() {
-  return useAuth().user?.permissions ?? 0;
 }

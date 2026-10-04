@@ -7,3 +7,12 @@ export {
   isLanguage,
   languageName,
 } from './languages';
+export {
+  type TokenizedText,
+  parseLrc,
+  readableText,
+  spansFromTokens,
+  spansText,
+  tokensFromSpans,
+} from './lyrics';
+export { PERMISSIONS, hasPermission } from './permissions';

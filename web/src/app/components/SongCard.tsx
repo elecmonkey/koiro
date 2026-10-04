@@ -11,13 +11,11 @@ import {
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import { Link } from 'react-router';
-import { usePlayer, type Track } from '@/app/player';
-import type { SongSummary } from '@/lib/api';
-
-export type SongCardData = SongSummary;
+import type { SongSummary } from '@koiro/shared';
+import { trackOf, usePlayer } from '@/app/player';
 
 type SongCardProps = {
-  song: SongCardData;
+  song: SongSummary;
   showPlayButton?: boolean;
 };
 
@@ -34,31 +32,16 @@ export default function SongCard({
     isLoading,
   } = usePlayer();
 
-  // 默认音频版本及其绑定的歌词
-  const defaultVersion = song.defaultVersion;
-  const coverUrl = song.cover?.url ?? null;
-  const artist = song.staff.map((s) => s.name.join('、')).join('、');
-
-  const track: Track | null = defaultVersion
-    ? {
-        id: song.id,
-        title: song.title,
-        artist,
-        coverUrl,
-        versionId: defaultVersion.id,
-        versionKey: defaultVersion.name,
-        lyrics: defaultVersion.lyrics,
-        languages: defaultVersion.lyrics?.meta?.languages,
-      }
-    : null;
+  // 播放默认版本
+  const track = trackOf(song);
+  const coverUrl = song.coverUrl;
 
   // 按音频版本匹配，确保是同一个版本
-  const isCurrentTrack = !!track && currentTrack?.versionId === track.versionId;
+  const isCurrentTrack = currentTrack?.versionId === track.versionId;
 
   const handlePlayClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!track) return;
     if (isCurrentTrack) {
       if (isPlaying) {
         pause();
@@ -161,7 +144,7 @@ export default function SongCard({
               >
                 {song.title}
               </Typography>
-              {song.staff && song.staff.length > 0 && (
+              {song.staff.length > 0 && (
                 <Stack
                   direction="row"
                   spacing={0.5}
@@ -174,7 +157,7 @@ export default function SongCard({
                   {song.staff.slice(0, 3).map((s, idx) => (
                     <Chip
                       key={idx}
-                      label={`${s.role || 'Staff'} · ${s.name.join('、')}`}
+                      label={`${s.role} · ${s.names.join('、')}`}
                       size="small"
                       variant="outlined"
                       sx={{
@@ -208,7 +191,7 @@ export default function SongCard({
       </CardActionArea>
 
       {/* 播放按钮 - 放在 CardActionArea 外部避免 button 嵌套 */}
-      {showPlayButton && track && (
+      {showPlayButton && (
         <IconButton
           size="small"
           color="primary"

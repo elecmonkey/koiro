@@ -21,22 +21,19 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import { Link } from 'react-router';
 import ImageUploadField from '../components/ImageUploadField';
-import { api, type Cover, type Pagination as PageInfo } from '@/lib/api';
+import type {
+  Page,
+  Playlist,
+  PlaylistInput,
+  PlaylistPatch,
+} from '@koiro/shared';
+import { api, withQuery } from '@/lib/api';
 
-interface Playlist {
-  id: string;
+/** 修改歌单：`coverObjectId` 为空表示不换封面 */
+type PlaylistEdit = {
   name: string;
   description: string;
-  coverObjectId: string;
-  cover: Cover | null;
-  songCount: number;
-  updatedAt: string;
-}
-
-type PlaylistDraft = {
-  name: string;
-  coverObjectId: string;
-  description: string;
+  coverObjectId: string | null;
 };
 
 export default function PlaylistsManager() {
@@ -56,28 +53,28 @@ export default function PlaylistsManager() {
   const [deleteTarget, setDeleteTarget] = useState<Playlist | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [draft, setDraft] = useState<PlaylistDraft>({
+  const [draft, setDraft] = useState<PlaylistInput>({
     name: '',
     coverObjectId: '',
     description: '',
   });
 
-  const [editDraft, setEditDraft] = useState<PlaylistDraft>({
+  const [editDraft, setEditDraft] = useState<PlaylistEdit>({
     name: '',
-    coverObjectId: '',
     description: '',
+    coverObjectId: null,
   });
 
   const fetchPlaylists = useCallback(async (q: string, p: number) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api<{ playlists: Playlist[]; pagination: PageInfo }>(
-        `/api/admin/playlists?q=${encodeURIComponent(q)}&page=${p}`,
+      const data = await api<Page<Playlist>>(
+        withQuery('/api/playlists', { q, page: p }),
       );
-      setPlaylists(data.playlists);
-      setTotal(data.pagination.total ?? 0);
-      setTotalPages(data.pagination.totalPages ?? 0);
+      setPlaylists(data.items);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
     } catch (err) {
       setError(err instanceof Error ? err.message : '未知错误');
     } finally {
@@ -109,7 +106,10 @@ export default function PlaylistsManager() {
     if (!draft.name.trim() || !draft.coverObjectId) return;
     setSubmitting(true);
     try {
-      await api('/api/playlists', { method: 'POST', json: draft });
+      await api('/api/playlists', {
+        method: 'POST',
+        json: draft satisfies PlaylistInput,
+      });
       setDraft({ name: '', coverObjectId: '', description: '' });
       setCreateOpen(false);
       void fetchPlaylists(keyword, page);
@@ -124,20 +124,23 @@ export default function PlaylistsManager() {
     setEditingPlaylist(playlist);
     setEditDraft({
       name: playlist.name,
-      coverObjectId: playlist.coverObjectId,
       description: playlist.description,
+      coverObjectId: null,
     });
     setEditOpen(true);
   };
 
   const handleEdit = async () => {
-    if (!editingPlaylist || !editDraft.name.trim() || !editDraft.coverObjectId)
-      return;
+    if (!editingPlaylist || !editDraft.name.trim()) return;
+    const { coverObjectId, ...fields } = editDraft;
     setSubmitting(true);
     try {
       await api(`/api/playlists/${editingPlaylist.id}`, {
-        method: 'PUT',
-        json: editDraft,
+        method: 'PATCH',
+        json: {
+          ...fields,
+          ...(coverObjectId ? { coverObjectId } : {}),
+        } satisfies PlaylistPatch,
       });
       setEditOpen(false);
       setEditingPlaylist(null);
@@ -399,17 +402,10 @@ export default function PlaylistsManager() {
             />
             <ImageUploadField
               label="封面图片"
-              objectId={editDraft.coverObjectId || null}
-              previewUrl={
-                editDraft.coverObjectId === editingPlaylist?.coverObjectId
-                  ? editingPlaylist?.cover?.url
-                  : null
-              }
+              objectId={editDraft.coverObjectId}
+              currentUrl={editingPlaylist?.coverUrl}
               onObjectIdChange={(value) =>
-                setEditDraft((prev) => ({
-                  ...prev,
-                  coverObjectId: value ?? '',
-                }))
+                setEditDraft((prev) => ({ ...prev, coverObjectId: value }))
               }
             />
             <TextField
@@ -434,9 +430,7 @@ export default function PlaylistsManager() {
           <Button
             variant="contained"
             onClick={handleEdit}
-            disabled={
-              submitting || !editDraft.name.trim() || !editDraft.coverObjectId
-            }
+            disabled={submitting || !editDraft.name.trim()}
           >
             {submitting ? '保存中...' : '保存'}
           </Button>

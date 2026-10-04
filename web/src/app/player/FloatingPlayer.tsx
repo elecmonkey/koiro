@@ -1,3 +1,4 @@
+import type { LyricLine } from '@koiro/shared';
 import {
   Box,
   Divider,
@@ -28,9 +29,13 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+/** 没有歌词时的稳定空数组，避免每次渲染重新计算 */
+const NO_LINES: LyricLine[] = [];
+
 export function FloatingPlayer() {
   const {
     track,
+    lyrics,
     isPlaying,
     currentTime,
     duration,
@@ -44,10 +49,8 @@ export function FloatingPlayer() {
   } = usePlayer();
 
   // 歌词同步
-  const { prevLine, currentLine, nextLine, isPreview } = useLyricsSync(
-    track?.lyrics,
-    currentTime,
-  );
+  const { currentIndex, prevLine, currentLine, nextLine, isPreview } =
+    useLyricsSync(lyrics?.lines ?? NO_LINES, currentTime);
 
   // 没有曲目时不显示
   if (!track) return null;
@@ -160,7 +163,7 @@ export function FloatingPlayer() {
               <IconButton
                 size="small"
                 component={Link}
-                to={`/songs/${track.id}`}
+                to={`/songs/${track.songId}`}
                 title="查看详情"
               >
                 <OpenInNew fontSize="small" />
@@ -177,11 +180,12 @@ export function FloatingPlayer() {
           {/* 歌词显示区域 */}
           <Divider />
           <LyricsDisplay
+            currentIndex={currentIndex}
             prevLine={prevLine}
             currentLine={currentLine}
             nextLine={nextLine}
             isPreview={isPreview}
-            languages={track.languages}
+            languages={lyrics?.languages}
           />
           <Divider />
 

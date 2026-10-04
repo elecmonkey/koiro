@@ -2,7 +2,6 @@ import type { ComponentType, ReactNode } from 'react';
 import { createBrowserRouter } from 'react-router';
 import { Box, CircularProgress } from '@mui/material';
 import RequireAuth from './auth/RequireAuth';
-import { PERMISSIONS } from './lib/permissions';
 import Layout from './app/Layout';
 // 最常见的落地页随主包加载，省掉一次串行请求；其余页面按路由拆分
 import HomePage from './app/page';
@@ -12,15 +11,15 @@ type Guard = (page: ReactNode) => ReactNode;
 
 /** 浏览类页面：VIEW 权限，开启匿名访问时未登录也可看 */
 const view: Guard = (page) => (
-  <RequireAuth permission={PERMISSIONS.VIEW} allowAnonymous>
+  <RequireAuth permission="view" allowAnonymous>
     {page}
   </RequireAuth>
 );
 const upload: Guard = (page) => (
-  <RequireAuth permission={PERMISSIONS.UPLOAD}>{page}</RequireAuth>
+  <RequireAuth permission="upload">{page}</RequireAuth>
 );
 const admin: Guard = (page) => (
-  <RequireAuth permission={PERMISSIONS.ADMIN}>{page}</RequireAuth>
+  <RequireAuth permission="admin">{page}</RequireAuth>
 );
 const loggedIn: Guard = (page) => <RequireAuth>{page}</RequireAuth>;
 const open: Guard = (page) => page;

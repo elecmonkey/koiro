@@ -1,4 +1,10 @@
-import { languageName } from '@koiro/shared';
+import {
+  hasPermission,
+  languageName,
+  type Page,
+  type SongDetail,
+  type SongSummary,
+} from '@koiro/shared';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
@@ -10,43 +16,10 @@ import {
   Typography,
 } from '@mui/material';
 import CoverArt from '@/app/components/CoverArt';
-import type { LyricsDocument } from '@/app/editor/ast/types';
-import { usePermissions } from '@/auth/AuthContext';
-import {
-  api,
-  ApiError,
-  type Cover,
-  type SongSummary,
-  type StaffEntry,
-} from '@/lib/api';
-import { PERMISSIONS, hasPermission } from '@/lib/permissions';
+import { useAuth } from '@/auth/AuthContext';
+import { api, ApiError, withQuery } from '@/lib/api';
 import { pageTitle } from '@/lib/site-config';
-import {
-  AudioControls,
-  LyricsDisplay,
-  type AudioVersion,
-  type LyricsVersion,
-} from './SongDetailClient';
-
-type SongDetail = {
-  id: string;
-  title: string;
-  description: string;
-  staff: StaffEntry[];
-  cover: Cover | null;
-  versions: {
-    id: string;
-    name: string;
-    isDefault: boolean;
-    lyricsId: string | null;
-  }[];
-  lyrics: {
-    id: string;
-    versionKey: string;
-    isDefault: boolean;
-    content: LyricsDocument;
-  }[];
-};
+import { AudioControls, LyricsCard } from './SongDetailClient';
 
 type State =
   | { status: 'loading' }
@@ -57,8 +30,10 @@ type State =
 /** 歌曲不存在时给出最近更新的几首作为入口 */
 async function recentSongs(): Promise<SongSummary[]> {
   try {
-    const data = await api<{ songs: SongSummary[] }>('/api/songs?page=1');
-    return data.songs.slice(0, 5);
+    const page = await api<Page<SongSummary>>(
+      withQuery('/api/songs', { pageSize: 5 }),
+    );
+    return page.items;
   } catch {
     return [];
   }
@@ -66,14 +41,14 @@ async function recentSongs(): Promise<SongSummary[]> {
 
 export default function SongDetailPage() {
   const { id = '' } = useParams();
-  const permissions = usePermissions();
+  const { user } = useAuth();
   const [state, setState] = useState<State>({ status: 'loading' });
 
   useEffect(() => {
     let alive = true;
     setState({ status: 'loading' });
-    api<{ song: SongDetail }>(`/api/songs/${id}`)
-      .then(({ song }) => alive && setState({ status: 'ready', song }))
+    api<SongDetail>(`/api/songs/${id}`)
+      .then((song) => alive && setState({ status: 'ready', song }))
       .catch(async (err: unknown) => {
         if (!alive) return;
         if (err instanceof ApiError && err.status === 404) {
@@ -136,34 +111,8 @@ export default function SongDetailPage() {
   }
 
   const { song } = state;
-  const staff = song.staff;
-  const coverUrl = song.cover?.url ?? null;
-  const canDownload = hasPermission(permissions, PERMISSIONS.DOWNLOAD);
-
-  const audioVersions: AudioVersion[] = song.versions.map((v) => ({
-    id: v.id,
-    key: v.name,
-    isDefault: v.isDefault,
-    lyricsId: v.lyricsId,
-  }));
-
-  const lyricsVersions: LyricsVersion[] = song.lyrics.map((lyr) => ({
-    id: lyr.id,
-    versionKey: lyr.versionKey,
-    isDefault: lyr.isDefault,
-    content: lyr.content,
-    languages: lyr.content?.meta?.languages ?? [],
-  }));
-
-  // 艺术家信息：优先取演唱相关的 staff
-  const artistInfo =
-    staff
-      .filter(
-        (s) =>
-          s.role?.toLowerCase().includes('vocal') || s.role?.includes('歌'),
-      )
-      .map((s) => s.name.join('、'))
-      .join(', ') || staff[0]?.name.join('、');
+  const canDownload = user !== null && hasPermission(user, 'download');
+  const defaultLyrics = song.lyrics.find((item) => item.isDefault);
 
   return (
     <Box component="main" sx={{ pb: 8 }}>
@@ -176,7 +125,7 @@ export default function SongDetailPage() {
         <Stack spacing={3}>
           <Stack spacing={3}>
             <CoverArt
-              url={coverUrl}
+              url={song.coverUrl}
               height="auto"
               width="100%"
               alt={song.title}
@@ -203,13 +152,13 @@ export default function SongDetailPage() {
                   alignItems: 'center',
                 }}
               >
-                {staff.map((item, index) => (
+                {song.staff.map((item, index) => (
                   <Chip
                     key={`${item.role}-${index}`}
-                    label={`${item.role || 'Staff'} · ${item.name.join('、')}`}
+                    label={`${item.role} · ${item.names.join('、')}`}
                   />
                 ))}
-                {lyricsVersions[0]?.languages?.map((lang) => (
+                {defaultLyrics?.languages.map((lang) => (
                   <Chip
                     key={lang}
                     label={languageName(lang)}
@@ -223,15 +172,8 @@ export default function SongDetailPage() {
               {/* 音频控制：版本切换 + 播放/下载 */}
               <AudioControls
                 key={song.id}
-                song={{
-                  id: song.id,
-                  title: song.title,
-                  artist: artistInfo,
-                  coverUrl: song.cover?.url ?? null,
-                }}
-                audioVersions={audioVersions}
+                song={song}
                 canDownload={canDownload}
-                lyricsVersions={lyricsVersions}
               />
             </Stack>
           </Stack>
@@ -241,7 +183,7 @@ export default function SongDetailPage() {
       <Container sx={{ pt: 4 }}>
         <Stack spacing={3}>
           {/* 歌词显示：支持多版本切换 */}
-          <LyricsDisplay lyrics={lyricsVersions} />
+          <LyricsCard key={song.id} lyrics={song.lyrics} />
         </Stack>
       </Container>
     </Box>

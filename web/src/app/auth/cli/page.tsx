@@ -11,17 +11,12 @@ import {
 } from '@mui/material';
 import { Link, useSearchParams } from 'react-router';
 import { useAuth } from '@/auth/AuthContext';
+import type { CliAuthorization, CliAuthorizeRequest } from '@koiro/shared';
 import { api } from '@/lib/api';
 import { pageTitle } from '@/lib/site-config';
 
-type Request = {
-  redirectUri: string;
-  state: string;
-  codeChallenge: string;
-};
-
 /** 与后端相同的校验：只接受本机回环地址上的 /callback */
-function parseRequest(params: URLSearchParams): Request | null {
+function parseRequest(params: URLSearchParams): CliAuthorizeRequest | null {
   const redirectUri = params.get('redirectUri') ?? '';
   const state = params.get('state') ?? '';
   const codeChallenge = params.get('codeChallenge') ?? '';
@@ -50,7 +45,7 @@ function parseRequest(params: URLSearchParams): Request | null {
 }
 
 /** 即使接口返回成功，也确认回调地址确实指回命令行，再离开本站 */
-function validCallback(callbackUrl: string, request: Request) {
+function validCallback(callbackUrl: string, request: CliAuthorizeRequest) {
   let callback: URL;
   try {
     callback = new URL(callbackUrl);
@@ -83,7 +78,7 @@ export default function CliLoginPage() {
     setPending(true);
     setError(null);
     try {
-      const { callbackUrl } = await api<{ callbackUrl: string }>(
+      const { callbackUrl } = await api<CliAuthorization>(
         '/api/auth/cli/authorize',
         { method: 'POST', json: request },
       );

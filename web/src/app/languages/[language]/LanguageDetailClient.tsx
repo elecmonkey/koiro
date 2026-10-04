@@ -9,39 +9,22 @@ import {
   Typography,
 } from '@mui/material';
 import SongCard from '@/app/components/SongCard';
-import { api, type SongSummary } from '@/lib/api';
-
-type LanguageInfo = {
-  code: string;
-  total: number;
-};
-
-type Song = SongSummary;
-
-type ResponseData = {
-  language: LanguageInfo;
-  songs: Song[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
-};
-
-import { languageName as nameOf } from '@koiro/shared';
+import {
+  isLanguage,
+  languageName as nameOf,
+  type Page,
+  type SongSummary,
+} from '@koiro/shared';
+import { api, withQuery } from '@/lib/api';
 
 export default function LanguageDetailClient({
   language,
 }: {
   language: string;
 }) {
-  const [languageInfo, setLanguageInfo] = useState<LanguageInfo | null>(null);
-  const [songs, setSongs] = useState<Song[]>([]);
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<
-    ResponseData['pagination'] | null
-  >(null);
+  const [pagination, setPagination] = useState<Page<SongSummary> | null>(null);
+  const songs = pagination?.items ?? [];
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,13 +37,11 @@ export default function LanguageDetailClient({
       setLoading(true);
       setError(null);
       try {
-        const data = await api<ResponseData>(
-          `/api/languages/${encodeURIComponent(languageCode)}?page=${page}`,
+        if (!isLanguage(languageCode)) throw new Error('没有这个语种');
+        const data = await api<Page<SongSummary>>(
+          withQuery('/api/songs', { language: languageCode, page }),
         );
-        if (!active) return;
-        setLanguageInfo(data.language);
-        setSongs(data.songs);
-        setPagination(data.pagination);
+        if (active) setPagination(data);
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : '未知错误');
       } finally {
@@ -78,7 +59,7 @@ export default function LanguageDetailClient({
       <Container sx={{ pt: 6 }}>
         <Stack spacing={1.5}>
           <Typography variant="h4">{languageName}</Typography>
-          {languageInfo && (
+          {pagination && (
             <Stack
               direction="row"
               spacing={1}
@@ -92,7 +73,7 @@ export default function LanguageDetailClient({
                   color: 'text.secondary',
                 }}
               >
-                共 {languageInfo.total} 首
+                共 {pagination.total} 首
               </Typography>
               <Typography
                 variant="caption"
@@ -100,7 +81,7 @@ export default function LanguageDetailClient({
                   color: 'text.secondary',
                 }}
               >
-                ({languageInfo.code})
+                ({languageCode})
               </Typography>
             </Stack>
           )}

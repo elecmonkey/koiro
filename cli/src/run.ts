@@ -1,10 +1,10 @@
+import type { Session } from '@koiro/shared';
 import { argumentsFor } from './arguments';
 import { businessCommand, localCommand } from './commands';
 import { normalizeUrl, readConfig, writeConfig } from './config';
 import { CliError, usage } from './errors';
 import { help } from './help';
 import { ApiClient } from './http';
-import { object } from './json';
 import { browserLogin } from './login';
 
 export interface Runtime {
@@ -135,14 +135,14 @@ export async function run(argv: string[], runtime: Runtime): Promise<number> {
 
     if (command === 'auth' && action === 'status') {
       args.allow([], 2);
-      const me = object(await api.request('/me'));
-      if (me.user === null)
+      const { user } = await api.request<Session>('/auth/session');
+      if (!user)
         throw new CliError(
           'auth',
           'Login is missing or expired. Run koiro login.',
           3,
         );
-      output({ webUrl, user: me.user });
+      output({ webUrl, user });
       return 0;
     }
 

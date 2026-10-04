@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { CliError, usage } from './errors';
 import { object, parseJson, string } from './json';
 
-export interface Session {
+export interface SavedLogin {
   token: string;
   expiresAt: string;
 }
@@ -21,7 +21,7 @@ export interface Session {
 export interface Config {
   webUrl?: string;
   /** 按站点地址分别保存的登录 */
-  sessions: Partial<Record<string, Session>>;
+  sessions: Partial<Record<string, SavedLogin>>;
 }
 
 /** 站点地址：HTTPS，仅回环地址允许 HTTP；不带凭据、查询串和锚点 */
@@ -72,7 +72,7 @@ export async function readConfig(directory: string): Promise<Config> {
     if (process.platform !== 'win32' && (stat.mode & 0o077) !== 0)
       throw new Error('Configuration must be private');
     const value = object(parseJson(await readFile(file, 'utf8')));
-    const sessions: Record<string, Session> = {};
+    const sessions: Record<string, SavedLogin> = {};
     for (const [url, raw] of Object.entries(object(value.sessions ?? {}))) {
       const session = object(raw);
       sessions[normalizeUrl(url)] = {

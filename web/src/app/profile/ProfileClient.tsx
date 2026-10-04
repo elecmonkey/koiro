@@ -13,23 +13,15 @@ import {
   Typography,
 } from '@mui/material';
 import { useNavigate } from 'react-router';
-import { useAuth, type CurrentUser } from '@/auth/AuthContext';
+import type { User } from '@koiro/shared';
+import { useAuth } from '@/auth/AuthContext';
 import { api } from '@/lib/api';
 import AgentSkillCard from './AgentSkillCard';
-
-interface UserProfile {
-  id: string;
-  email: string;
-  displayName: string;
-  permissions: number;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export default function ProfileClient() {
   const { logout, setUser } = useAuth();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,9 +47,9 @@ export default function ProfileClient() {
     setLoading(true);
     setError(null);
     try {
-      const data = await api<{ user: UserProfile }>('/api/profile');
-      setProfile(data.user);
-      setDisplayNameValue(data.user.displayName);
+      const user = await api<User>('/api/profile');
+      setProfile(user);
+      setDisplayNameValue(user.displayName);
     } catch (err) {
       setError(err instanceof Error ? err.message : '未知错误');
     } finally {
@@ -80,18 +72,13 @@ export default function ProfileClient() {
     setDisplayNameSuccess(null);
 
     try {
-      const data = await api<{ ok: boolean; user: CurrentUser }>(
-        '/api/profile',
-        {
-          method: 'PATCH',
-          json: { displayName: displayNameValue },
-        },
-      );
+      const user = await api<User>('/api/profile', {
+        method: 'PATCH',
+        json: { displayName: displayNameValue },
+      });
 
-      setProfile((prev) =>
-        prev ? { ...prev, displayName: data.user.displayName } : null,
-      );
-      setUser(data.user);
+      setProfile(user);
+      setUser(user);
       setEditingDisplayName(false);
       setDisplayNameSuccess('昵称更新成功');
       setTimeout(() => setDisplayNameSuccess(null), 3000);
@@ -126,7 +113,7 @@ export default function ProfileClient() {
     try {
       await api('/api/profile', {
         method: 'PATCH',
-        json: { currentPassword, newPassword },
+        json: { password: { current: currentPassword, new: newPassword } },
       });
 
       setPasswordSuccess('密码更新成功，请重新登录');

@@ -1,13 +1,10 @@
+import type { User } from '@koiro/shared';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from '@/auth/AuthContext';
 import { Box, Button, Stack, Typography } from '@mui/material';
 
 type NavUserMenuProps = {
-  user?: {
-    email?: string | null;
-    displayName?: string | null;
-    permissions?: number;
-  } | null;
+  user: User | null;
 };
 
 export default function NavUserMenu({ user }: NavUserMenuProps) {
@@ -52,7 +49,7 @@ export default function NavUserMenu({ user }: NavUserMenuProps) {
               color: 'text.secondary',
             }}
           >
-            已登录 - {user.displayName ?? user.email ?? '(未设置昵称)'}
+            已登录 - {user.displayName}
           </Typography>
         </Typography>
         <Typography

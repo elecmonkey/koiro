@@ -20,39 +20,25 @@ import {
 import { Link } from 'react-router';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import type { Playlist, PlaylistSongs, SongOption } from '@koiro/shared';
 import { api } from '@/lib/api';
 
-type PlaylistSong = {
-  id: string;
-  title: string;
-  description: string | null;
-  position: number | null;
-};
-
-type AvailableSong = {
-  id: string;
-  title: string;
-  description: string | null;
-};
-
-type PlaylistData = {
-  id: string;
-  name: string;
-  songs: PlaylistSong[];
-};
-
 type Props = {
-  playlist: PlaylistData;
-  availableSongs: AvailableSong[];
+  playlist: Playlist;
+  /** 歌单里的歌曲，按歌单顺序 */
+  initialSongs: SongOption[];
+  /** 全部歌曲，供选择加入 */
+  availableSongs: SongOption[];
 };
 
 export default function PlaylistSongsClient({
   playlist,
+  initialSongs,
   availableSongs,
 }: Props) {
-  const [songs, setSongs] = useState<PlaylistSong[]>(playlist.songs);
+  const [songs, setSongs] = useState<SongOption[]>(initialSongs);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [selectedSong, setSelectedSong] = useState<AvailableSong | null>(null);
+  const [selectedSong, setSelectedSong] = useState<SongOption | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -70,18 +56,10 @@ export default function PlaylistSongsClient({
     try {
       await api(`/api/playlists/${playlist.id}/songs`, {
         method: 'POST',
-        json: { songIds: [selectedSong.id] },
+        json: { songIds: [selectedSong.id] } satisfies PlaylistSongs,
       });
-      // 更新本地状态
-      setSongs((prev) => [
-        ...prev,
-        {
-          id: selectedSong.id,
-          title: selectedSong.title,
-          description: selectedSong.description,
-          position: prev.length,
-        },
-      ]);
+      // 追加到末尾
+      setSongs((prev) => [...prev, selectedSong]);
       setSelectedSong(null);
       setAddDialogOpen(false);
       setSuccess('已添加歌曲');

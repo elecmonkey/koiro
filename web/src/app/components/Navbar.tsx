@@ -34,7 +34,7 @@ export default function Navbar() {
               alignItems: 'center',
             }}
           >
-            <NavLinks permissions={user?.permissions ?? 0} user={user} />
+            <NavLinks user={user} />
             <NavUserMenu user={user} />
           </Stack>
         </Container>

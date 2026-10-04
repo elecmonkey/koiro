@@ -2,14 +2,7 @@ import { parseArgs } from 'node:util';
 import { usage } from './errors';
 
 const globalOptions = ['json', 'help', 'web-url'];
-const booleans = [
-  'json',
-  'help',
-  'no-browser',
-  'all',
-  'force',
-  'include-singles',
-];
+const booleans = ['json', 'help', 'no-browser', 'all', 'force'];
 const strings = [
   'web-url',
   'page',

@@ -9,12 +9,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-
-type StaffItem = {
-  id: string;
-  role: string;
-  name: string | string[];
-};
+import type { StaffItem } from './formTypes';
 
 type StaffRowProps = {
   item: StaffItem;
@@ -23,12 +18,7 @@ type StaffRowProps = {
 };
 
 export default function StaffRow({ item, onChange, onRemove }: StaffRowProps) {
-  // 将 name 统一转换为数组形式进行内部处理
-  const names = Array.isArray(item.name)
-    ? item.name
-    : item.name
-      ? [item.name]
-      : [];
+  const names = item.names;
 
   // 是否处于多人编辑模式
   const [isMultiMode, setIsMultiMode] = useState(names.length > 1);
@@ -36,17 +26,10 @@ export default function StaffRow({ item, onChange, onRemove }: StaffRowProps) {
   // 用于输入新名字的状态
   const [inputValue, setInputValue] = useState('');
 
-  // 更新 name 的辅助函数，根据数组长度和模式决定存储为 string 还是 string[]
   const updateNames = (newNames: string[]) => {
     const filtered = newNames.filter((n) => n.trim());
-    if (filtered.length === 0) {
-      onChange({ name: '' });
-      setIsMultiMode(false);
-    } else if (filtered.length === 1 && !isMultiMode) {
-      onChange({ name: filtered[0] });
-    } else {
-      onChange({ name: filtered });
-    }
+    if (filtered.length === 0) setIsMultiMode(false);
+    onChange({ names: filtered });
   };
 
   // 添加一个名字
@@ -80,12 +63,12 @@ export default function StaffRow({ item, onChange, onRemove }: StaffRowProps) {
         .map((s) => s.trim())
         .filter(Boolean);
       if (parts.length > 1) {
-        onChange({ name: parts });
+        onChange({ names: parts });
         setIsMultiMode(true);
         return;
       }
     }
-    onChange({ name: value });
+    onChange({ names: value ? [value] : [] });
   };
 
   // 点击加号进入多人模式

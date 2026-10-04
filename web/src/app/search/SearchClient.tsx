@@ -14,32 +14,8 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import { useNavigate, useSearchParams } from 'react-router';
 import SearchResultCard from '@/app/components/SearchResultCard';
-import { api, type Cover } from '@/lib/api';
-
-type SearchResult = {
-  id: string;
-  title: string;
-  description: string | null;
-  staff: { role: string; name: string | string[] }[];
-  cover: Cover | null;
-  score: number;
-  matchType: ('title' | 'staff' | 'lyrics')[];
-  matchSnippet?: string;
-  titleHighlights?: { text: string; highlight?: boolean }[];
-  staffHighlights?: {
-    role: string;
-    name: { text: string; highlight?: boolean }[];
-  }[];
-  matchSnippetHighlights?: { text: string; highlight?: boolean }[];
-};
-
-type SearchResponse = {
-  results: SearchResult[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-};
+import type { Page, SearchHit } from '@koiro/shared';
+import { api, withQuery } from '@/lib/api';
 
 export default function SearchClient() {
   const navigate = useNavigate();
@@ -49,7 +25,7 @@ export default function SearchClient() {
 
   const [keyword, setKeyword] = useState(initialKeyword);
   const [inputValue, setInputValue] = useState(initialKeyword);
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [results, setResults] = useState<SearchHit[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(0);
@@ -68,10 +44,10 @@ export default function SearchClient() {
     setLoading(true);
     setSearched(true);
     try {
-      const data = await api<SearchResponse>(
-        `/api/search?q=${encodeURIComponent(q)}&page=${p}`,
+      const data = await api<Page<SearchHit>>(
+        withQuery('/api/search', { q, page: p }),
       );
-      setResults(data.results);
+      setResults(data.items);
       setTotal(data.total);
       setTotalPages(data.totalPages);
     } catch {
@@ -188,7 +164,7 @@ export default function SearchClient() {
                 ) : (
                   <Stack spacing={2}>
                     {results.map((item) => (
-                      <SearchResultCard key={item.id} result={item} />
+                      <SearchResultCard key={item.song.id} hit={item} />
                     ))}
                   </Stack>
                 )}

@@ -1,10 +1,10 @@
 import { Box, Stack, Typography } from '@mui/material';
-import type { Language } from '@koiro/shared';
-import type { Inline } from '@/app/editor/ast/types';
+import type { Language, LyricLine, Span } from '@koiro/shared';
 import { lyricsFontFamily } from '@/lib/lyricsFont';
-import type { LyricLine } from './useLyricsSync';
 
 interface LyricsDisplayProps {
+  /** 当前行的序号；预览模式下为 -1 */
+  currentIndex: number;
   prevLine: LyricLine | null;
   currentLine: LyricLine | null;
   nextLine: LyricLine | null;
@@ -14,22 +14,17 @@ interface LyricsDisplayProps {
   languages?: Language[];
 }
 
-/**
- * 渲染 Inline 节点数组
- */
-function renderInlines(inlines: Inline[]): React.ReactNode {
-  return inlines.map((inline, index) => {
-    switch (inline.type) {
+function renderSpans(spans: readonly Span[]): React.ReactNode {
+  return spans.map((span, index) => {
+    switch (span.type) {
       case 'text':
-        return <span key={index}>{inline.text}</span>;
+        return <span key={index}>{span.text}</span>;
       case 'ruby':
         return (
           <ruby key={index} style={{ rubyPosition: 'over' }}>
-            {inline.base}
+            {span.base}
             <rp>(</rp>
-            <rt style={{ fontSize: '0.7em', fontWeight: 400 }}>
-              {inline.ruby}
-            </rt>
+            <rt style={{ fontSize: '0.7em', fontWeight: 400 }}>{span.ruby}</rt>
             <rp>)</rp>
           </ruby>
         );
@@ -43,11 +38,14 @@ function renderInlines(inlines: Inline[]): React.ReactNode {
  */
 function LyricLineView({
   line,
+  index,
   variant,
   isPreview = false,
   languages = [],
 }: {
   line: LyricLine | null;
+  /** 行在整份歌词中的序号，换行时触发淡入动画 */
+  index: number;
   variant: 'prev' | 'current' | 'next';
   isPreview?: boolean;
   languages?: Language[];
@@ -89,7 +87,7 @@ function LyricLineView({
 
   return (
     <Typography
-      key={line.index}
+      key={index}
       component="div"
       sx={{
         ...baseStyles[effectiveVariant],
@@ -119,7 +117,7 @@ function LyricLineView({
         },
       }}
     >
-      {renderInlines(line.block.children)}
+      {renderSpans(line.spans)}
     </Typography>
   );
 }
@@ -128,6 +126,7 @@ function LyricLineView({
  * 歌词显示组件 - 显示3行歌词（上一行、当前行、下一行）
  */
 export function LyricsDisplay({
+  currentIndex,
   prevLine,
   currentLine,
   nextLine,
@@ -135,6 +134,8 @@ export function LyricsDisplay({
   languages = [],
 }: LyricsDisplayProps) {
   const hasLyrics = prevLine || currentLine || nextLine;
+  // 预览时显示前三行，居中的是第 1 行
+  const center = isPreview ? 1 : currentIndex;
 
   if (!hasLyrics) {
     return (
@@ -171,18 +172,21 @@ export function LyricsDisplay({
     >
       <LyricLineView
         line={prevLine}
+        index={center - 1}
         variant="prev"
         isPreview={isPreview}
         languages={languages}
       />
       <LyricLineView
         line={currentLine}
+        index={center}
         variant="current"
         isPreview={isPreview}
         languages={languages}
       />
       <LyricLineView
         line={nextLine}
+        index={center + 1}
         variant="next"
         isPreview={isPreview}
         languages={languages}

@@ -4,43 +4,49 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 import { CliError } from './errors';
-import { object, parseJson, type Json, type JsonObject } from './json';
+import { object, parseJson } from './json';
+
+/** 服务端的错误体为 `{ code, message }`；代理返回的 HTML 等非 JSON 内容保留通用说明 */
+function serverMessage(text: string): string | undefined {
+  try {
+    const message = object(parseJson(text)).message;
+    return typeof message === 'string' && message ? message : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function failure(status: number, text: string): CliError {
+  const message = serverMessage(text);
   if (status === 401)
     return new CliError(
       'auth',
-      'Login is missing, expired or rejected. Run koiro login again.',
+      message ?? 'Login is missing or expired. Run koiro login again.',
       3,
     );
   if (status === 403)
     return new CliError(
       'forbidden',
-      'This account does not have permission for that action, or is disabled.',
+      message ?? 'This account does not have permission for that action.',
       4,
     );
   if (status === 404)
     return new CliError(
       'not_found',
-      'The resource does not exist or is not visible to this account.',
+      message ??
+        'The resource does not exist or is not visible to this account.',
       5,
     );
-  let message = `Koiro returned HTTP ${String(status)}.`;
-  if ([400, 409, 413, 422].includes(status)) {
-    try {
-      const error = object(parseJson(text)).error;
-      if (typeof error === 'string') message = error;
-    } catch {
-      // 请求体格式错误时框架返回纯文本说明（如缺少字段）；代理返回的 HTML 等保留通用信息
-      const plain = text.trim();
-      if (plain && plain.length <= 500 && !plain.startsWith('<'))
-        message = plain;
-    }
-  }
+  if (status === 409)
+    return new CliError(
+      'conflict',
+      message ?? 'The request conflicts with existing data.',
+      6,
+    );
   return new CliError(
-    status === 409 ? 'conflict' : 'api',
-    message,
-    status === 409 ? 6 : 8,
+    'api',
+    message ?? `Koiro returned HTTP ${String(status)}.`,
+    8,
   );
 }
 
@@ -101,13 +107,17 @@ export class ApiClient {
     };
   }
 
-  async request(
+  /**
+   * 请求 JSON 接口。响应的类型由调用方按 `@koiro/shared` 的接口类型给出：
+   * 那些类型由服务端生成，这里是整个命令行唯一做类型断言的地方。
+   */
+  async request<T = unknown>(
     path: string,
     method = 'GET',
-    body?: Json,
+    body?: unknown,
     query: Record<string, string | number | boolean | undefined> = {},
     authenticated = true,
-  ): Promise<Json> {
+  ): Promise<T> {
     const headers = this.headers(
       body === undefined ? {} : { 'content-type': 'application/json' },
       authenticated,
@@ -131,15 +141,11 @@ export class ApiClient {
       throw unreachable;
     }
     if (!response.ok) throw failure(response.status, text);
-    return text === '' ? null : parseJson(text);
+    return (text === '' ? null : parseJson(text)) as T;
   }
 
   /** 原始字节上传到后端（图片） */
-  async upload(
-    path: string,
-    data: Buffer,
-    contentType: string,
-  ): Promise<JsonObject> {
+  async upload<T>(path: string, data: Buffer, contentType: string): Promise<T> {
     const headers = this.headers({ 'content-type': contentType });
     let response: Response;
     let text: string;
@@ -156,7 +162,7 @@ export class ApiClient {
       throw unreachable;
     }
     if (!response.ok) throw failure(response.status, text);
-    return object(parseJson(text));
+    return parseJson(text) as T;
   }
 
   /** 按预签名地址直传对象存储；不携带 Koiro 的凭据 */

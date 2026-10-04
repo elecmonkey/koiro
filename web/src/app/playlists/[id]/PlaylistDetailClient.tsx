@@ -10,36 +10,19 @@ import {
 } from '@mui/material';
 import SongCard from '@/app/components/SongCard';
 import { pageTitle } from '@/lib/site-config';
-import { api, type Cover, type SongSummary } from '@/lib/api';
-
-type Song = SongSummary;
-
-type PlaylistInfo = {
-  id: string;
-  name: string;
-  description: string;
-  cover: Cover | null;
-  songCount: number;
-  updatedAt: string;
-};
-
-type PaginationInfo = {
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-};
+import type { Page, Playlist, SongSummary } from '@koiro/shared';
+import { api, withQuery } from '@/lib/api';
 
 type Props = {
   playlistId: string;
 };
 
 export default function PlaylistDetailClient({ playlistId }: Props) {
-  const [playlist, setPlaylist] = useState<PlaylistInfo | null>(null);
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [playlist, setPlaylist] = useState<Playlist | null>(null);
+  const [pagination, setPagination] = useState<Page<SongSummary> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const songs = pagination?.items ?? [];
   const [page, setPage] = useState(1);
 
   const fetchPlaylist = useCallback(
@@ -47,14 +30,14 @@ export default function PlaylistDetailClient({ playlistId }: Props) {
       setLoading(true);
       setError(null);
       try {
-        const data = await api<{
-          playlist: PlaylistInfo;
-          songs: Song[];
-          pagination: PaginationInfo;
-        }>(`/api/playlists/${playlistId}?page=${p}`);
-        setPlaylist(data.playlist);
-        setSongs(data.songs);
-        setPagination(data.pagination);
+        const [info, page] = await Promise.all([
+          api<Playlist>(`/api/playlists/${playlistId}`),
+          api<Page<SongSummary>>(
+            withQuery('/api/songs', { playlist: playlistId, page: p }),
+          ),
+        ]);
+        setPlaylist(info);
+        setPagination(page);
       } catch (err) {
         setError(err instanceof Error ? err.message : '未知错误');
       } finally {
@@ -115,41 +98,18 @@ export default function PlaylistDetailClient({ playlistId }: Props) {
             alignItems: { sm: 'flex-end' },
           }}
         >
-          {playlist.cover?.url ? (
-            <Box
-              component="img"
-              src={playlist.cover?.url}
-              alt={playlist.name}
-              sx={{
-                width: { xs: 160, sm: 200 },
-                height: { xs: 160, sm: 200 },
-                objectFit: 'cover',
-                borderRadius: 1,
-                boxShadow: 2,
-              }}
-            />
-          ) : (
-            <Box
-              sx={{
-                width: { xs: 160, sm: 200 },
-                height: { xs: 160, sm: 200 },
-                bgcolor: 'action.hover',
-                borderRadius: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Typography
-                variant="h2"
-                sx={{
-                  color: 'text.disabled',
-                }}
-              >
-                ♪
-              </Typography>
-            </Box>
-          )}
+          <Box
+            component="img"
+            src={playlist.coverUrl}
+            alt={playlist.name}
+            sx={{
+              width: { xs: 160, sm: 200 },
+              height: { xs: 160, sm: 200 },
+              objectFit: 'cover',
+              borderRadius: 1,
+              boxShadow: 2,
+            }}
+          />
           <Stack spacing={1} sx={{ pb: 1 }}>
             <Typography
               variant="caption"

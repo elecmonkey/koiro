@@ -44,7 +44,8 @@ pub async fn summaries(state: &AppState, ids: &[SongId]) -> AppResult<Vec<SongSu
                   s.staff AS "staff: Json<Vec<StaffCredit>>",
                   av.id AS "version_id: AudioVersionId", av.name AS version_name,
                   av.lyrics_id AS "lyrics_id: LyricsId",
-                  (SELECT count(*) FROM audio_versions x WHERE x.song_id = s.id) AS "version_count!"
+                  (SELECT count(*) FROM audio_versions x WHERE x.song_id = s.id) AS "version_count!",
+                  (SELECT count(*) FROM lyrics x WHERE x.song_id = s.id) AS "lyrics_count!"
            FROM songs s JOIN audio_versions av ON av.song_id = s.id AND av.is_default
            WHERE s.id = ANY($1)"#,
         ids as &[SongId]
@@ -68,6 +69,7 @@ pub async fn summaries(state: &AppState, ids: &[SongId]) -> AppResult<Vec<SongSu
                     lyrics_id: row.lyrics_id,
                 },
                 version_count: row.version_count,
+                lyrics_count: row.lyrics_count,
                 updated_at: row.updated_at,
             };
             (summary.id, summary)

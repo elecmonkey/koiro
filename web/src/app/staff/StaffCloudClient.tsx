@@ -13,17 +13,11 @@ import {
   Typography,
 } from '@mui/material';
 import { Link } from 'react-router';
+import type { StaffMember } from '@koiro/shared';
 import { api } from '@/lib/api';
 
-type StaffEntry = {
-  name: string;
-  count: number;
-  roles: { role: string; count: number }[];
-};
-
-type StaffResponse = {
-  staff: StaffEntry[];
-};
+/** 默认只显示参与歌曲数不少于这个数的人 */
+const MIN_SONGS = 3;
 
 function hashString(input: string) {
   let hash = 5381;
@@ -46,7 +40,7 @@ function scaleSize(
 }
 
 export default function StaffCloudClient() {
-  const [staff, setStaff] = useState<StaffEntry[]>([]);
+  const [members, setMembers] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSingles, setShowSingles] = useState(false);
@@ -57,10 +51,8 @@ export default function StaffCloudClient() {
       setLoading(true);
       setError(null);
       try {
-        const data = await api<StaffResponse>(
-          `/api/staff${showSingles ? '?includeSingles=1' : ''}`,
-        );
-        if (active) setStaff(data.staff || []);
+        const data = await api<StaffMember[]>('/api/staff');
+        if (active) setMembers(data);
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : '未知错误');
       } finally {
@@ -71,16 +63,24 @@ export default function StaffCloudClient() {
     return () => {
       active = false;
     };
-  }, [showSingles]);
+  }, []);
 
-  const counts = useMemo(() => staff.map((s) => s.count), [staff]);
+  const staff = useMemo(
+    () =>
+      showSingles
+        ? members
+        : members.filter((member) => member.songCount >= MIN_SONGS),
+    [members, showSingles],
+  );
+
+  const counts = useMemo(() => staff.map((s) => s.songCount), [staff]);
   const minCount = counts.length ? Math.min(...counts) : 0;
   const maxCount = counts.length ? Math.max(...counts) : 0;
   const sortedStaff = useMemo(() => {
     const items = [...staff];
     items.sort((a, b) => {
-      const aKey = `${a.name}|${a.count}|${a.roles.map((r) => `${r.role}:${r.count}`).join(',')}`;
-      const bKey = `${b.name}|${b.count}|${b.roles.map((r) => `${r.role}:${r.count}`).join(',')}`;
+      const aKey = `${a.name}|${a.songCount}|${a.roles.map((r) => `${r.role}:${r.songCount}`).join(',')}`;
+      const bKey = `${b.name}|${b.songCount}|${b.roles.map((r) => `${r.role}:${r.songCount}`).join(',')}`;
       const aHash = hashString(aKey);
       const bHash = hashString(bKey);
       if (aHash !== bHash) return aHash - bHash;
@@ -159,7 +159,7 @@ export default function StaffCloudClient() {
               >
                 {sortedStaff.map((item) => {
                   const fontSize = scaleSize(
-                    item.count,
+                    item.songCount,
                     minCount,
                     maxCount,
                     14,
@@ -199,7 +199,7 @@ export default function StaffCloudClient() {
                           justifyContent: 'center',
                           gap: 1,
                           fontSize,
-                          fontWeight: item.count >= maxCount ? 700 : 500,
+                          fontWeight: item.songCount >= maxCount ? 700 : 500,
                           lineHeight: 1.2,
                         }}
                       >
@@ -208,7 +208,7 @@ export default function StaffCloudClient() {
                           component="span"
                           sx={{ fontSize: '0.75em', color: 'text.secondary' }}
                         >
-                          {item.count}
+                          {item.songCount}
                         </Box>
                       </Box>
                       {topRoles.length > 0 && (

@@ -1,4 +1,12 @@
-import type { Language } from '@koiro/shared';
+import type {
+  AudioVersionId,
+  Lyrics,
+  LyricsId,
+  SongDetail,
+  SongId,
+  SongSummary,
+  StaffCredit,
+} from '@koiro/shared';
 import {
   createContext,
   useContext,
@@ -8,23 +16,46 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import type { LyricsDocument } from '@/app/editor/ast/types';
-import { audioUrl } from '@/lib/api';
+import { api, audioUrl } from '@/lib/api';
 
+/** 正在播放的一个音频版本 */
 export interface Track {
-  id: string;
+  songId: SongId;
   title: string;
-  artist?: string;
-  coverUrl?: string | null;
-  /** 音频版本 id，同一歌曲的不同版本靠它区分 */
-  versionId: string;
-  versionKey?: string; // 音频版本名称
-  lyrics?: LyricsDocument | null;
-  languages?: Language[]; // 歌词语言列表
+  artist: string;
+  coverUrl: string;
+  /** 同一首歌的不同版本靠它区分 */
+  versionId: AudioVersionId;
+  versionName: string;
+  /** 播放这个版本时显示的歌词 */
+  lyricsId: LyricsId | null;
+}
+
+/** 卡片上显示的演唱者：优先取演唱相关的 staff，没有时列出所有人 */
+export function artistOf(staff: readonly StaffCredit[]): string {
+  const singers = staff.filter((credit) => /演唱|歌|vocal/i.test(credit.role));
+  return (singers.length > 0 ? singers : staff)
+    .flatMap((credit) => credit.names)
+    .join('、');
+}
+
+/** 列表里的歌曲：播放默认版本 */
+export function trackOf(song: SongSummary): Track {
+  return {
+    songId: song.id,
+    title: song.title,
+    artist: artistOf(song.staff),
+    coverUrl: song.coverUrl,
+    versionId: song.defaultVersion.id,
+    versionName: song.defaultVersion.name,
+    lyricsId: song.defaultVersion.lyricsId,
+  };
 }
 
 interface PlayerState {
   track: Track | null;
+  /** 当前版本绑定的歌词；加载中或没有绑定时为空 */
+  lyrics: Lyrics | null;
   isPlaying: boolean;
   currentTime: number;
   duration: number;
@@ -34,7 +65,8 @@ interface PlayerState {
 }
 
 interface PlayerContextValue extends PlayerState {
-  play: (track: Track) => Promise<void>;
+  /** 已经拿到歌词时可以直接传入，否则按 `track.lyricsId` 加载 */
+  play: (track: Track, lyrics?: Lyrics | null) => Promise<void>;
   pause: () => void;
   resume: () => void;
   stop: () => void;
@@ -63,8 +95,21 @@ interface PlayerProviderProps {
 
 export function PlayerProvider({ children }: PlayerProviderProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // 歌词随歌曲详情一起加载；返回时若已切到别的版本则丢弃
+  const loadLyrics = useCallback(async (track: Track) => {
+    const song = await api<SongDetail>(`/api/songs/${track.songId}`).catch(
+      () => null,
+    );
+    const lyrics = song?.lyrics.find((item) => item.id === track.lyricsId);
+    if (!lyrics) return;
+    setState((prev) =>
+      prev.track?.versionId === track.versionId ? { ...prev, lyrics } : prev,
+    );
+  }, []);
   const [state, setState] = useState<PlayerState>({
     track: null,
+    lyrics: null,
     isPlaying: false,
     currentTime: 0,
     duration: 0,
@@ -74,35 +119,43 @@ export function PlayerProvider({ children }: PlayerProviderProps) {
   });
 
   // 播放新曲目
-  const play = useCallback(async (track: Track) => {
-    setState((prev) => ({
-      ...prev,
-      track,
-      isLoading: true,
-      error: null,
-      isPlaying: false,
-      currentTime: 0,
-      duration: 0,
-      isMinimized: false,
-    }));
-
-    try {
-      const audio = audioRef.current;
-      if (audio) {
-        // 后端 302 到当天有效的签名 URL
-        audio.src = audioUrl(track.versionId);
-        audio.load();
-        await audio.play();
-        setState((prev) => ({ ...prev, isPlaying: true, isLoading: false }));
-      }
-    } catch (err) {
+  const play = useCallback(
+    async (track: Track, lyrics?: Lyrics | null) => {
       setState((prev) => ({
         ...prev,
-        isLoading: false,
-        error: err instanceof Error ? err.message : '播放失败',
+        track,
+        lyrics: lyrics ?? null,
+        isLoading: true,
+        error: null,
+        isPlaying: false,
+        currentTime: 0,
+        duration: 0,
+        isMinimized: false,
       }));
-    }
-  }, []);
+
+      if (lyrics === undefined && track.lyricsId) {
+        void loadLyrics(track);
+      }
+
+      try {
+        const audio = audioRef.current;
+        if (audio) {
+          // 后端 302 到当天有效的签名 URL
+          audio.src = audioUrl(track.versionId);
+          audio.load();
+          await audio.play();
+          setState((prev) => ({ ...prev, isPlaying: true, isLoading: false }));
+        }
+      } catch (err) {
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: err instanceof Error ? err.message : '播放失败',
+        }));
+      }
+    },
+    [loadLyrics],
+  );
 
   const pause = useCallback(() => {
     audioRef.current?.pause();
@@ -128,6 +181,7 @@ export function PlayerProvider({ children }: PlayerProviderProps) {
     setState((prev) => ({
       ...prev,
       track: null,
+      lyrics: null,
       isPlaying: false,
       currentTime: 0,
       duration: 0,

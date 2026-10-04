@@ -8,184 +8,127 @@ import {
   Tabs,
   Typography,
 } from '@mui/material';
-import { PlayButton } from '@/app/components/PlayButton';
 import { Download } from '@mui/icons-material';
-import type { Language } from '@koiro/shared';
-import type { LyricsDocument, Block, Inline } from '@/app/editor/ast/types';
+import type { LyricLine, Lyrics, SongDetail, Span } from '@koiro/shared';
+import { PlayButton } from '@/app/components/PlayButton';
+import { artistOf } from '@/app/player';
 import { lyricsFontFamily } from '@/lib/lyricsFont';
 import { audioDownloadUrl } from '@/lib/api';
 
-export interface AudioVersion {
-  id: string;
-  key: string;
-  isDefault: boolean;
-  lyricsId?: string | null;
+/** 默认项的位置；接口保证恰好有一个，这里只防空列表 */
+function defaultIndex(items: readonly { isDefault: boolean }[]) {
+  return Math.max(
+    items.findIndex((item) => item.isDefault),
+    0,
+  );
 }
 
-export interface LyricsVersion {
-  id: string;
-  versionKey: string;
-  isDefault: boolean;
-  content: LyricsDocument;
-  languages?: Language[];
-}
-
-export interface SongDetailClientProps {
-  song: {
-    id: string;
-    title: string;
-    artist?: string;
-    coverUrl: string | null;
-  };
-  audioVersions: AudioVersion[];
-  canDownload: boolean;
-  lyricsVersions: LyricsVersion[];
-}
-
+/** 音频版本切换，以及播放 / 下载当前版本 */
 export function AudioControls({
   song,
-  audioVersions,
   canDownload,
-  lyricsVersions,
-}: SongDetailClientProps) {
-  const [selectedVersion, setSelectedVersion] = useState(() => {
-    const defaultIdx = audioVersions.findIndex((v) => v.isDefault);
-    return defaultIdx >= 0 ? defaultIdx : 0;
-  });
-
-  const currentVersion = audioVersions[selectedVersion];
-
-  // 根据当前音频版本的 lyricsId 查找对应的歌词
-  const currentLyricsVersion = currentVersion?.lyricsId
-    ? lyricsVersions.find((l) => l.id === currentVersion.lyricsId)
-    : null;
-
-  const currentLyrics = currentLyricsVersion?.content ?? null;
+}: {
+  song: SongDetail;
+  canDownload: boolean;
+}) {
+  const [selected, setSelected] = useState(() => defaultIndex(song.versions));
+  const version = song.versions[selected];
+  const lyrics =
+    song.lyrics.find((item) => item.id === version.lyricsId) ?? null;
 
   // 后端校验下载权限，并以「歌名 - 版本名」作为附件文件名
   const handleDownload = () => {
-    if (!currentVersion || !canDownload) return;
-    window.location.assign(audioDownloadUrl(currentVersion.id));
+    if (canDownload) window.location.assign(audioDownloadUrl(version.id));
   };
-
-  if (audioVersions.length === 0) {
-    return (
-      <Button variant="contained" disabled>
-        无音频
-      </Button>
-    );
-  }
 
   return (
     <Stack spacing={2}>
-      {audioVersions.length > 1 && (
+      {song.versions.length > 1 && (
         <Tabs
-          value={selectedVersion}
-          onChange={(_, v: number) => setSelectedVersion(v)}
+          value={selected}
+          onChange={(_, value: number) => setSelected(value)}
           variant="scrollable"
           scrollButtons="auto"
         >
-          {audioVersions.map((v, idx) => (
+          {song.versions.map((item, index) => (
             <Tab
-              key={v.id}
-              label={v.isDefault ? `${v.key}（默认）` : v.key}
-              value={idx}
+              key={item.id}
+              label={item.isDefault ? `${item.name}（默认）` : item.name}
+              value={index}
             />
           ))}
         </Tabs>
       )}
 
       <Stack direction="row" spacing={1.5}>
-        {currentVersion && (
-          <PlayButton
-            track={{
-              id: song.id,
-              title: song.title,
-              artist: song.artist,
-              coverUrl: song.coverUrl,
-              versionId: currentVersion.id,
-              versionKey: currentVersion.key,
-              lyrics: currentLyrics,
-              languages: currentLyricsVersion?.languages,
-            }}
-          />
-        )}
+        <PlayButton
+          track={{
+            songId: song.id,
+            title: song.title,
+            artist: artistOf(song.staff),
+            coverUrl: song.coverUrl,
+            versionId: version.id,
+            versionName: version.name,
+            lyricsId: version.lyricsId,
+          }}
+          lyrics={lyrics}
+        />
         <Button
           variant="outlined"
-          disabled={!canDownload || !currentVersion}
+          disabled={!canDownload}
           onClick={handleDownload}
           startIcon={<Download />}
         >
-          下载{audioVersions.length > 1 ? ` (${currentVersion?.key})` : ''}
+          下载{song.versions.length > 1 ? ` (${version.name})` : ''}
         </Button>
       </Stack>
     </Stack>
   );
 }
 
-interface LyricsDisplayProps {
-  lyrics: LyricsVersion[];
-}
-
-export function LyricsDisplay({ lyrics }: LyricsDisplayProps) {
-  const [selectedLyrics, setSelectedLyrics] = useState(() => {
-    const defaultIdx = lyrics.findIndex((l) => l.isDefault);
-    return defaultIdx >= 0 ? defaultIdx : 0;
-  });
-
-  const currentLyrics = lyrics[selectedLyrics];
-  const currentLanguages = currentLyrics?.languages || [];
+/** 歌词全文，多份歌词时可以切换 */
+export function LyricsCard({ lyrics }: { lyrics: readonly Lyrics[] }) {
+  const [selected, setSelected] = useState(() => defaultIndex(lyrics));
+  const current = selected < lyrics.length ? lyrics[selected] : undefined;
 
   return (
     <Card className="float-in">
       <CardContent>
         <Stack spacing={2}>
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Typography variant="h6">歌词</Typography>
-          </Stack>
-
-          {lyrics.length === 0 ? (
-            <Typography
-              variant="body2"
-              sx={{
-                color: 'text.secondary',
-              }}
-            >
+          <Typography variant="h6">歌词</Typography>
+          {current === undefined ? (
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               暂无歌词
             </Typography>
           ) : (
             <>
               {lyrics.length > 1 && (
                 <Tabs
-                  value={selectedLyrics}
-                  onChange={(_, v: number) => setSelectedLyrics(v)}
+                  value={selected}
+                  onChange={(_, value: number) => setSelected(value)}
                   variant="scrollable"
                   scrollButtons="auto"
                 >
-                  {lyrics.map((l, idx) => (
+                  {lyrics.map((item, index) => (
                     <Tab
-                      key={l.id}
+                      key={item.id}
                       label={
-                        l.isDefault ? `${l.versionKey}（默认）` : l.versionKey
+                        item.isDefault ? `${item.name}（默认）` : item.name
                       }
-                      value={idx}
+                      value={index}
                     />
                   ))}
                 </Tabs>
               )}
-
-              {currentLyrics && (
-                <Stack spacing={1}>
-                  {renderLyricsBlocks(currentLyrics.content, currentLanguages)}
-                </Stack>
-              )}
+              <Stack spacing={1}>
+                {current.lines.map((line, index) => (
+                  <LineView
+                    key={index}
+                    line={line}
+                    fontFamily={lyricsFontFamily(current.languages)}
+                  />
+                ))}
+              </Stack>
             </>
           )}
         </Stack>
@@ -194,54 +137,31 @@ export function LyricsDisplay({ lyrics }: LyricsDisplayProps) {
   );
 }
 
-function renderLyricsBlocks(
-  content: LyricsDocument,
-  languages: Language[] = [],
-) {
-  if (!content || content.type !== 'doc' || !Array.isArray(content.blocks)) {
-    return (
-      <Typography
-        variant="body2"
-        sx={{
-          color: 'text.secondary',
-        }}
-      >
-        歌词格式异常
-      </Typography>
-    );
-  }
-  return content.blocks.map((block, index) => (
-    <BlockView key={index} block={block} languages={languages} />
-  ));
-}
-
-function BlockView({
-  block,
-  languages = [],
+function LineView({
+  line,
+  fontFamily,
 }: {
-  block: Block;
-  languages?: Language[];
+  line: LyricLine;
+  fontFamily: string | undefined;
 }) {
-  const fontFamily = lyricsFontFamily(languages);
-
   return (
     <Typography variant="body1" sx={{ lineHeight: 1.9, fontFamily }}>
-      {block.children.map((node, idx) => (
-        <InlineView key={idx} node={node} />
+      {line.spans.map((span, index) => (
+        <SpanView key={index} span={span} />
       ))}
     </Typography>
   );
 }
 
-function InlineView({ node }: { node: Inline }): React.ReactNode {
-  switch (node.type) {
+function SpanView({ span }: { span: Span }) {
+  switch (span.type) {
     case 'text':
-      return <span>{node.text}</span>;
+      return <span>{span.text}</span>;
     case 'ruby':
       return (
         <ruby>
-          {node.base}
-          <rt style={{ fontSize: '0.7em' }}>{node.ruby}</rt>
+          {span.base}
+          <rt style={{ fontSize: '0.7em' }}>{span.ruby}</rt>
         </ruby>
       );
   }

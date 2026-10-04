@@ -17,34 +17,22 @@ import SearchIcon from '@mui/icons-material/Search';
 import ShuffleIcon from '@mui/icons-material/Shuffle';
 import QueueMusicIcon from '@mui/icons-material/QueueMusic';
 import { Link, useNavigate } from 'react-router';
-import SongCard, { type SongCardData } from '@/app/components/SongCard';
-import { api, type Cover } from '@/lib/api';
-
-type SongCard = SongCardData;
-
-type PlaylistCard = {
-  id: string;
-  name: string;
-  description: string;
-  songCount: number;
-  cover: Cover | null;
-};
+import type { Playlist, SongSummary } from '@koiro/shared';
+import SongCard from '@/app/components/SongCard';
+import { api } from '@/lib/api';
 
 export default function HomeClient() {
   const navigate = useNavigate();
   const [inputValue, setInputValue] = useState('');
-  const [featuredSongs, setFeaturedSongs] = useState<SongCard[]>([]);
-  const [featuredPlaylists, setFeaturedPlaylists] = useState<PlaylistCard[]>(
-    [],
-  );
+  const [featuredSongs, setFeaturedSongs] = useState<SongSummary[]>([]);
+  const [featuredPlaylists, setFeaturedPlaylists] = useState<Playlist[]>([]);
   const [loadingSongs, setLoadingSongs] = useState(true);
   const [loadingPlaylists, setLoadingPlaylists] = useState(true);
 
   const fetchRandomSongs = async () => {
     setLoadingSongs(true);
     try {
-      const data = await api<{ songs: SongCard[] }>('/api/songs/random');
-      setFeaturedSongs(data.songs);
+      setFeaturedSongs(await api<SongSummary[]>('/api/songs/random'));
     } catch {
       // ignore
     } finally {
@@ -55,10 +43,7 @@ export default function HomeClient() {
   const fetchRandomPlaylists = async () => {
     setLoadingPlaylists(true);
     try {
-      const data = await api<{ playlists: PlaylistCard[] }>(
-        '/api/playlists/random',
-      );
-      setFeaturedPlaylists(data.playlists);
+      setFeaturedPlaylists(await api<Playlist[]>('/api/playlists/random'));
     } catch {
       // ignore
     } finally {
@@ -303,33 +288,12 @@ export default function HomeClient() {
                         to={`/playlists/${playlist.id}`}
                         sx={{ height: '100%' }}
                       >
-                        {playlist.cover?.url ? (
-                          <CardMedia
-                            component="img"
-                            image={playlist.cover?.url}
-                            alt={playlist.name}
-                            sx={{ aspectRatio: '1', objectFit: 'cover' }}
-                          />
-                        ) : (
-                          <Box
-                            sx={{
-                              aspectRatio: '1',
-                              bgcolor: 'action.hover',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            <Typography
-                              variant="h4"
-                              sx={{
-                                color: 'text.disabled',
-                              }}
-                            >
-                              ♪
-                            </Typography>
-                          </Box>
-                        )}
+                        <CardMedia
+                          component="img"
+                          image={playlist.coverUrl}
+                          alt={playlist.name}
+                          sx={{ aspectRatio: '1', objectFit: 'cover' }}
+                        />
                         <CardContent sx={{ p: 1.5 }}>
                           <Typography
                             variant="subtitle2"

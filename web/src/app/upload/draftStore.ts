@@ -1,46 +1,19 @@
-import { isLanguage, type Language } from '@koiro/shared';
-export type UploadDraft = {
-  title: string;
-  description: string;
-  staff: { id: string; role: string; name: string | string[] }[];
-  versions: {
-    id: string;
-    key: string;
-    objectId: string;
-    isDefault: boolean;
-    lyricsId?: string | null;
-  }[];
-  audioDefaultName: string | null;
-  lyricsVersions: {
-    id: string;
-    key: string;
-    isDefault: boolean;
-    lines: {
-      id: string;
-      startMs: number;
-      endMs?: number;
-      text: string;
-      rubyByIndex?: Record<number, string>;
-    }[];
-    languages: Language[];
-  }[];
-  coverObjectId: string | null;
-  coverPreviewUrl?: string | null;
-  coverFilename: string | null;
-};
+import { isLanguage } from '@koiro/shared';
+import type { SongFormData } from './formTypes';
 
-const STORAGE_KEY = 'koiro_upload_draft_v1';
+/** 上传页的草稿：所属歌单不进草稿 */
+export type UploadDraft = Omit<SongFormData, 'playlistIds'>;
+
+// 表单结构变化时换一个键，旧草稿自然作废
+const STORAGE_KEY = 'koiro_upload_draft_v2';
 
 export function loadDraft(): UploadDraft | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const draft = JSON.parse(raw) as UploadDraft;
-    // 旧草稿里的语种可能是自由输入的，只保留认识的
-    for (const lyrics of draft.lyricsVersions) {
+    // 语种以站点定义为准，丢掉已经不支持的
+    for (const lyrics of draft.lyrics) {
       lyrics.languages = lyrics.languages.filter(isLanguage);
     }
     return draft;

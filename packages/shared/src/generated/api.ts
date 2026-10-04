@@ -339,7 +339,7 @@ export type SongSummary = { id: SongId, title: string, description: string, staf
 /**
  * 列表里直接播放的版本
  */
-defaultVersion: AudioVersion, versionCount: number, updatedAt: string, };
+defaultVersion: AudioVersion, versionCount: number, lyricsCount: number, updatedAt: string, };
 
 /**
  * 行内的一段文字

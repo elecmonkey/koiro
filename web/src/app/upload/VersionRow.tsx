@@ -7,27 +7,15 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import type { LyricsItem, VersionItem } from './formTypes';
 import { useS3Upload } from './useS3Upload';
-
-type VersionItem = {
-  id: string;
-  key: string;
-  objectId: string;
-  isDefault: boolean;
-  lyricsId?: string | null;
-};
-
-type LyricsVersionOption = {
-  id: string;
-  key: string;
-};
 
 type VersionRowProps = {
   item: VersionItem;
   onChange: (id: string, updates: Partial<VersionItem>) => void;
   onRemove: (id: string) => void;
   onSetDefault: (id: string) => void;
-  lyricsVersions: LyricsVersionOption[];
+  lyrics: Pick<LyricsItem, 'id' | 'name'>[];
 };
 
 export default function VersionRow({
@@ -35,7 +23,7 @@ export default function VersionRow({
   onChange,
   onRemove,
   onSetDefault,
-  lyricsVersions,
+  lyrics,
 }: VersionRowProps) {
   const [file, setFile] = useState<File | null>(null);
   const upload = useS3Upload();
@@ -51,8 +39,8 @@ export default function VersionRow({
       >
         <TextField
           label="版本名"
-          value={item.key}
-          onChange={(event) => onChange(item.id, { key: event.target.value })}
+          value={item.name}
+          onChange={(event) => onChange(item.id, { name: event.target.value })}
           fullWidth
         />
         <TextField
@@ -65,9 +53,9 @@ export default function VersionRow({
           sx={{ minWidth: 180 }}
         >
           <MenuItem value="">无歌词</MenuItem>
-          {lyricsVersions.map((lyr) => (
+          {lyrics.map((lyr) => (
             <MenuItem key={lyr.id} value={lyr.id}>
-              {lyr.key}
+              {lyr.name}
             </MenuItem>
           ))}
         </TextField>

@@ -9,33 +9,23 @@ import {
   Typography,
 } from '@mui/material';
 import SongCard from '@/app/components/SongCard';
-import { api, type SongSummary } from '@/lib/api';
-
-type Song = SongSummary;
-
-type PaginationInfo = {
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-};
+import type { Page, SongSummary } from '@koiro/shared';
+import { api, withQuery } from '@/lib/api';
 
 export default function SongsClient() {
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [pagination, setPagination] = useState<Page<SongSummary> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const songs = pagination?.items ?? [];
   const [page, setPage] = useState(1);
 
   const fetchSongs = useCallback(async (p: number) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api<{ songs: Song[]; pagination: PaginationInfo }>(
-        `/api/songs?page=${p}`,
+      setPagination(
+        await api<Page<SongSummary>>(withQuery('/api/songs', { page: p })),
       );
-      setSongs(data.songs);
-      setPagination(data.pagination);
     } catch (err) {
       setError(err instanceof Error ? err.message : '未知错误');
     } finally {

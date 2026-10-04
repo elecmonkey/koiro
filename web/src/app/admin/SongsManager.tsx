@@ -21,20 +21,20 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { Link } from 'react-router';
-import { api, type Pagination as PageInfo } from '@/lib/api';
+import type { Page, SearchHit, SongSummary } from '@koiro/shared';
+import { api, withQuery } from '@/lib/api';
 
-interface Song {
-  id: string;
-  title: string;
-  description: string;
-  staff: { role?: string; name?: string | string[] }[];
-  versionCount: number;
-  lyricsCount: number;
-  updatedAt: string;
+/** 有关键字时按标题、staff、歌词搜索，否则列出全部 */
+async function fetchPage(q: string, page: number): Promise<Page<SongSummary>> {
+  if (!q) return api<Page<SongSummary>>(withQuery('/api/songs', { page }));
+  const hits = await api<Page<SearchHit>>(
+    withQuery('/api/search', { q, page }),
+  );
+  return { ...hits, items: hits.items.map((hit) => hit.song) };
 }
 
 export default function SongsManager() {
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [songs, setSongs] = useState<SongSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -44,19 +44,17 @@ export default function SongsManager() {
   const [totalPages, setTotalPages] = useState(0);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Song | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SongSummary | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const fetchSongs = useCallback(async (q: string, p: number) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api<{ songs: Song[]; pagination: PageInfo }>(
-        `/api/admin/songs?q=${encodeURIComponent(q)}&page=${p}`,
-      );
-      setSongs(data.songs);
-      setTotal(data.pagination.total ?? 0);
-      setTotalPages(data.pagination.totalPages ?? 0);
+      const data = await fetchPage(q, p);
+      setSongs(data.items);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
     } catch (err) {
       setError(err instanceof Error ? err.message : '未知错误');
     } finally {
@@ -227,7 +225,7 @@ export default function SongsManager() {
                             · 更新于 {formatDate(song.updatedAt)}
                           </Typography>
                         </Stack>
-                        {Array.isArray(song.staff) && song.staff.length > 0 && (
+                        {song.staff.length > 0 && (
                           <Stack
                             direction="row"
                             spacing={0.5}
@@ -240,7 +238,7 @@ export default function SongsManager() {
                             {song.staff.map((s, idx) => (
                               <Chip
                                 key={idx}
-                                label={`${s.role || 'Staff'} · ${Array.isArray(s.name) ? s.name.join('、') : s.name || ''}`}
+                                label={`${s.role} · ${s.names.join('、')}`}
                                 size="small"
                                 variant="outlined"
                               />

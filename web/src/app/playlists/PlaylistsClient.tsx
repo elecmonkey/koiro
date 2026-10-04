@@ -13,41 +13,23 @@ import {
   Typography,
 } from '@mui/material';
 import { Link } from 'react-router';
-import { api, type Cover } from '@/lib/api';
-
-type Playlist = {
-  id: string;
-  name: string;
-  description: string;
-  cover: Cover | null;
-  songCount: number;
-  updatedAt: string;
-};
-
-type PaginationInfo = {
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-};
+import type { Page, Playlist } from '@koiro/shared';
+import { api, withQuery } from '@/lib/api';
 
 export default function PlaylistsClient() {
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [pagination, setPagination] = useState<Page<Playlist> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const playlists = pagination?.items ?? [];
   const [page, setPage] = useState(1);
 
   const fetchPlaylists = useCallback(async (p: number) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api<{
-        playlists: Playlist[];
-        pagination: PaginationInfo;
-      }>(`/api/playlists?page=${p}`);
-      setPlaylists(data.playlists);
-      setPagination(data.pagination);
+      setPagination(
+        await api<Page<Playlist>>(withQuery('/api/playlists', { page: p })),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : '未知错误');
     } finally {
@@ -124,33 +106,12 @@ export default function PlaylistsClient() {
                     to={`/playlists/${playlist.id}`}
                     sx={{ height: '100%' }}
                   >
-                    {playlist.cover?.url ? (
-                      <CardMedia
-                        component="img"
-                        image={playlist.cover?.url}
-                        alt={playlist.name}
-                        sx={{ aspectRatio: '1', objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <Box
-                        sx={{
-                          aspectRatio: '1',
-                          bgcolor: 'action.hover',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Typography
-                          variant="h4"
-                          sx={{
-                            color: 'text.disabled',
-                          }}
-                        >
-                          ♪
-                        </Typography>
-                      </Box>
-                    )}
+                    <CardMedia
+                      component="img"
+                      image={playlist.coverUrl}
+                      alt={playlist.name}
+                      sx={{ aspectRatio: '1', objectFit: 'cover' }}
+                    />
                     <CardContent sx={{ p: 1.5 }}>
                       <Typography
                         variant="subtitle2"

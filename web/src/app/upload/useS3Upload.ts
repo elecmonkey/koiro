@@ -1,6 +1,11 @@
+import type {
+  ApiError as ApiErrorBody,
+  AudioUpload,
+  UploadedImage,
+} from '@koiro/shared';
 import axios from 'axios';
 import { useState } from 'react';
-import { api, type StoredImage } from '@/lib/api';
+import { api } from '@/lib/api';
 
 type UploadResult = {
   objectId: string;
@@ -15,15 +20,9 @@ type UploadState = {
   progress: number;
 };
 
-type PresignedAudio = {
-  url: string;
-  objectId: string;
-  headers: Record<string, string>;
-};
-
 /**
  * 上传文件：
- * - 图片经后端校验格式后存储（POST /api/uploads/image）
+ * - 图片经后端校验格式后存储（POST /api/uploads/images）
  * - 音频体积大，向后端要预签名地址后由浏览器直传对象存储
  */
 export function useS3Upload() {
@@ -54,13 +53,19 @@ export function useS3Upload() {
     let result: UploadResult;
     try {
       if (folder === 'img') {
-        const res = await axios.post<StoredImage>('/api/uploads/image', file, {
-          headers: { 'Content-Type': file.type || 'application/octet-stream' },
-          onUploadProgress,
-        });
+        const res = await axios.post<UploadedImage>(
+          '/api/uploads/images',
+          file,
+          {
+            headers: {
+              'Content-Type': file.type || 'application/octet-stream',
+            },
+            onUploadProgress,
+          },
+        );
         result = res.data;
       } else {
-        const presigned = await api<PresignedAudio>('/api/uploads/audio', {
+        const presigned = await api<AudioUpload>('/api/uploads/audio', {
           method: 'POST',
           json: { filename: file.name, contentType: file.type || 'audio/mpeg' },
         });
@@ -72,11 +77,12 @@ export function useS3Upload() {
         result = { objectId: presigned.objectId };
       }
     } catch (error) {
+      // 对象存储返回的错误体不是 ApiError，此时只用通用说明
       if (
-        axios.isAxiosError<{ error?: string }>(error) &&
-        error.response?.data?.error
+        axios.isAxiosError<Partial<ApiErrorBody>>(error) &&
+        error.response?.data?.message
       ) {
-        return fail(error.response.data.error);
+        return fail(error.response.data.message);
       }
       return fail(error instanceof Error ? error.message : '上传失败');
     }

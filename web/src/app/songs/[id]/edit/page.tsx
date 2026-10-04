@@ -1,65 +1,46 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { Box, CircularProgress, Container, Typography } from '@mui/material';
-import SongForm, { type SongFormData } from '@/app/upload/SongForm';
-import { toLines, type LyricsContent } from '@/app/editor/ast/toLines';
-import { api, ApiError, type Cover, type StaffEntry } from '@/lib/api';
+import type { SongDetail, SongInput } from '@koiro/shared';
+import SongForm from '@/app/upload/SongForm';
+import type { SongFormData } from '@/app/upload/formTypes';
+import { toLineDrafts } from '@/app/editor/lines';
+import { api, ApiError } from '@/lib/api';
 import { pageTitle } from '@/lib/site-config';
 
-type SongEditData = {
-  id: string;
-  title: string;
-  description: string;
-  staff: StaffEntry[];
-  coverObjectId: string | null;
-  cover: Cover | null;
-  versions: {
-    id: string;
-    name: string;
-    objectId: string;
-    isDefault: boolean;
-    lyricsId: string | null;
-  }[];
-  lyrics: {
-    id: string;
-    key: string;
-    isDefault: boolean;
-    content: LyricsContent;
-  }[];
-  playlistIds: string[];
-};
-
-function toFormData(song: SongEditData): SongFormData {
+/** 接口的歌曲输入 → 表单数据；表单内的条目用本地 id 互相引用 */
+function toFormData(input: SongInput, coverUrl: string): SongFormData {
+  const lyrics = input.lyrics.map((item, index) => ({
+    id: `lyr_${String(index)}`,
+    name: item.name,
+    isDefault: item.isDefault,
+    lines: toLineDrafts(item.lines, `lyr_${String(index)}`),
+    languages: item.languages,
+  }));
+  const lyricsIdByName = new Map(lyrics.map((item) => [item.name, item.id]));
   return {
-    title: song.title,
-    description: song.description,
-    staff: song.staff.map((s, index) => ({
-      id: `staff_${index}`,
-      role: s.role,
-      name: s.name.length === 1 ? s.name[0] : s.name,
+    title: input.title,
+    description: input.description,
+    staff: input.staff.map((credit, index) => ({
+      id: `staff_${String(index)}`,
+      role: credit.role,
+      names: credit.names,
     })),
-    versions: song.versions.map((v) => ({
-      id: v.id,
-      key: v.name,
-      objectId: v.objectId,
-      isDefault: v.isDefault,
-      lyricsId: v.lyricsId,
+    versions: input.versions.map((version, index) => ({
+      id: `ver_${String(index)}`,
+      name: version.name,
+      objectId: version.objectId,
+      isDefault: version.isDefault,
+      lyricsId:
+        version.lyricsName === null
+          ? null
+          : (lyricsIdByName.get(version.lyricsName) ?? null),
     })),
-    audioDefaultName:
-      song.versions.find((v) => v.isDefault)?.name ??
-      song.versions[0]?.name ??
-      null,
-    lyricsVersions: song.lyrics.map((l) => ({
-      id: l.id,
-      key: l.key,
-      isDefault: l.isDefault,
-      lines: toLines(l.id, l.content),
-      languages: l.content.meta?.languages ?? [],
-    })),
-    coverObjectId: song.coverObjectId,
-    coverPreviewUrl: song.cover?.url ?? null,
+    lyrics,
+    coverObjectId: input.coverObjectId,
+    coverPreviewUrl: coverUrl,
     coverFilename: null,
-    playlistIds: song.playlistIds,
+    playlistIds: input.playlistIds,
   };
 }
 
@@ -73,14 +54,17 @@ export default function EditSongPage() {
 
   useEffect(() => {
     let alive = true;
-    api<SongEditData>(`/api/songs/${id}/edit`)
+    Promise.all([
+      api<SongInput>(`/api/songs/${id}/input`),
+      api<SongDetail>(`/api/songs/${id}`),
+    ])
       .then(
-        (song) =>
+        ([input, song]) =>
           alive &&
           setState({
             status: 'ready',
             title: song.title,
-            data: toFormData(song),
+            data: toFormData(input, song.coverUrl),
           }),
       )
       .catch((err: unknown) => {

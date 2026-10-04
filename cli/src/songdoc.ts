@@ -1,11 +1,17 @@
+import {
+  LANGUAGES,
+  isLanguage,
+  parseLrc,
+  type AudioUpload,
+  type SongInput,
+  type UploadedImage,
+} from '@koiro/shared';
 import { readFile, stat } from 'node:fs/promises';
 import { basename, dirname, extname, resolve } from 'node:path';
 import { usage } from './errors';
 import type { ApiClient } from './http';
-import { object, string, type Json, type JsonObject } from './json';
-import { LANGUAGES, isLanguage } from '@koiro/shared';
+import type { JsonObject } from './json';
 import { languageList } from './languages';
-import { parseLrc } from './lyrics';
 
 const MAX_IMAGE_BYTES = 30 * 1024 * 1024;
 const MAX_AUDIO_BYTES = 500 * 1024 * 1024;
@@ -33,25 +39,27 @@ async function readLocal(path: string, max: number, label: string) {
   return readFile(path);
 }
 
-/** 上传本地图片，或让服务端拉取远程图片；返回对象 ID */
+/** 上传本地图片，或让服务端下载网络图片；返回对象 ID */
 export async function uploadImage(
   api: ApiClient,
   source: { file?: string; url?: string },
 ): Promise<string> {
   if (source.file) {
     const data = await readLocal(source.file, MAX_IMAGE_BYTES, 'Image');
-    const stored = await api.upload(
-      '/uploads/image',
-      data,
-      'application/octet-stream',
-    );
-    return string(stored.objectId);
+    return (
+      await api.upload<UploadedImage>(
+        '/uploads/images',
+        data,
+        'application/octet-stream',
+      )
+    ).objectId;
   }
   if (source.url) {
-    const stored = object(
-      await api.request('/uploads/image-from-url', 'POST', { url: source.url }),
-    );
-    return string(stored.objectId);
+    return (
+      await api.request<UploadedImage>('/uploads/images/from-url', 'POST', {
+        url: source.url,
+      })
+    ).objectId;
   }
   return usage('An image file or URL is required.');
 }
@@ -67,27 +75,48 @@ export async function uploadAudio(
       `Unsupported audio type: ${file} (use ${Object.keys(audioTypes).join(', ')}).`,
     );
   const data = await readLocal(file, MAX_AUDIO_BYTES, 'Audio file');
-  const presigned = object(
-    await api.request('/uploads/audio', 'POST', {
-      filename: basename(file),
-      contentType,
-    }),
-  );
-  const headers: Record<string, string> = {};
-  for (const [key, value] of Object.entries(object(presigned.headers)))
-    headers[key] = string(value);
-  await api.putPresigned(string(presigned.url), data, headers);
-  return string(presigned.objectId);
+  const ticket = await api.request<AudioUpload>('/uploads/audio', 'POST', {
+    filename: basename(file),
+    contentType,
+  });
+  await api.putPresigned(ticket.url, data, ticket.headers);
+  return ticket.objectId;
 }
 
-function field(doc: JsonObject, key: string): string | undefined {
+/**
+ * SongInput 的每个字段，以及文档里可以代替它的本地输入。
+ * `satisfies` 要求覆盖接口定义的全部字段：服务端增减字段时这里会编译报错。
+ */
+const SONG_FIELDS = {
+  title: [],
+  description: [],
+  coverObjectId: ['coverFile', 'coverUrl'],
+  staff: [],
+  versions: [],
+  lyrics: [],
+  playlistIds: [],
+} as const satisfies Record<keyof SongInput, readonly string[]>;
+
+/** 上传任何文件之前，先确认文档没有缺字段（字段都必填，缺了服务端会拒绝） */
+function checkFields(doc: JsonObject) {
+  const missing = Object.entries(SONG_FIELDS)
+    .filter(
+      ([field, locals]) =>
+        ![field, ...locals].some((key) => doc[key] !== undefined),
+    )
+    .map(([field]) => field);
+  if (missing.length > 0)
+    usage(`The song document is missing: ${missing.join(', ')}.`, { missing });
+}
+
+function text(doc: JsonObject, key: string): string | undefined {
   const value = doc[key];
   if (value === undefined || value === null) return undefined;
   if (typeof value !== 'string') usage(`"${key}" must be a string.`);
   return value;
 }
 
-function list(doc: JsonObject, key: string): JsonObject[] {
+function objects(doc: JsonObject, key: string): JsonObject[] {
   const value = doc[key];
   if (value === undefined) return [];
   if (!Array.isArray(value)) usage(`"${key}" must be an array.`);
@@ -99,19 +128,20 @@ function list(doc: JsonObject, key: string): JsonObject[] {
 }
 
 /**
- * 读取歌曲文档，把其中引用的本地文件 / 远程图片先上传，整理成接口的 SongInput。
- * 文档字段与 `song export` 的输出一致，另外允许：
+ * 读取歌曲文档，把其中引用的本地文件、网络图片先上传，得到接口的 SongInput。
+ * 文档与 `song export` 的输出（即 SongInput）相同，另外允许：
  * - coverFile / coverUrl 代替 coverObjectId
  * - versions[].audioFile 代替 objectId
  * - lyrics[].lrcFile 代替 lines
  * 相对路径以文档所在目录为基准（文档从 stdin 读入时以 cwd 为基准）。
+ * 其余字段原样提交，由服务端校验。
  */
 export async function songInput(
   api: ApiClient,
   cwd: string,
   documentPath: string,
   readText: (path: string) => Promise<string>,
-): Promise<JsonObject> {
+): Promise<SongInput> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(await readText(documentPath));
@@ -124,8 +154,9 @@ export async function songInput(
   const base = documentPath === '-' ? cwd : dirname(resolve(cwd, documentPath));
   const local = (path: string) => resolve(base, path);
 
-  // 语种写错时，在上传任何文件之前就报错
-  for (const item of list(doc, 'lyrics')) {
+  // 缺字段、语种写错时，在上传任何文件之前就报错
+  checkFields(doc);
+  for (const item of objects(doc, 'lyrics')) {
     const languages = item.languages;
     if (
       languages !== undefined &&
@@ -136,49 +167,42 @@ export async function songInput(
       });
   }
 
-  const coverFile = field(doc, 'coverFile');
-  const coverUrl = field(doc, 'coverUrl');
-  const coverObjectId =
-    coverFile || coverUrl
-      ? await uploadImage(api, {
-          file: coverFile ? local(coverFile) : undefined,
-          url: coverUrl,
-        })
-      : field(doc, 'coverObjectId');
+  const { coverFile: _file, coverUrl: _url, ...fields } = doc;
+  const coverFile = text(doc, 'coverFile');
+  const coverUrl = text(doc, 'coverUrl');
+  if (coverFile || coverUrl)
+    fields.coverObjectId = await uploadImage(api, {
+      file: coverFile && local(coverFile),
+      url: coverUrl,
+    });
 
-  const lyrics: Json[] = [];
-  for (const item of list(doc, 'lyrics')) {
-    const { lrcFile, ...rest } = item;
-    if (lrcFile !== undefined) {
-      if (typeof lrcFile !== 'string') usage('"lrcFile" must be a string.');
-      lyrics.push({
-        ...rest,
-        lines: parseLrc(await readText(local(lrcFile))),
-      } as unknown as Json);
-    } else {
-      lyrics.push(rest);
+  if (doc.lyrics !== undefined) {
+    fields.lyrics = [];
+    for (const { lrcFile, ...rest } of objects(doc, 'lyrics')) {
+      if (lrcFile === undefined) fields.lyrics.push(rest);
+      else if (typeof lrcFile !== 'string')
+        usage('"lrcFile" must be a string.');
+      else
+        fields.lyrics.push({
+          ...rest,
+          lines: parseLrc(await readText(local(lrcFile))),
+        });
     }
   }
 
-  const versions: Json[] = [];
-  for (const item of list(doc, 'versions')) {
-    const { audioFile, ...rest } = item;
-    if (audioFile !== undefined) {
-      if (typeof audioFile !== 'string') usage('"audioFile" must be a string.');
-      versions.push({
-        ...rest,
-        objectId: await uploadAudio(api, local(audioFile)),
-      });
-    } else {
-      versions.push(rest);
+  if (doc.versions !== undefined) {
+    fields.versions = [];
+    for (const { audioFile, ...rest } of objects(doc, 'versions')) {
+      if (audioFile === undefined) fields.versions.push(rest);
+      else if (typeof audioFile !== 'string')
+        usage('"audioFile" must be a string.');
+      else
+        fields.versions.push({
+          ...rest,
+          objectId: await uploadAudio(api, local(audioFile)),
+        });
     }
   }
 
-  const { coverFile: _f, coverUrl: _u, ...fields } = doc;
-  return {
-    ...fields,
-    coverObjectId: coverObjectId ?? null,
-    versions,
-    lyrics,
-  };
+  return fields as unknown as SongInput;
 }

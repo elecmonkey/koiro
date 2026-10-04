@@ -1,4 +1,20 @@
-import { LANGUAGES, isLanguage } from '@koiro/shared';
+import {
+  LANGUAGES,
+  isLanguage,
+  parseLrc,
+  readableText,
+  type AddedSongs,
+  type LanguageStat,
+  type Page,
+  type Playlist,
+  type PlaylistPatch,
+  type SearchHit,
+  type SongDetail,
+  type SongInput,
+  type SongSummary,
+  type StaffMember,
+  type TextSegment,
+} from '@koiro/shared';
 import { lstat, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
@@ -10,70 +26,63 @@ import {
 } from './arguments';
 import { CliError, usage } from './errors';
 import type { ApiClient } from './http';
-import {
-  array,
-  number,
-  object,
-  string,
-  type Json,
-  type JsonObject,
-} from './json';
 import { languageList } from './languages';
-import { parseLrc, toLines, toReadableLines } from './lyrics';
 import { songInput, uploadImage } from './songdoc';
 import type { Runtime } from './run';
 
+/** `--all` 时每页取的条数（接口上限） */
+const ALL_PAGE_SIZE = 100;
 const MAX_PAGES = 1000;
 
-/** 分页列表：默认取一页；--all 取全部页 */
-async function paged(
+type Query = Record<string, string | number | undefined>;
+
+/** 分页列表：默认取一页；`--all` 依次取完所有页，返回 `{ items, total }` */
+async function paged<T, U>(
   args: Arguments,
-  fetchPage: (page: number) => Promise<{
-    items: Json[];
-    page: number;
-    totalPages: number;
-    total: number;
-  }>,
-) {
+  api: ApiClient,
+  path: string,
+  query: Query,
+  map: (item: T) => U,
+): Promise<Page<U> | { items: U[]; total: number }> {
   if (args.has('all') && args.has('page')) usage('Use either --page or --all.');
-  const first = args.has('page')
-    ? integer(required(args.text('page'), '--page'))
-    : 1;
-  const result = await fetchPage(first);
-  if (!args.has('all')) return result;
-  const items = [...result.items];
-  for (let page = 2; page <= Math.min(result.totalPages, MAX_PAGES); page++) {
-    items.push(...(await fetchPage(page)).items);
+  const fetchPage = async (page: number, pageSize?: number) => {
+    const result = await api.request<Page<T>>(path, 'GET', undefined, {
+      ...query,
+      page,
+      pageSize,
+    });
+    return { ...result, items: result.items.map(map) };
+  };
+  if (!args.has('all')) {
+    return fetchPage(
+      args.has('page') ? integer(required(args.text('page'), '--page')) : 1,
+    );
   }
-  return { items, total: result.total };
+  const first = await fetchPage(1, ALL_PAGE_SIZE);
+  const items = [...first.items];
+  for (let page = 2; page <= Math.min(first.totalPages, MAX_PAGES); page++) {
+    items.push(...(await fetchPage(page, ALL_PAGE_SIZE)).items);
+  }
+  return { items, total: first.total };
 }
 
-function pagination(value: Json | undefined) {
-  const p = object(value);
-  return {
-    page: number(p.page),
-    totalPages: number(p.totalPages),
-    total: number(p.total),
-  };
-}
+const songUrl = (api: ApiClient, id: string) => `${api.webUrl}/songs/${id}`;
+const playlistUrl = (api: ApiClient, id: string) =>
+  `${api.webUrl}/playlists/${id}`;
 
-/** 列表里的歌曲摘要：去掉体积大的歌词 AST，补上网页地址 */
-function summary(api: ApiClient, value: Json): JsonObject {
-  const song = object(value);
-  const version = song.defaultVersion;
-  return {
-    ...song,
-    url: `${api.webUrl}/songs/${string(song.id)}`,
-    defaultVersion:
-      version && typeof version === 'object' && !Array.isArray(version)
-        ? {
-            id: version.id ?? null,
-            name: version.name ?? null,
-            hasLyrics: Boolean(version.lyrics),
-          }
-        : null,
-  };
-}
+/** 列表里的歌曲：补上网页地址 */
+const summary = (api: ApiClient) => (song: SongSummary) => ({
+  ...song,
+  url: songUrl(api, song.id),
+});
+
+const playlistItem = (api: ApiClient) => (playlist: Playlist) => ({
+  ...playlist,
+  url: playlistUrl(api, playlist.id),
+});
+
+const segmentsText = (segments: readonly TextSegment[]) =>
+  segments.map((segment) => segment.text).join('');
 
 async function textOption(args: Arguments, runtime: Runtime, key: string) {
   const fileKey = `${key}-file`;
@@ -111,15 +120,6 @@ function readDocument(runtime: Runtime) {
       : readFile(resolve(runtime.cwd, path), 'utf8');
 }
 
-const songPage =
-  (api: ApiClient, path: string, key: string) => async (page: number) => {
-    const data = object(await api.request(path, 'GET', undefined, { page }));
-    return {
-      items: array(data[key]).map((item) => summary(api, item)),
-      ...pagination(data.pagination),
-    };
-  };
-
 async function songCommand(
   action: string | undefined,
   args: Arguments,
@@ -130,102 +130,41 @@ async function songCommand(
   switch (action) {
     case 'list':
       args.allow(['page', 'all'], 2);
-      return paged(args, songPage(api, '/songs', 'songs'));
-    case 'random': {
+      return paged(args, api, '/songs', {}, summary(api));
+    case 'random':
       args.allow([], 2);
-      const data = object(await api.request('/songs/random'));
-      return { items: array(data.songs).map((item) => summary(api, item)) };
-    }
+      return {
+        items: (await api.request<SongSummary[]>('/songs/random')).map(
+          summary(api),
+        ),
+      };
     case 'search': {
       args.allow(['page', 'all'], 3);
       const q = required(args.positionals[2], 'QUERY');
-      return paged(args, async (page) => {
-        const data = object(
-          await api.request('/search', 'GET', undefined, {
-            q,
-            page,
-            pageSize: 50,
-          }),
-        );
-        const items = array(data.results).map((item) => {
-          const result = object(item);
-          const {
-            titleHighlights: _t,
-            staffHighlights: _s,
-            matchSnippetHighlights: _m,
-            ...rest
-          } = result;
-          return { ...rest, url: `${api.webUrl}/songs/${string(result.id)}` };
-        });
-        return {
-          items,
-          page: number(data.page),
-          totalPages: number(data.totalPages),
-          total: number(data.total),
-        };
-      });
+      return paged(args, api, '/search', { q }, (hit: SearchHit) => ({
+        ...summary(api)(hit.song),
+        matched: hit.matched,
+        lyricsExcerpt: hit.lyricsExcerpt && segmentsText(hit.lyricsExcerpt),
+      }));
     }
     case 'view': {
       args.allow([], 3);
-      const song = object(object(await api.request(`/songs/${ref()}`)).song);
+      const song = await api.request<SongDetail>(`/songs/${ref()}`);
       return {
         ...song,
-        url: `${api.webUrl}/songs/${string(song.id)}`,
-        lyrics: array(song.lyrics).map((item) => {
-          // 与 export 的歌词版本名保持同一个字段名
-          const { content, versionKey, ...rest } = object(item);
-          const meta = object(content).meta;
-          return {
-            ...rest,
-            key: versionKey ?? null,
-            languages:
-              meta && typeof meta === 'object' && !Array.isArray(meta)
-                ? (meta.languages ?? [])
-                : [],
-            lines: toReadableLines(content),
-          };
-        }),
+        url: songUrl(api, song.id),
+        lyrics: song.lyrics.map((lyrics) => ({
+          ...lyrics,
+          lines: lyrics.lines.map(({ spans, ...line }) => ({
+            ...line,
+            text: readableText(spans),
+          })),
+        })),
       };
     }
-    case 'export': {
+    case 'export':
       args.allow([], 3);
-      const data = object(await api.request(`/songs/${ref()}/edit`));
-      const lyricsKeyById = new Map<string, string>();
-      const lyrics = array(data.lyrics).map((item) => {
-        const lyr = object(item);
-        lyricsKeyById.set(string(lyr.id), string(lyr.key));
-        const meta = object(lyr.content).meta;
-        return {
-          key: lyr.key,
-          isDefault: lyr.isDefault,
-          languages:
-            meta && typeof meta === 'object' && !Array.isArray(meta)
-              ? (meta.languages ?? [])
-              : [],
-          lines: toLines(lyr.content),
-        };
-      });
-      return {
-        title: data.title,
-        description: data.description,
-        coverObjectId: data.coverObjectId,
-        staff: data.staff,
-        versions: array(data.versions).map((item) => {
-          const version = object(item);
-          return {
-            name: version.name,
-            objectId: version.objectId,
-            isDefault: version.isDefault,
-            lyricsKey:
-              typeof version.lyricsId === 'string'
-                ? (lyricsKeyById.get(version.lyricsId) ?? null)
-                : null,
-          };
-        }),
-        lyrics,
-        playlistIds: data.playlistIds,
-      };
-    }
+      return api.request<SongInput>(`/songs/${ref()}/input`);
     case 'update': {
       args.allow(['file'], 3);
       const id = ref();
@@ -235,8 +174,8 @@ async function songCommand(
         required(args.text('file'), '--file'),
         readDocument(runtime),
       );
-      await api.request(`/songs/${id}`, 'PUT', input);
-      return { ok: true, id, url: `${api.webUrl}/songs/${id}` };
+      await api.request<SongDetail>(`/songs/${id}`, 'PUT', input);
+      return { ok: true, id, url: songUrl(api, id) };
     }
     case 'create': {
       args.allow(['file'], 2);
@@ -246,8 +185,8 @@ async function songCommand(
         required(args.text('file'), '--file'),
         readDocument(runtime),
       );
-      const id = string(object(await api.request('/songs', 'POST', input)).id);
-      return { ok: true, id, url: `${api.webUrl}/songs/${id}` };
+      const song = await api.request<SongDetail>('/songs', 'POST', input);
+      return { ok: true, id: song.id, url: songUrl(api, song.id) };
     }
     case 'delete': {
       args.allow([], 3);
@@ -257,21 +196,18 @@ async function songCommand(
     }
     case 'download': {
       args.allow(['version', 'out', 'force'], 3);
-      const song = object(object(await api.request(`/songs/${ref()}`)).song);
-      const versions = array(song.versions).map((item) => object(item));
+      const song = await api.request<SongDetail>(`/songs/${ref()}`);
       const wanted = args.text('version');
       const version = wanted
-        ? versions.find((item) => item.name === wanted)
-        : (versions.find((item) => item.isDefault === true) ?? versions[0]);
+        ? song.versions.find((item) => item.name === wanted)
+        : song.versions.find((item) => item.isDefault);
       if (!version)
         throw new CliError(
           'not_found',
-          wanted
-            ? `No audio version named "${wanted}".`
-            : 'This song has no audio.',
+          `No audio version named "${wanted ?? ''}".`,
           5,
           {
-            versions: versions.map((item) => item.name ?? null),
+            versions: song.versions.map((item) => item.name),
           },
         );
       const out = resolve(runtime.cwd, required(args.text('out'), '--out'));
@@ -284,10 +220,10 @@ async function songCommand(
           usage(`${out} already exists. Pass --force to overwrite it.`);
       }
       const { sizeBytes } = await api.download(
-        `/audio/${string(version.id)}/download`,
+        `/audio/${version.id}/download`,
         out,
       );
-      return { ok: true, path: out, version: version.name ?? null, sizeBytes };
+      return { ok: true, path: out, version: version.name, sizeBytes };
     }
     default:
       return usage('Unknown song command. Run koiro help.');
@@ -309,77 +245,52 @@ async function playlistCommand(
     if (ids.length === 0) usage('At least one SONG is required.');
     return ids;
   };
+  const editOptions = [
+    'name',
+    'description',
+    'description-file',
+    'cover-file',
+    'cover-url',
+  ];
   switch (action) {
     case 'list':
       args.allow(['page', 'all'], 2);
-      return paged(args, async (page) => {
-        const data = object(
-          await api.request('/playlists', 'GET', undefined, { page }),
-        );
-        const items = array(data.playlists).map((item) => {
-          const playlist = object(item);
-          return {
-            ...playlist,
-            url: `${api.webUrl}/playlists/${string(playlist.id)}`,
-          };
-        });
-        return { items, ...pagination(data.pagination) };
-      });
+      return paged(args, api, '/playlists', {}, playlistItem(api));
     case 'view': {
       args.allow(['page', 'all'], 3);
       const id = ref();
-      let playlist: Json = null;
-      const result = await paged(args, async (page) => {
-        const data = object(
-          await api.request(`/playlists/${id}`, 'GET', undefined, { page }),
-        );
-        playlist = data.playlist ?? null;
-        return {
-          items: array(data.songs).map((item) => summary(api, item)),
-          ...pagination(data.pagination),
-        };
-      });
+      const playlist = await api.request<Playlist>(`/playlists/${id}`);
       return {
-        playlist: { ...object(playlist), url: `${api.webUrl}/playlists/${id}` },
-        songs: result,
+        playlist: playlistItem(api)(playlist),
+        songs: await paged(args, api, '/songs', { playlist: id }, summary(api)),
       };
     }
     case 'create': {
-      args.allow(
-        ['name', 'description', 'description-file', 'cover-file', 'cover-url'],
-        2,
-      );
+      args.allow(editOptions, 2);
       const name = required(args.text('name'), '--name');
       const coverObjectId = await coverOption(args, runtime, api);
       if (!coverObjectId)
         usage('A cover is required: pass --cover-file or --cover-url.');
       const description =
         (await textOption(args, runtime, 'description')) ?? '';
-      const id = string(
-        object(
-          await api.request('/playlists', 'POST', {
-            name,
-            description,
-            coverObjectId,
-          }),
-        ).id,
-      );
-      return { ok: true, id, url: `${api.webUrl}/playlists/${id}` };
+      const playlist = await api.request<Playlist>('/playlists', 'POST', {
+        name,
+        description,
+        coverObjectId,
+      });
+      return { ok: true, id: playlist.id, url: playlistUrl(api, playlist.id) };
     }
     case 'edit': {
-      args.allow(
-        ['name', 'description', 'description-file', 'cover-file', 'cover-url'],
-        3,
-      );
+      args.allow(editOptions, 3);
       const id = ref();
-      const body: JsonObject = {};
-      if (args.has('name')) body.name = required(args.text('name'), '--name');
+      const patch: PlaylistPatch = {};
+      if (args.has('name')) patch.name = required(args.text('name'), '--name');
       const description = await textOption(args, runtime, 'description');
-      if (description !== undefined) body.description = description;
+      if (description !== undefined) patch.description = description;
       const coverObjectId = await coverOption(args, runtime, api);
-      if (coverObjectId) body.coverObjectId = coverObjectId;
-      if (Object.keys(body).length === 0) usage('Nothing to change.');
-      await api.request(`/playlists/${id}`, 'PUT', body);
+      if (coverObjectId) patch.coverObjectId = coverObjectId;
+      if (Object.keys(patch).length === 0) usage('Nothing to change.');
+      await api.request<Playlist>(`/playlists/${id}`, 'PATCH', patch);
       return { ok: true, id };
     }
     case 'delete': {
@@ -390,98 +301,78 @@ async function playlistCommand(
     }
     case 'add': {
       args.allow([], 4, Number.MAX_SAFE_INTEGER);
-      return api.request(`/playlists/${ref()}/songs`, 'POST', {
-        songIds: songs(3),
-      });
+      const result = await api.request<AddedSongs>(
+        `/playlists/${ref()}/songs`,
+        'POST',
+        { songIds: songs(3) },
+      );
+      return { ok: true, ...result };
     }
     case 'remove': {
       args.allow([], 4);
       const [song] = songs(3);
-      return api.request(`/playlists/${ref()}/songs/${song}`, 'DELETE');
+      await api.request(`/playlists/${ref()}/songs/${song}`, 'DELETE');
+      return { ok: true };
     }
     case 'reorder': {
       args.allow([], 4, Number.MAX_SAFE_INTEGER);
-      const id = ref();
-      const order = songs(3);
-      // 服务端只移动列出的歌曲；要求传入完整列表，避免与未列出的歌曲位置重叠
-      const current = new Set<string>();
-      for (
-        let page = 1, totalPages = 1;
-        page <= Math.min(totalPages, MAX_PAGES);
-        page++
-      ) {
-        const data = object(
-          await api.request(`/playlists/${id}`, 'GET', undefined, { page }),
-        );
-        for (const item of array(data.songs))
-          current.add(string(object(item).id));
-        totalPages = number(object(data.pagination).totalPages);
-      }
-      const given = new Set(order);
-      const missing = [...current].filter((song) => !given.has(song));
-      const unknown = [...given].filter((song) => !current.has(song));
-      if (
-        given.size !== order.length ||
-        missing.length > 0 ||
-        unknown.length > 0
-      )
-        usage('reorder needs every song in the playlist exactly once.', {
-          missing,
-          unknown,
-        });
-      return api.request(`/playlists/${id}/songs`, 'PUT', { songIds: order });
+      await api.request(`/playlists/${ref()}/songs`, 'PUT', {
+        songIds: songs(3),
+      });
+      return { ok: true };
     }
     default:
       return usage('Unknown playlist command. Run koiro help.');
   }
 }
 
-async function browseCommand(
-  command: string,
+async function staffCommand(
   action: string | undefined,
   args: Arguments,
   api: ApiClient,
 ): Promise<unknown> {
-  if (command === 'staff' && action === 'list') {
-    args.allow(['include-singles'], 2);
-    return api.request('/staff', 'GET', undefined, {
-      includeSingles: args.has('include-singles') ? '1' : undefined,
-    });
-  }
-  if (command === 'language' && action === 'list') {
+  if (action === 'list') {
     args.allow([], 2);
-    return api.request('/languages');
+    return { items: await api.request<StaffMember[]>('/staff') };
   }
   if (action === 'view') {
     args.allow(['page', 'all'], 3);
-    const kind = command === 'staff' ? 'staff' : 'languages';
-    const key = nameFrom(
-      required(args.positionals[2], command === 'staff' ? 'NAME' : 'CODE'),
-      kind,
-    );
-    if (command === 'language' && !isLanguage(key))
+    const name = nameFrom(required(args.positionals[2], 'NAME'), 'staff');
+    return {
+      staff: await api.request<StaffMember>(
+        `/staff/${encodeURIComponent(name)}`,
+      ),
+      songs: await paged(args, api, '/songs', { staff: name }, summary(api)),
+    };
+  }
+  return usage('Unknown staff command. Run koiro help.');
+}
+
+async function languageCommand(
+  action: string | undefined,
+  args: Arguments,
+  api: ApiClient,
+): Promise<unknown> {
+  if (action === 'list') {
+    args.allow([], 2);
+    return { items: await api.request<LanguageStat[]>('/languages') };
+  }
+  if (action === 'view') {
+    args.allow(['page', 'all'], 3);
+    const code = nameFrom(required(args.positionals[2], 'CODE'), 'languages');
+    if (!isLanguage(code))
       usage(`Unknown language code. Use one of: ${languageList}.`, {
         languages: LANGUAGES,
       });
-    const path = `/${kind}/${encodeURIComponent(key)}`;
-    let info: Json = null;
-    const result = await paged(args, async (page) => {
-      const data = object(await api.request(path, 'GET', undefined, { page }));
-      info = (command === 'staff' ? data.staff : data.language) ?? null;
-      return {
-        items: array(data.songs).map((item) => summary(api, item)),
-        ...pagination(data.pagination),
-      };
-    });
     return {
-      [command === 'staff' ? 'staff' : 'language']: info,
-      songs: result,
+      language: code,
+      songs: await paged(args, api, '/songs', { language: code }, summary(api)),
     };
   }
-  return usage(`Unknown ${command} command. Run koiro help.`);
+  return usage('Unknown language command. Run koiro help.');
 }
 
-/** 需要登录状态之外的业务命令 */
+/** 需要访问站点的业务命令 */
 export async function businessCommand(
   args: Arguments,
   api: ApiClient,
@@ -494,8 +385,9 @@ export async function businessCommand(
     case 'playlist':
       return playlistCommand(action, args, api, runtime);
     case 'staff':
+      return staffCommand(action, args, api);
     case 'language':
-      return browseCommand(command, action, args, api);
+      return languageCommand(action, args, api);
     default:
       return usage('Unknown command. Run koiro help.');
   }

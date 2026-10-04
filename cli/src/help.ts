@@ -26,32 +26,32 @@ Usage:
   koiro playlist delete PLAYLIST
   koiro playlist add PLAYLIST SONG...        append, skipping songs already in it
   koiro playlist remove PLAYLIST SONG
-  koiro playlist reorder PLAYLIST SONG...    full new order
+  koiro playlist reorder PLAYLIST SONG...    every song in the playlist, in the new order
 
-  koiro staff list [--include-singles]
+  koiro staff list
   koiro staff view NAME [--page N | --all]
   koiro language list
   koiro language view CODE [--page N | --all]
 
-  koiro lyrics from-lrc FILE|-               convert LRC into editable lines (offline)
+  koiro lyrics from-lrc FILE|-               convert LRC into lyric lines (offline)
 
 SONG / PLAYLIST: a UUID or a site link such as https://<site>/songs/<uuid>.
 NAME / CODE may also be a /staff/<name> or /languages/<code> link.
 DESCRIPTION: --description TEXT | --description-file FILE|-
 
-Song documents (export / update / create) use the API's field names:
-  title, description, coverObjectId, staff[{role, name[]}],
-  versions[{name, objectId, isDefault, lyricsKey}],
-  lyrics[{key, isDefault, languages[], lines[{startMs, endMs?, text, rubyByIndex?}]}],
+Song documents (export / update / create) are the API's SongInput; every field
+is required:
+  title, description, coverObjectId, staff[{role, names[]}],
+  versions[{name, objectId, isDefault, lyricsName}],
+  lyrics[{name, isDefault, languages[], lines[{startMs, endMs, spans[]}]}],
   playlistIds[]
-and additionally accept local inputs, resolved relative to the document:
-  coverFile or coverUrl instead of coverObjectId,
-  versions[].audioFile instead of objectId, lyrics[].lrcFile instead of lines.
+spans are {"type": "text", "text"} or {"type": "ruby", "base", "ruby"}.
+Documents may use local inputs instead, resolved relative to the document:
+  coverFile or coverUrl for coverObjectId, versions[].audioFile for objectId,
+  lyrics[].lrcFile for lines.
 update replaces the whole song: export first, edit, then update.
 languages[] codes: ${languageList}.
-In lines, text splits tokens with "/" and rubyByIndex maps a token index
-("0", "1", ...) to its reading; e.g. text "君/の声" with {"0": "きみ"}.
-Each line is one timed line: text and readings cannot contain line breaks.
+Each line is one timed line: texts cannot contain line breaks.
 
 Global: --web-url URL, --json, --help
 Site precedence: --web-url > KOIRO_WEB_URL > config set > the site that served
@@ -59,7 +59,8 @@ this skill. KOIRO_TOKEN overrides the saved login; keep it out of logs.
 KOIRO_CONFIG_DIR overrides the config directory. Run config get to see it.
 
 Output is JSON on stdout (pretty, or compact with --json). Errors are JSON on
-stderr. Lists return {items, page, totalPages, total}; --all returns every page.
+stderr. Lists return {items, page, pageSize, total, totalPages}; --all returns
+{items, total} with every page.
 Exit: 0 success; 1 local failure; 2 arguments; 3 login; 4 permissions;
   5 not found; 6 conflict; 7 network; 8 API/response; 130 cancelled.
 login opens the approval page in the default browser and prints its URL first;

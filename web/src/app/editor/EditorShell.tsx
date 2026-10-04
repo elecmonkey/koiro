@@ -4,18 +4,19 @@ import { useLyricsEditor, type LineDraft } from './state/useLyricsEditor';
 import LineList from './components/LineList';
 import LineEditor from './components/LineEditor';
 import PreviewPanel from './components/PreviewPanel';
-import { validateBlocks } from './ast/validate';
+import { lineErrors } from './lines';
 
 type EditorShellProps = {
   initialLines?: LineDraft[];
   onLinesChange?: (lines: LineDraft[]) => void;
+  /** 预览时决定字体 */
   languages?: Language[];
 };
 
 export default function EditorShell({
   initialLines,
   onLinesChange,
-  languages,
+  languages = [],
 }: EditorShellProps) {
   const {
     lines,
@@ -26,15 +27,13 @@ export default function EditorShell({
     addLine,
     removeLine,
     moveLine,
-    doc,
-    plainText,
+    preview,
   } = useLyricsEditor({
     initial: initialLines,
     onChange: onLinesChange,
-    languages,
   });
 
-  const validation = validateBlocks(doc.blocks);
+  const errors = lineErrors(preview);
 
   return (
     <Stack spacing={3} sx={{ py: 4 }}>
@@ -79,17 +78,17 @@ export default function EditorShell({
         <Box>
           <Card variant="outlined">
             <CardContent>
-              <PreviewPanel doc={doc} plainText={plainText} />
+              <PreviewPanel lines={preview} languages={languages} />
             </CardContent>
           </Card>
-          {!validation.ok ? (
+          {errors.length > 0 ? (
             <Card variant="outlined" sx={{ mt: 2 }}>
               <CardContent>
                 <Typography variant="subtitle2" color="error">
                   校验错误
                 </Typography>
                 <Stack spacing={1} sx={{ mt: 1 }}>
-                  {validation.errors.map((error) => (
+                  {errors.map((error) => (
                     <Typography key={error} variant="caption" color="error">
                       {error}
                     </Typography>

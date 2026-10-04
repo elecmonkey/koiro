@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, type StoredImage } from '@/lib/api';
+import type { UploadedImage } from '@koiro/shared';
+import { api } from '@/lib/api';
 import {
   Box,
   Button,
@@ -14,8 +15,10 @@ type ImageUploadFieldProps = {
   label?: string;
   helperText?: string;
   objectId: string | null;
-  /** 已有图片（如编辑时）的预览地址 */
+  /** `objectId` 对应的已有图片（如编辑时）的预览地址 */
   previewUrl?: string | null;
+  /** 还没有选择图片（`objectId` 为空）时显示的现有图片，如修改歌单时保持原封面 */
+  currentUrl?: string | null;
   /** 第二个参数为新图片的预览地址 */
   onObjectIdChange: (value: string | null, previewUrl?: string | null) => void;
   onFilenameChange?: (value: string | null) => void;
@@ -26,6 +29,7 @@ export default function ImageUploadField({
   helperText = '建议尺寸：1:1 或 4:3，最大 30MB，支持 PNG/JPG/WebP。',
   objectId,
   previewUrl: initialPreviewUrl = null,
+  currentUrl = null,
   onObjectIdChange,
   onFilenameChange,
 }: ImageUploadFieldProps) {
@@ -51,10 +55,10 @@ export default function ImageUploadField({
     };
   }, [previewUrl]);
 
-  // 没有选中 objectId 时不显示已上传的预览
+  // 没有选中 objectId 时不显示已上传的预览，只显示现有图片
   const shownUploadedUrl = objectId
     ? (uploadedPreviewUrl ?? initialPreviewUrl)
-    : null;
+    : currentUrl;
 
   return (
     <Stack spacing={1.5}>
@@ -177,8 +181,8 @@ export default function ImageUploadField({
                   setRemoteError(null);
                   setIsFetchingRemote(true);
                   try {
-                    const data = await api<StoredImage>(
-                      '/api/uploads/image-from-url',
+                    const data = await api<UploadedImage>(
+                      '/api/uploads/images/from-url',
                       {
                         method: 'POST',
                         json: { url },

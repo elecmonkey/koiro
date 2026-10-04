@@ -24,6 +24,7 @@ pub struct SongSummary {
     /// 列表里直接播放的版本
     pub default_version: AudioVersion,
     pub version_count: i64,
+    pub lyrics_count: i64,
     pub updated_at: DateTime<Utc>,
 }
 

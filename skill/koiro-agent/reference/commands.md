@@ -36,11 +36,11 @@
 
 **分页选项**（列表类命令）
 
-| 选项       | 含义                                            |
-| ---------- | ----------------------------------------------- |
-| 不加       | 返回第 1 页：`{items, page, totalPages, total}` |
-| `--page N` | 返回第 N 页，格式同上                           |
-| `--all`    | 依次取完所有页，返回 `{items, total}`           |
+| 选项       | 含义                                                                  |
+| ---------- | --------------------------------------------------------------------- |
+| 不加       | 返回第 1 页：`{items, page, pageSize, total, totalPages}`，每页 20 条 |
+| `--page N` | 返回第 N 页，格式同上                                                 |
+| `--all`    | 依次取完所有页，返回 `{items, total}`                                 |
 
 `--page` 和 `--all` 不能同时使用。
 
@@ -59,10 +59,16 @@
   "id": "…",
   "title": "…",
   "description": "…",
-  "staff": [{ "role": "作曲", "name": ["…"] }],
-  "cover": { "url": "…" },
-  "defaultVersion": { "id": "…", "name": "主版本", "hasLyrics": true },
+  "staff": [{ "role": "作曲", "names": ["…"] }],
+  "coverUrl": "…",
+  "defaultVersion": {
+    "id": "…",
+    "name": "主版本",
+    "isDefault": true,
+    "lyricsId": "…"
+  },
   "versionCount": 2,
+  "lyricsCount": 1,
   "updatedAt": "2026-01-01T00:00:00Z",
   "url": "https://<站点>/songs/<id>"
 }
@@ -106,7 +112,7 @@
 
 ### `koiro song list [--page N | --all]`
 
-需要 VIEW。按更新时间从新到旧列出全部歌曲，每页 10 首。返回歌曲摘要列表。
+需要 VIEW。按更新时间从新到旧列出全部歌曲，每页 20 首。返回歌曲摘要列表。
 
 ### `koiro song random`
 
@@ -114,14 +120,12 @@
 
 ### `koiro song search QUERY [--page N | --all]`
 
-需要 VIEW。在标题、staff 姓名、歌词正文中搜索 `QUERY`，按相关度排序，每页 50 条。每一项：
+需要 VIEW。在标题、staff 姓名、歌词正文中搜索 `QUERY`，按相关度排序，每页 20 条。每一项是歌曲摘要，另外有：
 
-| 字段                                                  | 含义                                              |
-| ----------------------------------------------------- | ------------------------------------------------- |
-| `id`、`title`、`description`、`staff`、`cover`、`url` | 同歌曲摘要                                        |
-| `score`                                               | 相关度，越大越相关                                |
-| `matchType`                                           | 命中部分的数组，元素为 `title`、`staff`、`lyrics` |
-| `matchSnippet`                                        | 命中的歌词片段，没有命中歌词时为 `null`           |
+| 字段            | 含义                                                      |
+| --------------- | --------------------------------------------------------- |
+| `matched`       | 命中部分的数组，元素为 `title`、`staff`、`lyrics`         |
+| `lyricsExcerpt` | 命中歌词时，包含关键字的一段歌词；没有命中歌词时为 `null` |
 
 ```sh
 koiro song search 夜に駆ける --json
@@ -131,13 +135,13 @@ koiro song search 夜に駆ける --json
 
 需要 VIEW。返回一首歌的完整信息：
 
-| 字段                                                                            | 含义                                                                         |
-| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `id`、`title`、`description`、`staff`、`cover`、`url`、`createdAt`、`updatedAt` | 基本信息                                                                     |
-| `versions[]`                                                                    | 音频版本：`id`、`name`、`isDefault`、`lyricsId`（绑定的歌词，可能为 `null`） |
-| `lyrics[]`                                                                      | 歌词版本：`id`、`key`、`isDefault`、`languages`、`lines[]`                   |
-| `lyrics[].lines[]`                                                              | `{startMs, endMs?, text}`；有注音的词写成 `基字(读音)`                       |
-| `playlists[]`                                                                   | 所属歌单：`id`、`name`                                                       |
+| 字段                                                                               | 含义                                                                         |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `id`、`title`、`description`、`staff`、`coverUrl`、`url`、`createdAt`、`updatedAt` | 基本信息                                                                     |
+| `versions[]`                                                                       | 音频版本：`id`、`name`、`isDefault`、`lyricsId`（绑定的歌词，可能为 `null`） |
+| `lyrics[]`                                                                         | 歌词：`id`、`name`、`isDefault`、`languages`、`lines[]`                      |
+| `lyrics[].lines[]`                                                                 | `{startMs, endMs, text}`；`text` 里有注音的词写成 `基字(读音)`               |
+| `playlists[]`                                                                      | 所属歌单：`id`、`name`                                                       |
 
 这是给人读的形式。要修改歌曲时不要用它当底稿，改用 `song export`。
 
@@ -146,8 +150,8 @@ koiro song search 夜に駆ける --json
 需要 ADMIN。输出可以直接编辑、再交给 `song update` 的歌曲文档，字段见 [song-document.md](song-document.md)。和 `view` 的区别：
 
 - 封面和音频以 `coverObjectId`、`objectId` 表示（不是网址）；
-- 歌词行是可编辑形式（`text` 以 `/` 分段，注音在 `rubyByIndex`）；
-- 音频与歌词的绑定以歌词的 `key` 表示（`lyricsKey`）；
+- 歌词行是原始结构（`spans` 文字片段，注音是 `ruby` 片段）；
+- 音频与歌词的绑定以歌词的 `name` 表示（`lyricsName`）；
 - 所属歌单以 ID 数组 `playlistIds` 表示。
 
 ```sh
@@ -164,7 +168,7 @@ koiro song export <SONG> > song.json
 
 ### `koiro song create --file FILE`
 
-需要 UPLOAD。用文档新建一首歌，先上传文档引用的封面和音频，再创建。文档至少要有 `title`、封面和一个音频版本。输出：`{ok: true, id, url}`。
+需要 UPLOAD。用文档新建一首歌，先上传文档引用的封面和音频，再创建。文档必须写全所有字段，见 [song-document.md](song-document.md)；缺字段时在上传前就报错（退出码 `2`）。输出：`{ok: true, id, url}`。
 
 退出码 `7` 时歌曲可能已经创建，先搜索确认再决定是否重试。
 
@@ -188,11 +192,11 @@ koiro song export <SONG> > song.json
 
 ### `koiro playlist list [--page N | --all]`
 
-需要 VIEW。列出歌单，每页 10 个：每项 `{id, name, description, cover, songCount, updatedAt, url}`。
+需要 VIEW。按更新时间从新到旧列出歌单，每页 20 个：每项 `{id, name, description, coverUrl, songCount, updatedAt, url}`。
 
 ### `koiro playlist view PLAYLIST [--page N | --all]`
 
-需要 VIEW。输出 `{playlist: {id, name, description, cover, url}, songs: <分页的歌曲摘要>}`，歌曲按歌单中的顺序排列。
+需要 VIEW。输出 `{playlist: {id, name, description, coverUrl, songCount, updatedAt, url}, songs: <分页的歌曲摘要>}`，歌曲按歌单中的顺序排列。
 
 ### `koiro playlist create --name NAME (--cover-file FILE | --cover-url URL) [--description TEXT | --description-file FILE]`
 
@@ -224,11 +228,11 @@ koiro playlist add <PLAYLIST> <SONG1> <SONG2> https://<站点>/songs/<UUID3>
 
 ### `koiro playlist remove PLAYLIST SONG`
 
-需要 ADMIN。把一首歌移出歌单（不删除歌曲）。歌曲本来不在歌单里也算成功。输出：`{ok: true}`。
+需要 ADMIN。把一首歌移出歌单（不删除歌曲）。歌曲不在歌单里时退出码 `5`。输出：`{ok: true}`。
 
 ### `koiro playlist reorder PLAYLIST SONG...`
 
-需要 ADMIN。按给出的顺序重排歌单。必须**恰好**列出歌单里的每一首歌各一次，否则退出码 `2`，`details.missing` 是漏掉的歌曲 ID，`details.unknown` 是不在歌单里的 ID。输出：`{ok: true}`。
+需要 ADMIN。按给出的顺序重排歌单。必须**恰好**列出歌单里的每一首歌各一次，否则站点拒绝（退出码 `8`），歌单保持不变。输出：`{ok: true}`。
 
 ```sh
 koiro playlist view <PLAYLIST> --all --json   # 取得当前全部歌曲
@@ -237,26 +241,26 @@ koiro playlist reorder <PLAYLIST> <ID3> <ID1> <ID2> …
 
 ## staff 与语种
 
-### `koiro staff list [--include-singles]`
+### `koiro staff list`
 
-需要 VIEW。所有 staff 及其参与的歌曲数：`{staff: [{name, count, roles: [{role, count}]}]}`。默认只列出参与三首及以上歌曲的人，`--include-singles` 列出所有人。
+需要 VIEW。所有参与者，按参与的歌曲数从多到少：`{items: [{name, songCount, roles: [{role, songCount}]}]}`。
 
 ### `koiro staff view NAME [--page N | --all]`
 
-需要 VIEW。输出 `{staff: {name, total, roles}, songs: <分页的歌曲摘要>}`。名字按精确写法匹配。
+需要 VIEW。输出 `{staff: {name, songCount, roles}, songs: <分页的歌曲摘要>}`。名字按精确写法匹配，不存在时退出码 `5`。
 
 ### `koiro language list`
 
-需要 VIEW。`{languages: [{language, count}]}`：每个语种代码，及有歌词标注了该语种的歌曲数。
+需要 VIEW。`{items: [{language, songCount}]}`：每个语种代码，及有歌词标注了该语种的歌曲数。
 
 ### `koiro language view CODE [--page N | --all]`
 
-需要 VIEW。输出 `{language: {code, total}, songs: <分页的歌曲摘要>}`。`CODE` 不是站点定义的语种时退出码 `2`，`details.languages` 列出可选代码。
+需要 VIEW。输出 `{language, songs: <分页的歌曲摘要>}`，歌曲总数见 `songs.total`。`CODE` 不是站点定义的语种时退出码 `2`，`details.languages` 列出可选代码。
 
 ## 本地工具
 
 ### `koiro lyrics from-lrc FILE`
 
-不联网、不需要站点和登录。把 LRC 转成可编辑的歌词行：`{lines: [{startMs, text}]}`。`FILE` 为 `-` 时从标准输入读。规则见 [workflows.md 第 6 节](workflows.md#6-编写歌词)。
+不联网、不需要站点和登录。把 LRC 转成歌词行：`{lines: [{startMs, endMs, spans}]}`，可以直接放进歌曲文档的 `lines`。`FILE` 为 `-` 时从标准输入读。规则见 [workflows.md 第 6 节](workflows.md#6-编写歌词)。
 
 用于先检查、修改转换结果（例如加注音），再写进歌曲文档的 `lines`。不需要修改时，直接在文档里写 `lrcFile` 更简单。

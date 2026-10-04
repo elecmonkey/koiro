@@ -1,8 +1,7 @@
-import type { Language } from '@koiro/shared';
 import { useEffect, useMemo, useReducer, useRef } from 'react';
-import type { Block, Inline, LyricsDocument } from '../ast/types';
-import { buildPlainText } from '../ast/plainText';
+import { toLyricLines } from '../lines';
 
+/** 编辑中的一行：`text` 用 "/" 分词，`rubyByIndex` 按分词序号标注读音 */
 export type LineDraft = {
   id: string;
   startMs: number;
@@ -19,7 +18,6 @@ const initialLines: LineDraft[] = [
 type UseLyricsEditorOptions = {
   initial?: LineDraft[];
   onChange?: (lines: LineDraft[]) => void;
-  languages?: Language[];
 };
 
 type EditorState = {
@@ -99,28 +97,8 @@ export function useLyricsEditor(options: UseLyricsEditorOptions = {}) {
     [state.lines, state.selectedId],
   );
 
-  const blocks = useMemo<Block[]>(() => {
-    return state.lines.map((line) => ({
-      type: 'line',
-      time: {
-        startMs: line.startMs,
-        endMs: line.endMs,
-      },
-      children: buildInlinesFromText(line.text, line.rubyByIndex),
-    }));
-  }, [state.lines]);
-
-  const doc = useMemo<LyricsDocument>(() => {
-    return {
-      type: 'doc',
-      meta: {
-        languages: options.languages ?? ['ja', 'zh'],
-      },
-      blocks,
-    };
-  }, [blocks, options.languages]);
-
-  const plainText = useMemo(() => buildPlainText(blocks), [blocks]);
+  // 提交后的样子，用于预览和校验
+  const preview = useMemo(() => toLyricLines(state.lines), [state.lines]);
 
   const updateLine = (id: string, updates: Partial<LineDraft>) => {
     dispatch({ type: 'update', id, updates });
@@ -147,39 +125,6 @@ export function useLyricsEditor(options: UseLyricsEditorOptions = {}) {
     addLine,
     removeLine,
     moveLine,
-    doc,
-    plainText,
+    preview,
   };
-}
-
-/** 与服务端构建歌词的规则一致：只按 "/" 分词，换行等字符原样保留在正文里 */
-function buildInlinesFromText(
-  text: string,
-  rubyByIndex: Record<number, string> | undefined,
-): Inline[] {
-  if (!text) {
-    return [{ type: 'text', text: '' }];
-  }
-
-  const segments = text.split(/(\/)/);
-  let tokenIndex = 0;
-  const inlines: Inline[] = [];
-
-  segments.forEach((segment) => {
-    if (!segment) {
-      return;
-    }
-    if (segment === '/') {
-      return;
-    }
-    const ruby = rubyByIndex?.[tokenIndex];
-    if (ruby) {
-      inlines.push({ type: 'ruby', base: segment, ruby });
-    } else {
-      inlines.push({ type: 'text', text: segment });
-    }
-    tokenIndex += 1;
-  });
-
-  return inlines;
 }

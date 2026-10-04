@@ -3,14 +3,15 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { release } from 'node:os';
 import { CliError } from './errors';
-import { normalizeUrl, type Session } from './config';
-import { object, string, type Json } from './json';
+import type { CliToken, User } from '@koiro/shared';
+import { normalizeUrl, type SavedLogin } from './config';
 import { ApiClient } from './http';
 
-export function loginSession(value: Json): { session: Session; user: Json } {
-  const data = object(value);
-  const token = string(data.token);
-  const expiresAt = string(data.expiresAt);
+/** 换来的凭据必须尚未过期，才值得保存 */
+export function loginSession({ token, expiresAt, user }: CliToken): {
+  session: SavedLogin;
+  user: User;
+} {
   if (
     !token ||
     !Number.isFinite(Date.parse(expiresAt)) ||
@@ -22,8 +23,6 @@ export function loginSession(value: Json): { session: Session; user: Json } {
       8,
     );
   }
-  const user = object(data.user);
-  string(user.id);
   return { session: { token, expiresAt }, user };
 }
 
@@ -265,7 +264,7 @@ export async function browserLogin(
     }
     const code = await listener.code;
     return loginSession(
-      await api.request(
+      await api.request<CliToken>(
         '/auth/cli/exchange',
         'POST',
         {

@@ -12,16 +12,7 @@ import {
 } from '@mui/material';
 import { Link } from 'react-router';
 
-type LanguageEntry = {
-  language: Language;
-  count: number;
-};
-
-type LanguageResponse = {
-  languages: LanguageEntry[];
-};
-
-import { languageName, type Language } from '@koiro/shared';
+import { languageName, type LanguageStat } from '@koiro/shared';
 import { api } from '@/lib/api';
 
 function hashString(input: string) {
@@ -45,7 +36,7 @@ function scaleSize(
 }
 
 export default function LanguageCloudClient() {
-  const [languages, setLanguages] = useState<LanguageEntry[]>([]);
+  const [languages, setLanguages] = useState<LanguageStat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,8 +46,8 @@ export default function LanguageCloudClient() {
       setLoading(true);
       setError(null);
       try {
-        const data = await api<LanguageResponse>('/api/languages');
-        if (active) setLanguages(data.languages || []);
+        const data = await api<LanguageStat[]>('/api/languages');
+        if (active) setLanguages(data);
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : '未知错误');
       } finally {
@@ -69,15 +60,15 @@ export default function LanguageCloudClient() {
     };
   }, []);
 
-  const counts = useMemo(() => languages.map((l) => l.count), [languages]);
+  const counts = useMemo(() => languages.map((l) => l.songCount), [languages]);
   const minCount = counts.length ? Math.min(...counts) : 0;
   const maxCount = counts.length ? Math.max(...counts) : 0;
 
   const sortedLanguages = useMemo(() => {
     const items = [...languages];
     items.sort((a, b) => {
-      const aKey = `${a.language}|${a.count}`;
-      const bKey = `${b.language}|${b.count}`;
+      const aKey = `${a.language}|${a.songCount}`;
+      const bKey = `${b.language}|${b.songCount}`;
       const aHash = hashString(aKey);
       const bHash = hashString(bKey);
       if (aHash !== bHash) return aHash - bHash;
@@ -126,7 +117,7 @@ export default function LanguageCloudClient() {
               >
                 {sortedLanguages.map((item) => {
                   const fontSize = scaleSize(
-                    item.count,
+                    item.songCount,
                     minCount,
                     maxCount,
                     14,
@@ -165,7 +156,7 @@ export default function LanguageCloudClient() {
                           justifyContent: 'center',
                           gap: 1,
                           fontSize,
-                          fontWeight: item.count >= maxCount ? 700 : 500,
+                          fontWeight: item.songCount >= maxCount ? 700 : 500,
                           lineHeight: 1.2,
                         }}
                       >
@@ -176,7 +167,7 @@ export default function LanguageCloudClient() {
                           component="span"
                           sx={{ fontSize: '0.75em', color: 'text.secondary' }}
                         >
-                          {item.count}
+                          {item.songCount}
                         </Box>
                       </Box>
                       <Stack direction="row" spacing={0.5}>

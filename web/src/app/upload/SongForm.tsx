@@ -1,4 +1,11 @@
-import { LANGUAGES, LANGUAGE_NAMES, type Language } from '@koiro/shared';
+import {
+  LANGUAGES,
+  LANGUAGE_NAMES,
+  parseLrc,
+  type Language,
+  type PlaylistOption,
+  type SongInput,
+} from '@koiro/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Autocomplete,
@@ -24,54 +31,19 @@ import VersionRow from './VersionRow';
 import StaffRow from './StaffRow';
 import ImageUploadField from '../components/ImageUploadField';
 import type { LineDraft } from '../editor/state/useLyricsEditor';
+import { toLineDrafts, toLyricLines } from '../editor/lines';
+import type {
+  LyricsItem,
+  SongFormData,
+  StaffItem,
+  VersionItem,
+} from './formTypes';
 import { api } from '@/lib/api';
-
-type StaffItem = {
-  id: string;
-  role: string;
-  name: string | string[];
-};
-
-type VersionItem = {
-  id: string;
-  key: string;
-  objectId: string;
-  isDefault: boolean;
-  lyricsId?: string | null; // 绑定的歌词版本ID
-};
-
-type LyricsVersion = {
-  id: string;
-  key: string;
-  isDefault: boolean;
-  lines: LineDraft[];
-  languages: Language[];
-};
-
-type PlaylistOption = {
-  id: string;
-  name: string;
-};
-
-// 表单数据类型
-export type SongFormData = {
-  title: string;
-  description: string;
-  staff: StaffItem[];
-  versions: VersionItem[];
-  audioDefaultName: string | null;
-  lyricsVersions: LyricsVersion[];
-  coverObjectId: string | null;
-  /** 封面预览地址（上传或编辑时由后端返回） */
-  coverPreviewUrl?: string | null;
-  coverFilename: string | null;
-  playlistIds?: string[];
-};
 
 // 初始模板
 const STAFF_TEMPLATE: StaffItem[] = [
-  { id: 'staff_1', role: '作词', name: '' },
-  { id: 'staff_2', role: '演唱', name: '' },
+  { id: 'staff_1', role: '作词', names: [] },
+  { id: 'staff_2', role: '演唱', names: [] },
 ];
 
 const DEFAULT_LINES: LineDraft[] = [
@@ -86,17 +58,16 @@ const buildEmptyFormData = (): SongFormData => ({
   versions: [
     {
       id: makeId('ver'),
-      key: '主版本',
+      name: '主版本',
       objectId: '',
       isDefault: true,
       lyricsId: null,
     },
   ],
-  audioDefaultName: '主版本',
-  lyricsVersions: [
+  lyrics: [
     {
       id: makeId('lyr'),
-      key: '原文',
+      name: '原文',
       isDefault: true,
       lines: DEFAULT_LINES,
       languages: ['zh'],
@@ -105,6 +76,7 @@ const buildEmptyFormData = (): SongFormData => ({
   coverObjectId: null,
   coverPreviewUrl: null,
   coverFilename: null,
+  playlistIds: [],
 });
 
 type SongFormProps = {
@@ -146,9 +118,6 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
   const [versions, setVersions] = useState<VersionItem[]>(() =>
     getInitialValue('versions', emptyFormData.versions),
   );
-  const [audioDefaultName, setAudioDefaultName] = useState<string | null>(() =>
-    getInitialValue('audioDefaultName', emptyFormData.audioDefaultName),
-  );
   const [title, setTitle] = useState(() =>
     getInitialValue('title', emptyFormData.title),
   );
@@ -158,22 +127,17 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
   const [coverObjectId, setCoverObjectId] = useState<string | null>(() =>
     getInitialValue('coverObjectId', emptyFormData.coverObjectId),
   );
-  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(
-    () =>
-      getInitialValue('coverPreviewUrl', emptyFormData.coverPreviewUrl) ?? null,
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(() =>
+    getInitialValue('coverPreviewUrl', emptyFormData.coverPreviewUrl),
   );
   const [coverFilename, setCoverFilename] = useState<string | null>(() =>
     getInitialValue('coverFilename', emptyFormData.coverFilename),
   );
-  const [lyricsVersions, setLyricsVersions] = useState<LyricsVersion[]>(() =>
-    getInitialValue('lyricsVersions', emptyFormData.lyricsVersions),
+  const [lyricsVersions, setLyricsVersions] = useState<LyricsItem[]>(() =>
+    getInitialValue('lyrics', emptyFormData.lyrics),
   );
   const [activeLyricsId, setActiveLyricsId] = useState<string>(
-    () =>
-      initialData?.lyricsVersions?.[0]?.id ??
-      draftData?.lyricsVersions?.[0]?.id ??
-      emptyFormData.lyricsVersions[0]?.id ??
-      '',
+    () => lyricsVersions[0]?.id ?? '',
   );
 
   // 播放列表相关状态
@@ -196,18 +160,14 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
   useEffect(() => {
     const fetchPlaylists = async () => {
       try {
-        const data = await api<{ playlists: PlaylistOption[] }>(
-          '/api/playlists/options',
-        );
-        const options = data.playlists;
+        const options = await api<PlaylistOption[]>('/api/playlists/options');
         setAllPlaylists(options);
 
         // 如果是编辑模式，设置已选中的播放列表
-        if (initialData?.playlistIds) {
-          const selected = options.filter((p) =>
-            initialData.playlistIds?.includes(p.id),
+        if (initialData) {
+          setSelectedPlaylists(
+            options.filter((p) => initialData.playlistIds.includes(p.id)),
           );
-          setSelectedPlaylists(selected);
         }
       } catch {
         // 忽略错误，播放列表是可选的
@@ -216,7 +176,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
       }
     };
     void fetchPlaylists();
-  }, [initialData?.playlistIds]);
+  }, [initialData]);
 
   // 仅在创建模式下保存草稿
   useEffect(() => {
@@ -230,8 +190,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
       description,
       staff,
       versions,
-      audioDefaultName,
-      lyricsVersions,
+      lyrics: lyricsVersions,
       coverObjectId,
       coverPreviewUrl,
       coverFilename,
@@ -242,7 +201,6 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     description,
     staff,
     versions,
-    audioDefaultName,
     lyricsVersions,
     coverObjectId,
     coverPreviewUrl,
@@ -250,7 +208,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
   ]);
 
   const addStaff = () => {
-    const next = [...staff, { id: makeId('staff'), role: '', name: '' }];
+    const next = [...staff, { id: makeId('staff'), role: '', names: [] }];
     setStaff(next);
   };
 
@@ -269,13 +227,13 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
   const addVersion = () => {
     const nextName = uniqueName(
       '未命名',
-      versions.map((v) => v.key),
+      versions.map((v) => v.name),
     );
     const next = [
       ...versions,
       {
         id: makeId('ver'),
-        key: nextName,
+        name: nextName,
         objectId: '',
         isDefault: versions.length === 0,
         lyricsId: null,
@@ -285,54 +243,49 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
   };
 
   const updateVersion = (id: string, updates: Partial<VersionItem>) => {
-    let nextKey = updates.key;
-    if (typeof nextKey === 'string') {
-      nextKey = uniqueName(
-        nextKey,
-        versions.filter((v) => v.id !== id).map((v) => v.key),
+    let nextName = updates.name;
+    if (typeof nextName === 'string') {
+      nextName = uniqueName(
+        nextName,
+        versions.filter((v) => v.id !== id).map((v) => v.name),
       );
     }
-    const next = versions.map((item) =>
-      item.id === id ? { ...item, ...updates, key: nextKey ?? item.key } : item,
+    setVersions(
+      versions.map((item) =>
+        item.id === id
+          ? { ...item, ...updates, name: nextName ?? item.name }
+          : item,
+      ),
     );
-    setVersions(next);
-    if (updates.key && next.find((v) => v.id === id)?.isDefault) {
-      setAudioDefaultName(next.find((v) => v.id === id)?.key ?? null);
-      return;
-    }
   };
 
   const setDefaultVersion = (id: string) => {
-    const next = versions.map((item) => ({
-      ...item,
-      isDefault: item.id === id,
-    }));
-    const defaultName = next.find((item) => item.id === id)?.key ?? null;
-    setVersions(next);
-    setAudioDefaultName(
-      defaultName && defaultName.length > 0 ? defaultName : null,
+    setVersions(
+      versions.map((item) => ({
+        ...item,
+        isDefault: item.id === id,
+      })),
     );
   };
 
   const removeVersion = (id: string) => {
     const next = versions.filter((item) => item.id !== id);
     if (next.length > 0 && !next.some((item) => item.isDefault)) {
-      next[0].isDefault = true;
-      setAudioDefaultName(next[0].key || null);
+      next[0] = { ...next[0], isDefault: true };
     }
     setVersions(next);
   };
 
   const addLyricsVersion = () => {
-    const nextKey = uniqueName(
+    const nextName = uniqueName(
       '未命名',
-      lyricsVersions.map((v) => v.key),
+      lyricsVersions.map((v) => v.name),
     );
-    const next: LyricsVersion[] = [
+    const next: LyricsItem[] = [
       ...lyricsVersions,
       {
         id: makeId('lyr'),
-        key: nextKey,
+        name: nextName,
         isDefault: lyricsVersions.length === 0,
         lines: DEFAULT_LINES,
         languages: ['zh'],
@@ -342,13 +295,13 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     setActiveLyricsId(next[next.length - 1].id);
   };
 
-  const updateLyricsKey = (id: string, key: string) => {
-    const nextKey = uniqueName(
-      key,
-      lyricsVersions.filter((v) => v.id !== id).map((v) => v.key),
+  const updateLyricsName = (id: string, name: string) => {
+    const nextName = uniqueName(
+      name,
+      lyricsVersions.filter((v) => v.id !== id).map((v) => v.name),
     );
     const next = lyricsVersions.map((item) =>
-      item.id === id ? { ...item, key: nextKey } : item,
+      item.id === id ? { ...item, name: nextName } : item,
     );
     setLyricsVersions(next);
   };
@@ -371,7 +324,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
   const removeLyricsVersion = (id: string) => {
     const next = lyricsVersions.filter((item) => item.id !== id);
     if (next.length > 0 && !next.some((item) => item.isDefault)) {
-      next[0].isDefault = true;
+      next[0] = { ...next[0], isDefault: true };
     }
     setLyricsVersions(next);
     setActiveLyricsId(next[0]?.id ?? '');
@@ -399,13 +352,15 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     if (!title.trim()) return '歌曲名不能为空';
     if (!coverObjectId) return '必须上传封面';
     if (!versions.length) return '必须至少添加一个音频版本';
-    if (!audioDefaultName) return '必须选择默认音频版本';
+    if (!versions.some((v) => v.isDefault)) return '必须选择默认音频版本';
     const invalidAudio = versions.some((v) => !v.objectId);
     if (invalidAudio) return '所有音频版本都必须上传';
-    const invalidAudioName = versions.some((v) => !v.key.trim());
+    const invalidAudioName = versions.some((v) => !v.name.trim());
     if (invalidAudioName) return '音频版本名不能为空';
+    const invalidStaff = staff.some((s) => !s.role.trim() || !s.names.length);
+    if (invalidStaff) return 'staff 的角色和姓名不能为空';
     if (lyricsVersions.length > 0) {
-      const invalidLyricsName = lyricsVersions.some((v) => !v.key.trim());
+      const invalidLyricsName = lyricsVersions.some((v) => !v.name.trim());
       if (invalidLyricsName) return '歌词版本名不能为空';
       const defaultLyrics = lyricsVersions.find((v) => v.isDefault);
       if (!defaultLyrics) return '必须设置默认歌词版本';
@@ -420,31 +375,26 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    // 音频版本绑定歌词时用歌词版本名（同一首歌内唯一），后端据此建立关联
-    const lyricsKeyById = new Map(
-      lyricsVersions.map((l) => [l.id, l.key.trim()]),
-    );
-    const payload = {
+    // 音频版本以歌词名（同一首歌内唯一）绑定歌词
+    const lyricsNameById = new Map(lyricsVersions.map((l) => [l.id, l.name]));
+    const payload: SongInput = {
       title,
       description,
-      coverObjectId,
-      staff: staff.map(({ role, name }) => ({ role, name })),
+      coverObjectId: coverObjectId ?? '',
+      staff: staff.map(({ role, names }) => ({ role, names })),
       versions: versions.map((v) => ({
-        name: v.key,
+        name: v.name,
         objectId: v.objectId,
-        isDefault: v.key === audioDefaultName,
-        lyricsKey: v.lyricsId ? (lyricsKeyById.get(v.lyricsId) ?? null) : null,
+        isDefault: v.isDefault,
+        lyricsName: v.lyricsId
+          ? (lyricsNameById.get(v.lyricsId) ?? null)
+          : null,
       })),
       lyrics: lyricsVersions.map((l) => ({
-        key: l.key,
+        name: l.name,
         isDefault: l.isDefault,
         languages: l.languages,
-        lines: l.lines.map(({ startMs, endMs, text, rubyByIndex }) => ({
-          startMs,
-          endMs,
-          text,
-          rubyByIndex,
-        })),
+        lines: toLyricLines(l.lines),
       })),
       playlistIds: selectedPlaylists.map((p) => p.id),
     };
@@ -482,9 +432,8 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
     setDescription('');
     setStaff(STAFF_TEMPLATE);
     setVersions(nextEmpty.versions);
-    setAudioDefaultName(nextEmpty.audioDefaultName);
-    setLyricsVersions(nextEmpty.lyricsVersions);
-    setActiveLyricsId(nextEmpty.lyricsVersions[0]?.id ?? '');
+    setLyricsVersions(nextEmpty.lyrics);
+    setActiveLyricsId(nextEmpty.lyrics[0]?.id ?? '');
     setLyricsEditorKey((prev) => prev + 1);
     setUploadComponentKey((prev) => prev + 1);
     setCoverObjectId(null);
@@ -507,7 +456,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
       return;
     }
     setLrcError(null);
-    updateLyricsLines(activeLyrics.id, parsed);
+    updateLyricsLines(activeLyrics.id, toLineDrafts(parsed, makeId('lrc')));
     setLyricsEditorKey((prev) => prev + 1);
   };
 
@@ -609,7 +558,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
                           onChange={updateVersion}
                           onRemove={removeVersion}
                           onSetDefault={setDefaultVersion}
-                          lyricsVersions={lyricsVersions}
+                          lyrics={lyricsVersions}
                         />
                       ))}
                     </Stack>
@@ -717,7 +666,7 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
                             size="small"
                             onClick={() => setActiveLyricsId(item.id)}
                           >
-                            {item.key || '未命名'}
+                            {item.name || '未命名'}
                           </Button>
                         ))}
                         <Button
@@ -739,9 +688,12 @@ export default function SongForm({ songId, initialData, mode }: SongFormProps) {
                       >
                         <TextField
                           label="版本名称"
-                          value={activeLyrics.key}
+                          value={activeLyrics.name}
                           onChange={(event) =>
-                            updateLyricsKey(activeLyrics.id, event.target.value)
+                            updateLyricsName(
+                              activeLyrics.id,
+                              event.target.value,
+                            )
                           }
                           fullWidth
                         />
@@ -967,42 +919,4 @@ function makeId(prefix: string) {
       ? crypto.randomUUID()
       : `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   return `${prefix}_${rand}`;
-}
-
-function parseLrc(content: string): LineDraft[] {
-  const lines = content.split(/\r?\n/);
-  const result: LineDraft[] = [];
-  const timeTag = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
-
-  lines.forEach((line, index) => {
-    const text = line.replace(timeTag, '').trim();
-    let match: RegExpExecArray | null;
-    let hasTime = false;
-    timeTag.lastIndex = 0;
-    while ((match = timeTag.exec(line))) {
-      hasTime = true;
-      const min = Number(match[1]);
-      const sec = Number(match[2]);
-      const fractionRaw = match[3] ?? '';
-      const fraction =
-        fractionRaw.length === 1
-          ? Number(fractionRaw) * 100
-          : fractionRaw.length === 2
-            ? Number(fractionRaw) * 10
-            : fractionRaw.length === 3
-              ? Number(fractionRaw)
-              : 0;
-      const startMs = min * 60 * 1000 + sec * 1000 + fraction;
-      result.push({
-        id: `lrc_${index}_${startMs}`,
-        startMs,
-        text,
-      });
-    }
-    if (!hasTime && text) {
-      result.push({ id: `lrc_${index}_0`, startMs: 0, text });
-    }
-  });
-
-  return result.sort((a, b) => a.startMs - b.startMs);
 }

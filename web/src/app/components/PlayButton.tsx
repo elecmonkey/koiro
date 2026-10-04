@@ -1,12 +1,15 @@
 import { Button } from '@mui/material';
 import { PlayArrow, Pause } from '@mui/icons-material';
+import type { Lyrics } from '@koiro/shared';
 import { usePlayer, type Track } from '@/app/player';
 
 interface PlayButtonProps {
   track: Track;
+  /** 手头已有的歌词；不传时播放器按 `track.lyricsId` 加载 */
+  lyrics?: Lyrics | null;
 }
 
-export function PlayButton({ track }: PlayButtonProps) {
+export function PlayButton({ track, lyrics }: PlayButtonProps) {
   const {
     play,
     pause,
@@ -27,7 +30,7 @@ export function PlayButton({ track }: PlayButtonProps) {
         resume();
       }
     } else {
-      await play(track);
+      await play(track, lyrics);
     }
   };
 

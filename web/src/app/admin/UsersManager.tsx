@@ -20,23 +20,24 @@ import {
   Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { api, type Pagination as PageInfo } from '@/lib/api';
+import {
+  PERMISSIONS,
+  type Page,
+  type Permission,
+  type User,
+  type UserInput,
+  type UserPatch,
+} from '@koiro/shared';
+import { api, withQuery } from '@/lib/api';
 
-interface User {
-  id: string;
-  email: string;
-  displayName: string;
-  permissions: number;
-  createdAt: string;
-  updatedAt: string;
+const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
+
+/** 切换一项权限，结果保持固定顺序 */
+function toggle(list: readonly Permission[], permission: Permission) {
+  return ALL_PERMISSIONS.filter((item) =>
+    item === permission ? !list.includes(item) : list.includes(item),
+  );
 }
-
-const PERMISSION_LABELS: { value: number; label: string }[] = [
-  { value: 1, label: 'VIEW' },
-  { value: 2, label: 'DOWNLOAD' },
-  { value: 4, label: 'UPLOAD' },
-  { value: 8, label: 'ADMIN' },
-];
 
 export default function UsersManager() {
   const [users, setUsers] = useState<User[]>([]);
@@ -51,7 +52,7 @@ export default function UsersManager() {
   // 编辑权限对话框
   const [editOpen, setEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<User | null>(null);
-  const [editPermissions, setEditPermissions] = useState<number>(0);
+  const [editPermissions, setEditPermissions] = useState<Permission[]>([]);
 
   // 删除确认对话框
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -62,7 +63,9 @@ export default function UsersManager() {
   const [createEmail, setCreateEmail] = useState('');
   const [createDisplayName, setCreateDisplayName] = useState('');
   const [createPassword, setCreatePassword] = useState('');
-  const [createPermissions, setCreatePermissions] = useState(1); // 默认 VIEW
+  const [createPermissions, setCreatePermissions] = useState<Permission[]>([
+    'view',
+  ]);
 
   // 重置密码对话框
   const [resetOpen, setResetOpen] = useState(false);
@@ -80,12 +83,12 @@ export default function UsersManager() {
     setLoading(true);
     setError(null);
     try {
-      const data = await api<{ users: User[]; pagination: PageInfo }>(
-        `/api/admin/users?q=${encodeURIComponent(q)}&page=${p}`,
+      const data = await api<Page<User>>(
+        withQuery('/api/users', { q, page: p }),
       );
-      setUsers(data.users);
-      setTotal(data.pagination.total ?? 0);
-      setTotalPages(data.pagination.totalPages ?? 0);
+      setUsers(data.items);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
     } catch (err) {
       setError(err instanceof Error ? err.message : '未知错误');
     } finally {
@@ -113,33 +116,23 @@ export default function UsersManager() {
     setPage(1);
   };
 
-  const getPermissionLabels = (permissions: number) => {
-    const labels: string[] = [];
-    for (const { value, label } of PERMISSION_LABELS) {
-      if (permissions & value) {
-        labels.push(label);
-      }
-    }
-    return labels;
-  };
-
   const openEditDialog = (user: User) => {
     setEditTarget(user);
     setEditPermissions(user.permissions);
     setEditOpen(true);
   };
 
-  const handleTogglePermission = (value: number) => {
-    setEditPermissions((prev) => prev ^ value);
+  const handleTogglePermission = (permission: Permission) => {
+    setEditPermissions((prev) => toggle(prev, permission));
   };
 
   const handleEdit = async () => {
     if (!editTarget) return;
     setSubmitting(true);
     try {
-      await api(`/api/admin/users/${editTarget.id}`, {
+      await api(`/api/users/${editTarget.id}`, {
         method: 'PATCH',
-        json: { permissions: editPermissions },
+        json: { permissions: editPermissions } satisfies UserPatch,
       });
       setEditOpen(false);
       setEditTarget(null);
@@ -155,7 +148,7 @@ export default function UsersManager() {
     if (!deleteTarget) return;
     setSubmitting(true);
     try {
-      await api(`/api/admin/users/${deleteTarget.id}`, { method: 'DELETE' });
+      await api(`/api/users/${deleteTarget.id}`, { method: 'DELETE' });
       setDeleteOpen(false);
       setDeleteTarget(null);
       void fetchUsers(keyword, page);
@@ -171,20 +164,20 @@ export default function UsersManager() {
     if (!createEmail.trim() || !createPassword) return;
     setSubmitting(true);
     try {
-      await api('/api/admin/users', {
+      await api('/api/users', {
         method: 'POST',
         json: {
           email: createEmail.trim(),
           displayName: createDisplayName.trim() || createEmail.trim(),
           password: createPassword,
           permissions: createPermissions,
-        },
+        } satisfies UserInput,
       });
       setCreateOpen(false);
       setCreateEmail('');
       setCreateDisplayName('');
       setCreatePassword('');
-      setCreatePermissions(1);
+      setCreatePermissions(['view']);
       void fetchUsers(keyword, page);
     } catch (err) {
       alert(err instanceof Error ? err.message : '创建失败');
@@ -198,9 +191,9 @@ export default function UsersManager() {
     if (!resetTarget || !resetPassword) return;
     setSubmitting(true);
     try {
-      await api(`/api/admin/users/${resetTarget.id}`, {
+      await api(`/api/users/${resetTarget.id}`, {
         method: 'PATCH',
-        json: { password: resetPassword },
+        json: { password: resetPassword } satisfies UserPatch,
       });
       setResetOpen(false);
       setResetTarget(null);
@@ -218,9 +211,9 @@ export default function UsersManager() {
     if (!editNameTarget || !editDisplayName.trim()) return;
     setSubmitting(true);
     try {
-      await api(`/api/admin/users/${editNameTarget.id}`, {
+      await api(`/api/users/${editNameTarget.id}`, {
         method: 'PATCH',
-        json: { displayName: editDisplayName.trim() },
+        json: { displayName: editDisplayName.trim() } satisfies UserPatch,
       });
       setEditNameOpen(false);
       setEditNameTarget(null);
@@ -338,16 +331,14 @@ export default function UsersManager() {
                             mt: 0.5,
                           }}
                         >
-                          {getPermissionLabels(user.permissions).map(
-                            (label) => (
-                              <Chip
-                                key={label}
-                                label={label}
-                                size="small"
-                                variant="outlined"
-                              />
-                            ),
-                          )}
+                          {user.permissions.map((permission) => (
+                            <Chip
+                              key={permission}
+                              label={PERMISSIONS[permission]}
+                              size="small"
+                              variant="outlined"
+                            />
+                          ))}
                         </Stack>
                         <Typography
                           variant="caption"
@@ -450,13 +441,17 @@ export default function UsersManager() {
               flexWrap: 'wrap',
             }}
           >
-            {PERMISSION_LABELS.map(({ value, label }) => (
+            {ALL_PERMISSIONS.map((permission) => (
               <Chip
-                key={value}
-                label={label}
-                color={editPermissions & value ? 'primary' : 'default'}
-                variant={editPermissions & value ? 'filled' : 'outlined'}
-                onClick={() => handleTogglePermission(value)}
+                key={permission}
+                label={PERMISSIONS[permission]}
+                color={
+                  editPermissions.includes(permission) ? 'primary' : 'default'
+                }
+                variant={
+                  editPermissions.includes(permission) ? 'filled' : 'outlined'
+                }
+                onClick={() => handleTogglePermission(permission)}
               />
             ))}
           </Stack>
@@ -552,13 +547,23 @@ export default function UsersManager() {
                   flexWrap: 'wrap',
                 }}
               >
-                {PERMISSION_LABELS.map(({ value, label }) => (
+                {ALL_PERMISSIONS.map((permission) => (
                   <Chip
-                    key={value}
-                    label={label}
-                    color={createPermissions & value ? 'primary' : 'default'}
-                    variant={createPermissions & value ? 'filled' : 'outlined'}
-                    onClick={() => setCreatePermissions((prev) => prev ^ value)}
+                    key={permission}
+                    label={PERMISSIONS[permission]}
+                    color={
+                      createPermissions.includes(permission)
+                        ? 'primary'
+                        : 'default'
+                    }
+                    variant={
+                      createPermissions.includes(permission)
+                        ? 'filled'
+                        : 'outlined'
+                    }
+                    onClick={() =>
+                      setCreatePermissions((prev) => toggle(prev, permission))
+                    }
                   />
                 ))}
               </Stack>

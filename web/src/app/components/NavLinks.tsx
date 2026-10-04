@@ -15,41 +15,38 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
-import { PERMISSIONS, hasPermission } from '@/lib/permissions';
+import { hasPermission, type Permission, type User } from '@koiro/shared';
 import { useAuth } from '@/auth/AuthContext';
 
 type NavLinksProps = {
-  permissions?: number;
-  user?: {
-    email?: string | null;
-    displayName?: string | null;
-    permissions?: number;
-  } | null;
+  user: User | null;
 };
 
 type NavItem = {
   label: string;
   href: string;
-  permission?: number;
+  permission?: Permission;
 };
 
 const navItems: NavItem[] = [
-  { label: '搜索', href: '/search', permission: PERMISSIONS.VIEW },
-  { label: 'staff', href: '/staff', permission: PERMISSIONS.VIEW },
-  { label: '语种', href: '/languages', permission: PERMISSIONS.VIEW },
-  { label: '歌曲', href: '/songs', permission: PERMISSIONS.VIEW },
-  { label: '歌单', href: '/playlists', permission: PERMISSIONS.VIEW },
-  { label: '上传', href: '/upload', permission: PERMISSIONS.UPLOAD },
-  { label: '管理', href: '/admin', permission: PERMISSIONS.ADMIN },
+  { label: '搜索', href: '/search', permission: 'view' },
+  { label: 'staff', href: '/staff', permission: 'view' },
+  { label: '语种', href: '/languages', permission: 'view' },
+  { label: '歌曲', href: '/songs', permission: 'view' },
+  { label: '歌单', href: '/playlists', permission: 'view' },
+  { label: '上传', href: '/upload', permission: 'upload' },
+  { label: '管理', href: '/admin', permission: 'admin' },
 ];
 
-export default function NavLinks({ permissions = 0, user }: NavLinksProps) {
+export default function NavLinks({ user }: NavLinksProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { logout } = useAuth();
   const navigate = useNavigate();
 
   const visibleItems = navItems.filter(
-    (item) => !item.permission || hasPermission(permissions, item.permission),
+    (item) =>
+      !item.permission ||
+      (user !== null && hasPermission(user, item.permission)),
   );
 
   const toggleDrawer = (open: boolean) => () => {
@@ -133,7 +130,7 @@ export default function NavLinks({ permissions = 0, user }: NavLinksProps) {
                       color: 'text.secondary',
                     }}
                   >
-                    已登录 - {user.displayName ?? user.email ?? '(未设置昵称)'}
+                    已登录 - {user.displayName}
                   </Typography>
                 </Typography>
                 <Typography

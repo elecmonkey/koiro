@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { Box, CircularProgress } from '@mui/material';
-import { hasPermission } from '@/lib/permissions';
+import { hasPermission, type Permission } from '@koiro/shared';
 import { useAuth } from './AuthContext';
 
 type RequireAuthProps = {
   children: ReactNode;
   /** 所需权限；不填则只要求登录 */
-  permission?: number;
+  permission?: Permission;
   /** 全局开启匿名访问时，该页面是否允许未登录浏览 */
   allowAnonymous?: boolean;
 };
@@ -41,8 +41,8 @@ export default function RequireAuth({
   }
 
   if (
-    user.permissions === 0 ||
-    (permission && !hasPermission(user.permissions, permission))
+    user.permissions.length === 0 ||
+    (permission && !hasPermission(user, permission))
   ) {
     return <Navigate to="/denied" replace />;
   }
