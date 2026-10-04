@@ -4,7 +4,7 @@ import {
   lineErrors,
   toLineDrafts,
   toLyricLines,
-} from '../src/app/editor/lines';
+} from '../src/components/lyrics-editor/lines';
 
 const lines: LyricLine[] = [
   {
