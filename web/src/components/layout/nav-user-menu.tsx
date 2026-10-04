@@ -1,6 +1,6 @@
 import type { User } from '@koiro/shared';
 import { Link, useNavigate } from 'react-router';
-import { useAuth } from '@/stores/session';
+import { useLogout } from '@/query';
 import { Box, Button, Stack, Typography } from '@mui/material';
 
 type NavUserMenuProps = {
@@ -8,7 +8,7 @@ type NavUserMenuProps = {
 };
 
 export default function NavUserMenu({ user }: NavUserMenuProps) {
-  const { logout } = useAuth();
+  const logout = useLogout();
   const navigate = useNavigate();
 
   if (!user) {
@@ -66,7 +66,7 @@ export default function NavUserMenu({ user }: NavUserMenuProps) {
         variant="contained"
         size="small"
         onClick={async () => {
-          await logout();
+          await logout.mutateAsync();
           void navigate('/login');
         }}
       >

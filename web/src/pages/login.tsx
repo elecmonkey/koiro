@@ -1,13 +1,13 @@
 import { Navigate, useSearchParams } from 'react-router';
-import { useAuth } from '@/stores/session';
+import { useSession } from '@/query';
 import { pageTitle } from '@/utils/page-title';
 import LoginForm from '@/components/user/login-form';
 
 export default function Page() {
-  const { user, loading } = useAuth();
+  const user = useSession().data?.user ?? null;
   const [searchParams] = useSearchParams();
   // 已登录（包括刚登录成功）时跳回来源页面，没有则回首页
-  if (!loading && user) {
+  if (user) {
     return <Navigate to={safeNext(searchParams.get('next'))} replace />;
   }
   return (

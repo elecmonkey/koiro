@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { Box, CircularProgress } from '@mui/material';
 import { hasPermission, type Permission } from '@koiro/shared';
-import { useAuth } from '@/stores/session';
+import { useSession } from '@/query';
 
 type RequireAuthProps = {
   children: ReactNode;
@@ -21,10 +21,11 @@ export default function RequireAuth({
   permission,
   allowAnonymous = false,
 }: RequireAuthProps) {
-  const { user, allowAnonymous: globalAnonymous, loading } = useAuth();
+  const session = useSession();
   const location = useLocation();
 
-  if (loading) {
+  // 取会话失败时按未登录处理
+  if (session.isPending) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 12 }}>
         <CircularProgress size={28} />
@@ -32,8 +33,9 @@ export default function RequireAuth({
     );
   }
 
+  const user = session.data?.user ?? null;
   if (!user) {
-    if (globalAnonymous && allowAnonymous) {
+    if (session.data?.allowAnonymous && allowAnonymous) {
       return children;
     }
     const next = encodeURIComponent(location.pathname + location.search);

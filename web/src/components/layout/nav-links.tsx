@@ -16,7 +16,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import { hasPermission, type Permission, type User } from '@koiro/shared';
-import { useAuth } from '@/stores/session';
+import { useLogout } from '@/query';
 
 type NavLinksProps = {
   user: User | null;
@@ -40,7 +40,7 @@ const navItems: NavItem[] = [
 
 export default function NavLinks({ user }: NavLinksProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { logout } = useAuth();
+  const logout = useLogout();
   const navigate = useNavigate();
 
   const visibleItems = navItems.filter(
@@ -159,7 +159,7 @@ export default function NavLinks({ user }: NavLinksProps) {
                 fullWidth
                 onClick={async () => {
                   setDrawerOpen(false);
-                  await logout();
+                  await logout.mutateAsync();
                   void navigate('/login');
                 }}
               >

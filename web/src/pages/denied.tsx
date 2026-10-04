@@ -8,11 +8,11 @@ import {
   Typography,
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router';
-import { useAuth } from '@/stores/session';
+import { useLogout } from '@/query';
 import { pageTitle } from '@/utils/page-title';
 
 export default function DeniedPage() {
-  const { logout } = useAuth();
+  const logout = useLogout();
   const navigate = useNavigate();
 
   return (
@@ -38,7 +38,7 @@ export default function DeniedPage() {
                 <Button
                   variant="outlined"
                   onClick={async () => {
-                    await logout();
+                    await logout.mutateAsync();
                     void navigate('/login');
                   }}
                 >

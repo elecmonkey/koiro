@@ -5,7 +5,6 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router';
 import { createQueryClient } from './query';
 import { router } from './router';
-import { AuthProvider } from '@/stores/session';
 import { theme } from './theme';
 import './fonts';
 import './globals.css';
@@ -19,9 +18,7 @@ if (rootEl) {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <AuthProvider>
-            <RouterProvider router={router} />
-          </AuthProvider>
+          <RouterProvider router={router} />
         </ThemeProvider>
       </QueryClientProvider>
     </StrictMode>,

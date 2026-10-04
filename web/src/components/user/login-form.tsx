@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useAuth } from '@/stores/session';
-import { ApiError } from '@/lib/api';
+import { ApiError } from '@/http';
+import { useLogin } from '@/query';
 import {
   Box,
   Button,
@@ -14,29 +14,20 @@ import {
 } from '@mui/material';
 
 export default function LoginForm() {
-  const { login } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const login = useLogin();
   const [ttlDays, setTtlDays] = useState('7');
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
-    setLoading(true);
-
     const formData = new FormData(event.currentTarget);
-    const email = formValue(formData, 'email').trim();
-    const password = formValue(formData, 'password');
-
-    try {
-      await login(email, password, Number(ttlDays));
-    } catch (err) {
-      setLoading(false);
-      setError(err instanceof ApiError ? err.message : '登录失败，请稍后重试');
-      return;
-    }
-
-    // 登录成功后由登录页统一跳转（见 page.tsx）
+    // 登录成功后会话随之更新，由登录页统一跳转；失败的说明见下方 login.error
+    await login
+      .mutateAsync({
+        email: formValue(formData, 'email').trim(),
+        password: formValue(formData, 'password'),
+        ttlDays: Number(ttlDays),
+      })
+      .catch(() => undefined);
   };
 
   return (
@@ -75,18 +66,20 @@ export default function LoginForm() {
                   <MenuItem value="180">180 天</MenuItem>
                 </TextField>
               </Stack>
-              {error ? (
+              {login.error ? (
                 <Typography variant="body2" color="error">
-                  {error}
+                  {login.error instanceof ApiError
+                    ? login.error.message
+                    : '登录失败，请稍后重试'}
                 </Typography>
               ) : null}
               <Button
                 type="submit"
                 variant="contained"
                 size="large"
-                disabled={loading}
+                disabled={login.isPending}
               >
-                {loading ? '登录中...' : '登录'}
+                {login.isPending ? '登录中...' : '登录'}
               </Button>
             </Stack>
           </CardContent>

@@ -1,11 +1,11 @@
 import { AppBar, Container, Stack, Toolbar } from '@mui/material';
-import { useAuth } from '@/stores/session';
+import { useCurrentUser } from '@/query';
 import NavLinks from './nav-links';
 import NavUserMenu from './nav-user-menu';
 import HomeLink from './home-link';
 
 export default function Navbar() {
-  const { user } = useAuth();
+  const user = useCurrentUser();
 
   return (
     <AppBar

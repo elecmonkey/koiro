@@ -16,7 +16,7 @@ import {
   Typography,
 } from '@mui/material';
 import CoverArt from '@/components/ui/cover-art';
-import { useAuth } from '@/stores/session';
+import { useCurrentUser } from '@/query';
 import { api, ApiError, withQuery } from '@/lib/api';
 import { pageTitle } from '@/utils/page-title';
 import { AudioControls, LyricsCard } from '@/components/song/song-detail-parts';
@@ -41,7 +41,7 @@ async function recentSongs(): Promise<SongSummary[]> {
 
 export default function SongDetailPage() {
   const { id = '' } = useParams();
-  const { user } = useAuth();
+  const user = useCurrentUser();
   const [state, setState] = useState<State>({ status: 'loading' });
 
   useEffect(() => {

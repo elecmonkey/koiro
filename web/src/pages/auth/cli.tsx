@@ -10,7 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Link, useSearchParams } from 'react-router';
-import { useAuth } from '@/stores/session';
+import { useCurrentUser } from '@/query';
 import type { CliAuthorization, CliAuthorizeRequest } from '@koiro/shared';
 import { api } from '@/lib/api';
 import { pageTitle } from '@/utils/page-title';
@@ -68,7 +68,7 @@ function validCallback(callbackUrl: string, request: CliAuthorizeRequest) {
 
 export default function CliLoginPage() {
   const [params] = useSearchParams();
-  const { user } = useAuth();
+  const user = useCurrentUser();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const request = parseRequest(params);
