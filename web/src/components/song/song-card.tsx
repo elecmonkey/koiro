@@ -12,17 +12,14 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import { Link } from 'react-router';
 import type { SongSummary } from '@koiro/shared';
-import { trackOf, usePlayer } from '@/components/player';
+import { trackOf, usePlayer } from '@/stores/player';
 
 type SongCardProps = {
   song: SongSummary;
   showPlayButton?: boolean;
 };
 
-export default function SongCard({
-  song,
-  showPlayButton = true,
-}: SongCardProps) {
+export function SongCard({ song, showPlayButton = true }: SongCardProps) {
   const {
     play,
     pause,

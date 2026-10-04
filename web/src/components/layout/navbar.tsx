@@ -1,10 +1,10 @@
 import { AppBar, Container, Stack, Toolbar } from '@mui/material';
 import { useCurrentUser } from '@/query';
-import NavLinks from './nav-links';
-import NavUserMenu from './nav-user-menu';
-import HomeLink from './home-link';
+import { NavLinks } from './nav-links';
+import { NavUserMenu } from './nav-user-menu';
+import { HomeLink } from './home-link';
 
-export default function Navbar() {
+export function Navbar() {
   const user = useCurrentUser();
 
   return (

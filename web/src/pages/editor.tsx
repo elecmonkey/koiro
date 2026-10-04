@@ -1,5 +1,5 @@
 import { pageTitle } from '@/utils/page-title';
-import EditorShell from '@/components/lyrics-editor/editor-shell';
+import { EditorShell } from '@/components/lyrics-editor/editor-shell';
 
 export default function Page() {
   return (

@@ -7,7 +7,7 @@ type CoverArtProps = {
   alt?: string;
 };
 
-export default function CoverArt({
+export function CoverArt({
   url,
   height = 280,
   width,

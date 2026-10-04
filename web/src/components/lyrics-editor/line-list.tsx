@@ -18,7 +18,7 @@ type LineListProps = {
   onMove: (id: string, direction: 'up' | 'down') => void;
 };
 
-export default function LineList({
+export function LineList({
   lines,
   selectedId,
   onSelect,

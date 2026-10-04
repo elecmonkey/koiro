@@ -59,7 +59,7 @@ function HighlightText({ parts }: { parts: readonly TextSegment[] }) {
   );
 }
 
-export default function SearchResultCard({ hit }: SearchResultCardProps) {
+export function SearchResultCard({ hit }: SearchResultCardProps) {
   const { song } = hit;
 
   return (

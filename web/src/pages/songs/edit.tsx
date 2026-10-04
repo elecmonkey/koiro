@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { Box, CircularProgress, Container, Typography } from '@mui/material';
 import type { SongDetail, SongInput } from '@koiro/shared';
-import SongForm from '@/components/song-form/song-form';
+import { SongForm } from '@/components/song-form/song-form';
 import type { SongFormData } from '@/components/song-form/form-types';
 import { toLineDrafts } from '@/components/lyrics-editor/lines';
 import { api, ApiError } from '@/lib/api';

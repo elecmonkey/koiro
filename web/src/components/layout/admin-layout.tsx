@@ -12,7 +12,7 @@ interface AdminLayoutProps {
   activeTab: Tab;
 }
 
-export default function AdminLayout({ children, activeTab }: AdminLayoutProps) {
+export function AdminLayout({ children, activeTab }: AdminLayoutProps) {
   const tabs: { key: Tab; label: string; href: string; icon: ReactNode }[] = [
     {
       key: 'playlists',

@@ -2,7 +2,7 @@ import type { ComponentType, ReactNode } from 'react';
 import { createBrowserRouter } from 'react-router';
 import { Box, CircularProgress } from '@mui/material';
 import RequireAuth from './require-auth';
-import Layout from '@/components/layout/app-layout';
+import { Layout } from '@/components/layout/app-layout';
 // 最常见的落地页随主包加载，省掉一次串行请求；其余页面按路由拆分
 import HomePage from '@/pages/home';
 import LoginPage from '@/pages/login';

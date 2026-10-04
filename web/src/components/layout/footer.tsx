@@ -1,7 +1,7 @@
 import { Box, Container, Link, Typography } from '@mui/material';
 import GitHubIcon from '@mui/icons-material/GitHub';
 
-export default function Footer() {
+export function Footer() {
   return (
     <Box
       component="footer"

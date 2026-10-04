@@ -16,7 +16,7 @@ function installCommand() {
   return `npx -y ${origin}/downloads/koiro-installer.tgz --site ${origin}`;
 }
 
-export default function AgentSkillCard() {
+export function AgentSkillCard() {
   const command = installCommand();
   const [copied, setCopied] = useState<boolean | null>(null);
 

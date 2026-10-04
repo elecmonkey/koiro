@@ -33,7 +33,7 @@ async function fetchPage(q: string, page: number): Promise<Page<SongSummary>> {
   return { ...hits, items: hits.items.map((hit) => hit.song) };
 }
 
-export default function SongsManager() {
+export function SongsManager() {
   const [songs, setSongs] = useState<SongSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

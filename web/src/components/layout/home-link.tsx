@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router';
 import { Box, Stack, Typography } from '@mui/material';
 
-export default function HomeLink() {
+export function HomeLink() {
   const { pathname } = useLocation();
   const isHome = pathname === '/';
 

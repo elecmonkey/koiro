@@ -1,7 +1,7 @@
 import { Button } from '@mui/material';
 import { PlayArrow, Pause } from '@mui/icons-material';
 import type { Lyrics } from '@koiro/shared';
-import { usePlayer, type Track } from '@/components/player';
+import { usePlayer, type Track } from '@/stores/player';
 
 interface PlayButtonProps {
   track: Track;

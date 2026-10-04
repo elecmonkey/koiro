@@ -1,9 +1,9 @@
 import type { Language } from '@koiro/shared';
 import { Box, Card, CardContent, Stack, Typography } from '@mui/material';
 import { useLyricsEditor, type LineDraft } from './use-lyrics-editor';
-import LineList from './line-list';
-import LineEditor from './line-editor';
-import PreviewPanel from './preview-panel';
+import { LineList } from './line-list';
+import { LineEditor } from './line-editor';
+import { PreviewPanel } from './preview-panel';
 import { lineErrors } from './lines';
 
 type EditorShellProps = {
@@ -13,7 +13,7 @@ type EditorShellProps = {
   languages?: Language[];
 };
 
-export default function EditorShell({
+export function EditorShell({
   initialLines,
   onLinesChange,
   languages = [],

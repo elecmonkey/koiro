@@ -4,7 +4,7 @@ import { Box, CircularProgress, Container, Typography } from '@mui/material';
 import type { Playlist, SongOption, SongSummary } from '@koiro/shared';
 import { api, ApiError, fetchAllPages } from '@/lib/api';
 import { pageTitle } from '@/utils/page-title';
-import PlaylistSongsClient from '@/components/playlist/playlist-songs-manager';
+import { PlaylistSongsClient } from '@/components/playlist/playlist-songs-manager';
 
 export default function PlaylistManagePage() {
   const { id = '' } = useParams();

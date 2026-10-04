@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 
-export default function LoginForm() {
+export function LoginForm() {
   const login = useLogin();
   const [ttlDays, setTtlDays] = useState('7');
 

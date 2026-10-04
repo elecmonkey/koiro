@@ -1,6 +1,6 @@
 import { pageTitle } from '@/utils/page-title';
-import AdminLayout from '@/components/layout/admin-layout';
-import UsersManager from '@/components/user/user-manager';
+import { AdminLayout } from '@/components/layout/admin-layout';
+import { UsersManager } from '@/components/user/user-manager';
 
 export default function Page() {
   return (

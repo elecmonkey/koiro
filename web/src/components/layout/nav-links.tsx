@@ -38,7 +38,7 @@ const navItems: NavItem[] = [
   { label: '管理', href: '/admin/playlists', permission: 'admin' },
 ];
 
-export default function NavLinks({ user }: NavLinksProps) {
+export function NavLinks({ user }: NavLinksProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const logout = useLogout();
   const navigate = useNavigate();

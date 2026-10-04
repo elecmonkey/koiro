@@ -7,7 +7,7 @@ type NavUserMenuProps = {
   user: User | null;
 };
 
-export default function NavUserMenu({ user }: NavUserMenuProps) {
+export function NavUserMenu({ user }: NavUserMenuProps) {
   const logout = useLogout();
   const navigate = useNavigate();
 

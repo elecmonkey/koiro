@@ -18,7 +18,7 @@ type VersionRowProps = {
   lyrics: Pick<LyricsItem, 'id' | 'name'>[];
 };
 
-export default function VersionRow({
+export function VersionRow({
   item,
   onChange,
   onRemove,

@@ -17,7 +17,7 @@ type StaffRowProps = {
   onRemove: () => void;
 };
 
-export default function StaffRow({ item, onChange, onRemove }: StaffRowProps) {
+export function StaffRow({ item, onChange, onRemove }: StaffRowProps) {
   const names = item.names;
 
   // 是否处于多人编辑模式

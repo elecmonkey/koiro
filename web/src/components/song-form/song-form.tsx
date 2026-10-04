@@ -25,11 +25,11 @@ import {
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import { useNavigate } from 'react-router';
-import EditorShell from '@/components/lyrics-editor/editor-shell';
+import { EditorShell } from '@/components/lyrics-editor/editor-shell';
 import { clearDraft, loadDraft, saveDraft } from '@/stores/upload-draft';
-import VersionRow from './version-row';
-import StaffRow from './staff-row';
-import ImageUploadField from '@/components/upload/image-upload-field';
+import { VersionRow } from './version-row';
+import { StaffRow } from './staff-row';
+import { ImageUploadField } from '@/components/upload/image-upload-field';
 import type { LineDraft } from '@/components/lyrics-editor/use-lyrics-editor';
 import { toLineDrafts, toLyricLines } from '@/components/lyrics-editor/lines';
 import type {
@@ -88,7 +88,7 @@ type SongFormProps = {
   mode: 'create' | 'edit';
 };
 
-export default function SongForm({ songId, initialData, mode }: SongFormProps) {
+export function SongForm({ songId, initialData, mode }: SongFormProps) {
   const navigate = useNavigate();
   const emptyFormData = useMemo(() => buildEmptyFormData(), []);
 

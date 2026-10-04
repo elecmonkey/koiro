@@ -1,5 +1,5 @@
 import { pageTitle } from '@/utils/page-title';
-import SongForm from '@/components/song-form/song-form';
+import { SongForm } from '@/components/song-form/song-form';
 
 export default function Page() {
   return (

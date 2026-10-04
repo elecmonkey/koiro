@@ -28,11 +28,15 @@ import { queryKeys } from './keys';
 const MAX_PAGE_SIZE = 100;
 
 /** 一页歌曲；翻页时保留上一页直到新数据到达 */
-export function useSongs(query: PageQuery & SongFilter) {
+export function useSongs(
+  query: PageQuery & SongFilter,
+  { enabled = true }: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: queryKeys.songList(query),
     queryFn: ({ signal }) => fetchSongs(query, { signal }),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 

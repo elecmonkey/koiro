@@ -7,7 +7,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import AgentSkillCard from '@/components/profile/agent-skill-card';
+import { AgentSkillCard } from '@/components/profile/agent-skill-card';
 import { DisplayNameField } from '@/components/profile/display-name-field';
 import { PasswordCard } from '@/components/profile/password-card';
 import { PageState } from '@/components/ui/page-state';

@@ -31,7 +31,7 @@ type Props = {
   availableSongs: SongOption[];
 };
 
-export default function PlaylistSongsClient({
+export function PlaylistSongsClient({
   playlist,
   initialSongs,
   availableSongs,

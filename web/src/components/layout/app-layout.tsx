@@ -1,10 +1,11 @@
 import { Outlet, ScrollRestoration } from 'react-router';
-import { PlayerProvider, FloatingPlayer } from '@/components/player';
-import Navbar from './navbar';
-import Footer from './footer';
+import { PlayerProvider } from '@/stores/player';
+import { FloatingPlayer } from '@/components/player';
+import { Navbar } from './navbar';
+import { Footer } from './footer';
 
 /** 所有页面共享的外壳：导航栏、页脚与全局播放器 */
-export default function Layout() {
+export function Layout() {
   return (
     <PlayerProvider>
       <Navbar />

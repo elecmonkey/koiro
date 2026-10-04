@@ -6,7 +6,7 @@ type LineEditorProps = {
   onChange: (id: string, updates: Partial<LineDraft>) => void;
 };
 
-export default function LineEditor({ line, onChange }: LineEditorProps) {
+export function LineEditor({ line, onChange }: LineEditorProps) {
   if (!line) {
     return <Typography variant="body2">请选择一行开始编辑。</Typography>;
   }

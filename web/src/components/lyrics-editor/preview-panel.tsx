@@ -8,7 +8,7 @@ type PreviewPanelProps = {
 };
 
 /** 按提交后的样子预览歌词 */
-export default function PreviewPanel({ lines, languages }: PreviewPanelProps) {
+export function PreviewPanel({ lines, languages }: PreviewPanelProps) {
   const fontFamily = lyricsFontFamily(languages);
   return (
     <Stack spacing={2}>

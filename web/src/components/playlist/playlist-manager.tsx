@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { Link } from 'react-router';
-import ImageUploadField from '@/components/upload/image-upload-field';
+import { ImageUploadField } from '@/components/upload/image-upload-field';
 import type {
   Page,
   Playlist,
@@ -36,7 +36,7 @@ type PlaylistEdit = {
   coverObjectId: string | null;
 };
 
-export default function PlaylistsManager() {
+export function PlaylistsManager() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

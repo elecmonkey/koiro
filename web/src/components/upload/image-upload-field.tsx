@@ -24,7 +24,7 @@ type ImageUploadFieldProps = {
   onFilenameChange?: (value: string | null) => void;
 };
 
-export default function ImageUploadField({
+export function ImageUploadField({
   label = '封面',
   helperText = '建议尺寸：1:1 或 4:3，最大 30MB，支持 PNG/JPG/WebP。',
   objectId,

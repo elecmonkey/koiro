@@ -1,7 +1,7 @@
 import { Navigate, useSearchParams } from 'react-router';
 import { useSession } from '@/query';
 import { pageTitle } from '@/utils/page-title';
-import LoginForm from '@/components/user/login-form';
+import { LoginForm } from '@/components/user/login-form';
 
 export default function Page() {
   const user = useSession().data?.user ?? null;
