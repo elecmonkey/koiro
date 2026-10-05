@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { Box, Container } from '@mui/material';
+import { hasPermission } from '@koiro/shared';
+import { Box, Button, Container } from '@mui/material';
+import { Link } from 'react-router';
 import { SongList } from '@/components/song/song-list';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageState } from '@/components/ui/page-state';
-import { useSongs } from '@/query';
+import { useCurrentUser, useSongs } from '@/query';
 import { pageTitle } from '@/utils/page-title';
 
 export default function SongsPage() {
   const [page, setPage] = useState(1);
+  const user = useCurrentUser();
   const { data, isPending, error } = useSongs({ page });
 
   return (
@@ -17,6 +20,19 @@ export default function SongsPage() {
       <PageHeader
         title="全部歌曲"
         subtitle={data && `共 ${String(data.total)} 首歌曲`}
+        action={
+          user !== null &&
+          hasPermission(user, 'upload') && (
+            <Button
+              component={Link}
+              to="/upload"
+              variant="contained"
+              size="small"
+            >
+              上传
+            </Button>
+          )
+        }
       />
       <Container sx={{ pt: 4 }}>
         <PageState

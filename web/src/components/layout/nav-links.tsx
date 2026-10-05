@@ -35,7 +35,6 @@ const navItems: NavItem[] = [
   { label: '语种', href: '/languages', permission: 'view' },
   { label: '歌曲', href: '/songs', permission: 'view' },
   { label: '歌单', href: '/playlists', permission: 'view' },
-  { label: '上传', href: '/upload', permission: 'upload' },
 ];
 
 export function NavLinks({ user }: NavLinksProps) {

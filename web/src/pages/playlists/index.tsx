@@ -1,20 +1,38 @@
 import { useState } from 'react';
-import { Box, Container } from '@mui/material';
+import { hasPermission } from '@koiro/shared';
+import { Box, Button, Container } from '@mui/material';
+import { CreatePlaylistDialog } from '@/components/playlist/create-playlist-dialog';
 import { PlaylistCard } from '@/components/playlist/playlist-card';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageState } from '@/components/ui/page-state';
-import { usePlaylists } from '@/query';
+import { useCurrentUser, usePlaylists } from '@/query';
 import { pageTitle } from '@/utils/page-title';
 
 export default function PlaylistsPage() {
   const [page, setPage] = useState(1);
+  const [createOpen, setCreateOpen] = useState(false);
+  const user = useCurrentUser();
   const { data, isPending, error } = usePlaylists({ page });
 
   return (
     <Box component="main" sx={{ pb: 8 }}>
       <title>{pageTitle('播放列表')}</title>
-      <PageHeader title="播放列表" />
+      <PageHeader
+        title="播放列表"
+        action={
+          user !== null &&
+          hasPermission(user, 'upload') && (
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => setCreateOpen(true)}
+            >
+              新建
+            </Button>
+          )
+        }
+      />
       <Container sx={{ pt: 4 }}>
         <PageState
           loading={isPending}
@@ -48,6 +66,9 @@ export default function PlaylistsPage() {
           />
         </PageState>
       </Container>
+      {createOpen && (
+        <CreatePlaylistDialog onClose={() => setCreateOpen(false)} />
+      )}
     </Box>
   );
 }
