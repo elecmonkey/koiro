@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"n!\" FROM songs s\n           WHERE ($1::text IS NULL OR EXISTS (\n                     SELECT 1 FROM jsonb_array_elements(s.staff) x, jsonb_array_elements_text(x->'names') n\n                     WHERE n = $1))\n             AND ($2::text IS NULL OR EXISTS (\n                     SELECT 1 FROM lyrics l WHERE l.song_id = s.id AND $2 = ANY(l.languages)))\n             AND ($3::uuid IS NULL OR EXISTS (\n                     SELECT 1 FROM song_playlists sp WHERE sp.song_id = s.id AND sp.playlist_id = $3))\n             AND ($4::text IS NULL OR s.title ILIKE $4)\n             AND ($5::uuid IS NULL OR s.created_by = $5)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "b33eab76b07ccc197273e9e516d3c205366507ac91b9676e81ced31eb66408d5"
+}

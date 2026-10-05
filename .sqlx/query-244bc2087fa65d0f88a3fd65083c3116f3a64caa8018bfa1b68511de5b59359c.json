@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT s.id AS \"id: SongId\", count(*) OVER () AS \"total!\"\n           FROM songs s\n           LEFT JOIN song_playlists sp ON sp.song_id = s.id AND sp.playlist_id = $3\n           WHERE ($1::text IS NULL OR EXISTS (\n                     SELECT 1 FROM jsonb_array_elements(s.staff) x, jsonb_array_elements_text(x->'names') n\n                     WHERE n = $1))\n             AND ($2::text IS NULL OR EXISTS (\n                     SELECT 1 FROM lyrics l WHERE l.song_id = s.id AND $2 = ANY(l.languages)))\n             AND ($3::uuid IS NULL OR sp.song_id IS NOT NULL)\n             AND ($4::text IS NULL OR s.title ILIKE $4)\n             AND ($5::uuid IS NULL OR s.created_by = $5)\n           ORDER BY sp.position, s.updated_at DESC, s.id\n           LIMIT $6 OFFSET $7",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: SongId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "songs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "244bc2087fa65d0f88a3fd65083c3116f3a64caa8018bfa1b68511de5b59359c"
+}

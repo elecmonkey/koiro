@@ -11,10 +11,10 @@ use chrono::{DateTime, Utc};
 use super::extract::{Json, Path, Query};
 use crate::{
     api::{
-        AddedSongs, Page, PageQuery, Playlist, PlaylistFilter, PlaylistId, PlaylistInput, PlaylistOption,
-        PlaylistPatch, PlaylistSongs, SongId,
+        AddedSongs, Page, PageQuery, Permission, Playlist, PlaylistFilter, PlaylistId, PlaylistInput,
+        PlaylistOption, PlaylistPatch, PlaylistSongs, SongId, UserId,
     },
-    auth::{Admin, Auth, CanView},
+    auth::{Auth, CanView, Upload, require_owner_or_admin},
     db::like_pattern,
     error::{AppError, AppResult},
     media::{image_url, is_image_key},
@@ -27,6 +27,7 @@ const RANDOM_COUNT: i64 = 4;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/playlists", get(list).post(create))
+        .route("/playlists/mine", get(list_mine))
         .route("/playlists/random", get(random))
         .route("/playlists/options", get(options))
         .route("/playlists/{id}", get(detail).patch(update).delete(remove))
@@ -35,6 +36,17 @@ pub fn router() -> Router<AppState> {
             axum::routing::post(add_songs).put(reorder_songs),
         )
         .route("/playlists/{id}/songs/{song_id}", delete(remove_song))
+}
+
+/// 歌单的创建者（`None` 为无主）；歌单不存在时 404
+async fn owner(state: &AppState, id: PlaylistId) -> AppResult<Option<UserId>> {
+    sqlx::query_scalar!(
+        r#"SELECT created_by AS "created_by: UserId" FROM playlists WHERE id = $1"#,
+        id as PlaylistId
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or(AppError::NotFound)
 }
 
 struct PlaylistRow {
@@ -80,10 +92,32 @@ async fn list(
     Query(page): Query<PageQuery>,
     Query(filter): Query<PlaylistFilter>,
 ) -> AppResult<Json<Page<Playlist>>> {
+    list_filtered(&state, &page, &filter, None).await
+}
+
+/// 「我的」：非 ADMIN 只看自己创建的歌单，ADMIN 看全部
+async fn list_mine(
+    State(state): State<AppState>,
+    auth: Auth<Upload>,
+    Query(page): Query<PageQuery>,
+    Query(filter): Query<PlaylistFilter>,
+) -> AppResult<Json<Page<Playlist>>> {
+    let owner = (!auth.user.permissions.contains(Permission::Admin)).then_some(auth.user.id);
+    list_filtered(&state, &page, &filter, owner).await
+}
+
+async fn list_filtered(
+    state: &AppState,
+    page: &PageQuery,
+    filter: &PlaylistFilter,
+    owner: Option<UserId>,
+) -> AppResult<Json<Page<Playlist>>> {
     let pattern = like_pattern(filter.q.as_deref().unwrap_or_default());
     let total = sqlx::query_scalar!(
-        r#"SELECT count(*) AS "n!" FROM playlists WHERE name ILIKE $1 OR description ILIKE $1"#,
-        pattern
+        r#"SELECT count(*) AS "n!" FROM playlists
+           WHERE (name ILIKE $1 OR description ILIKE $1) AND ($2::uuid IS NULL OR created_by = $2)"#,
+        pattern,
+        owner as Option<UserId>,
     )
     .fetch_one(&state.pool)
     .await?;
@@ -91,16 +125,18 @@ async fn list(
         PlaylistRow,
         r#"SELECT p.id AS "id: PlaylistId", p.name, p.description, p.cover_object_id, p.updated_at,
                   (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!"
-           FROM playlists p WHERE p.name ILIKE $1 OR p.description ILIKE $1
+           FROM playlists p
+           WHERE (p.name ILIKE $1 OR p.description ILIKE $1) AND ($4::uuid IS NULL OR p.created_by = $4)
            ORDER BY p.updated_at DESC, p.id LIMIT $2 OFFSET $3"#,
         pattern,
         page.limit(),
-        page.offset()
+        page.offset(),
+        owner as Option<UserId>,
     )
     .fetch_all(&state.pool)
     .await?;
-    let items = rows.into_iter().map(|row| row.into_api(&state)).collect();
-    Ok(Json(Page::new(items, &page, total)))
+    let items = rows.into_iter().map(|row| row.into_api(state)).collect();
+    Ok(Json(Page::new(items, page, total)))
 }
 
 async fn random(State(state): State<AppState>, _view: CanView) -> AppResult<Json<Vec<Playlist>>> {
@@ -154,17 +190,18 @@ fn check_cover(state: &AppState, key: &str) -> AppResult<()> {
 
 async fn create(
     State(state): State<AppState>,
-    _auth: Auth<Admin>,
+    auth: Auth<Upload>,
     Json(body): Json<PlaylistInput>,
 ) -> AppResult<(StatusCode, Json<Playlist>)> {
     let name = checked_name(&body.name)?;
     check_cover(&state, &body.cover_object_id)?;
     let id = sqlx::query_scalar!(
-        r#"INSERT INTO playlists (name, description, cover_object_id) VALUES ($1, $2, $3)
+        r#"INSERT INTO playlists (name, description, cover_object_id, created_by) VALUES ($1, $2, $3, $4)
            RETURNING id AS "id: PlaylistId""#,
         name,
         body.description.trim(),
-        body.cover_object_id
+        body.cover_object_id,
+        auth.user.id as UserId,
     )
     .fetch_one(&state.pool)
     .await?;
@@ -173,10 +210,11 @@ async fn create(
 
 async fn update(
     State(state): State<AppState>,
-    _auth: Auth<Admin>,
+    auth: Auth<Upload>,
     Path(id): Path<PlaylistId>,
     Json(body): Json<PlaylistPatch>,
 ) -> AppResult<Json<Playlist>> {
+    require_owner_or_admin(&auth.user, owner(&state, id).await?)?;
     let name = body.name.as_deref().map(checked_name).transpose()?;
     if let Some(key) = &body.cover_object_id {
         check_cover(&state, key)?;
@@ -207,9 +245,10 @@ async fn update(
 
 async fn remove(
     State(state): State<AppState>,
-    _auth: Auth<Admin>,
+    auth: Auth<Upload>,
     Path(id): Path<PlaylistId>,
 ) -> AppResult<StatusCode> {
+    require_owner_or_admin(&auth.user, owner(&state, id).await?)?;
     let deleted = sqlx::query!("DELETE FROM playlists WHERE id = $1", id as PlaylistId)
         .execute(&state.pool)
         .await?
@@ -220,22 +259,22 @@ async fn remove(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// 锁住歌单行：同一歌单的追加、重排串行执行
-async fn lock(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, id: PlaylistId) -> AppResult<()> {
-    sqlx::query!(
-        "SELECT id FROM playlists WHERE id = $1 FOR UPDATE",
+/// 锁住歌单行并返回创建者：同一歌单的追加、重排串行执行；歌单不存在时 404
+async fn lock(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, id: PlaylistId) -> AppResult<Option<UserId>> {
+    sqlx::query_scalar!(
+        r#"SELECT created_by AS "created_by: UserId" FROM playlists WHERE id = $1 FOR UPDATE"#,
         id as PlaylistId
     )
     .fetch_optional(&mut **tx)
     .await?
-    .ok_or(AppError::NotFound)?;
-    Ok(())
+    .ok_or(AppError::NotFound)
 }
 
-/// 按给出的顺序追加到末尾；已在歌单里、不存在或重复给出的跳过
+/// 按给出的顺序追加到末尾；已在歌单里、不存在或重复给出的跳过。
+/// 要加的歌不需要是自己的，只要是自己的歌单就能加
 async fn add_songs(
     State(state): State<AppState>,
-    _auth: Auth<Admin>,
+    auth: Auth<Upload>,
     Path(id): Path<PlaylistId>,
     Json(body): Json<PlaylistSongs>,
 ) -> AppResult<Json<AddedSongs>> {
@@ -250,7 +289,7 @@ async fn add_songs(
         .filter(|id| seen.insert(*id))
         .collect();
     let mut tx = state.pool.begin().await?;
-    lock(&mut tx, id).await?;
+    require_owner_or_admin(&auth.user, lock(&mut tx, id).await?)?;
     let added = sqlx::query!(
         r#"INSERT INTO song_playlists (song_id, playlist_id, position)
            SELECT s.id, $1,
@@ -276,12 +315,12 @@ async fn add_songs(
 /// 必须恰好给出歌单里的每一首歌各一次
 async fn reorder_songs(
     State(state): State<AppState>,
-    _auth: Auth<Admin>,
+    auth: Auth<Upload>,
     Path(id): Path<PlaylistId>,
     Json(body): Json<PlaylistSongs>,
 ) -> AppResult<StatusCode> {
     let mut tx = state.pool.begin().await?;
-    lock(&mut tx, id).await?;
+    require_owner_or_admin(&auth.user, lock(&mut tx, id).await?)?;
     let current: HashSet<SongId> = sqlx::query_scalar!(
         r#"SELECT song_id AS "id: SongId" FROM song_playlists WHERE playlist_id = $1"#,
         id as PlaylistId
@@ -311,9 +350,10 @@ async fn reorder_songs(
 
 async fn remove_song(
     State(state): State<AppState>,
-    _auth: Auth<Admin>,
+    auth: Auth<Upload>,
     Path((id, song_id)): Path<(PlaylistId, SongId)>,
 ) -> AppResult<StatusCode> {
+    require_owner_or_admin(&auth.user, owner(&state, id).await?)?;
     let removed = sqlx::query!(
         "DELETE FROM song_playlists WHERE playlist_id = $1 AND song_id = $2",
         id as PlaylistId,

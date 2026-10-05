@@ -1,15 +1,15 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO songs (title, description, staff, cover_object_id) VALUES ($1, $2, $3, $4)\n           RETURNING id AS \"id: SongId\"",
+  "query": "INSERT INTO playlists (name, description, cover_object_id, created_by) VALUES ($1, $2, $3, $4)\n           RETURNING id AS \"id: PlaylistId\"",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "id: SongId",
+        "name": "id: PlaylistId",
         "type_info": "Uuid",
         "origin": {
           "Table": {
-            "table": "songs",
+            "table": "playlists",
             "name": "id"
           }
         }
@@ -19,13 +19,13 @@
       "Left": [
         "Text",
         "Text",
-        "Jsonb",
-        "Text"
+        "Text",
+        "Uuid"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "7bcbad6ec2277b873f30c40f0a58ca48c6b6ebbfec4448dbfb5198ebf7bcd59d"
+  "hash": "2c134d4ef2d5f5b2bcc0fb9af3b7f850bf74d17dded5baef94051dc7a7a14c52"
 }

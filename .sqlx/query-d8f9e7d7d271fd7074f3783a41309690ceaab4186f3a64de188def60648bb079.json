@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO playlists (name, description, cover_object_id) VALUES ($1, $2, $3)\n           RETURNING id AS \"id: PlaylistId\"",
+  "query": "SELECT id AS \"id: PlaylistId\" FROM playlists\n           WHERE id = ANY($1) AND ($2 OR created_by = $3)\n           ORDER BY id FOR UPDATE",
   "describe": {
     "columns": [
       {
@@ -17,14 +17,14 @@
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Text",
-        "Text"
+        "UuidArray",
+        "Bool",
+        "Uuid"
       ]
     },
     "nullable": [
       false
     ]
   },
-  "hash": "3190614572e787c6c15c5a96b535e86f68ed0d90c0a4609094f6252fb66a88d2"
+  "hash": "d8f9e7d7d271fd7074f3783a41309690ceaab4186f3a64de188def60648bb079"
 }

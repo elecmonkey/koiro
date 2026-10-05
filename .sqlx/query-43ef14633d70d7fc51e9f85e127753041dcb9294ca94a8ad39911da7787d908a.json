@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT p.id AS \"id: PlaylistId\", p.name, p.description, p.cover_object_id, p.updated_at,\n                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS \"song_count!\"\n           FROM playlists p WHERE p.name ILIKE $1 OR p.description ILIKE $1\n           ORDER BY p.updated_at DESC, p.id LIMIT $2 OFFSET $3",
+  "query": "SELECT p.id AS \"id: PlaylistId\", p.name, p.description, p.cover_object_id, p.updated_at,\n                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS \"song_count!\"\n           FROM playlists p\n           WHERE (p.name ILIKE $1 OR p.description ILIKE $1) AND ($4::uuid IS NULL OR p.created_by = $4)\n           ORDER BY p.updated_at DESC, p.id LIMIT $2 OFFSET $3",
   "describe": {
     "columns": [
       {
@@ -69,7 +69,8 @@
       "Left": [
         "Text",
         "Int8",
-        "Int8"
+        "Int8",
+        "Uuid"
       ]
     },
     "nullable": [
@@ -81,5 +82,5 @@
       null
     ]
   },
-  "hash": "5714e9042eb860bfebbca327d79afbd2535c0e9d7b8a0ee17852839f8e6adac7"
+  "hash": "43ef14633d70d7fc51e9f85e127753041dcb9294ca94a8ad39911da7787d908a"
 }

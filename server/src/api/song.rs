@@ -132,4 +132,7 @@ pub struct SongFilter {
     /// 歌单中的歌曲，此时按歌单顺序排列；否则按更新时间从新到旧
     #[cfg_attr(test, ts(optional))]
     pub playlist: Option<PlaylistId>,
+    /// 标题包含的文字
+    #[cfg_attr(test, ts(optional))]
+    pub q: Option<String>,
 }

@@ -300,7 +300,11 @@ language?: Language,
 /**
  * 歌单中的歌曲，此时按歌单顺序排列；否则按更新时间从新到旧
  */
-playlist?: PlaylistId, };
+playlist?: PlaylistId, 
+/**
+ * 标题包含的文字
+ */
+q?: string, };
 
 /**
  * 歌曲 ID

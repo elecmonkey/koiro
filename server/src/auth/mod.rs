@@ -4,6 +4,9 @@
 //! - [`Auth<P>`]：必须登录且具备权限 `P`
 //! - [`CanView`]：VIEW 权限；开启匿名访问时未登录也放行
 //! - [`MaybeUser`]：不做要求，只取当前用户
+//!
+//! 歌曲、歌单这类资源记录了创建者；编辑/删除要求 ADMIN，或者是创建者本人且具备
+//! `UPLOAD`，用 [`require_owner_or_admin`] 在拿到资源的 `created_by` 后检查。
 
 pub mod cli_codes;
 pub mod login_limit;
@@ -16,7 +19,12 @@ use axum::{extract::FromRequestParts, http::request::Parts};
 
 pub use password::{Hasher, hash_password};
 
-use crate::{api::Permission, error::AppError, state::AppState, users::Account};
+use crate::{
+    api::{Permission, UserId},
+    error::{AppError, AppResult},
+    state::AppState,
+    users::Account,
+};
 
 /// 数据库中的权限位掩码
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -89,6 +97,15 @@ requirements! {
     Download = Some(Permission::Download),
     Upload = Some(Permission::Upload),
     Admin = Some(Permission::Admin),
+}
+
+/// 要求是 `owner`（资源的创建者），或者有 ADMIN 权限；`owner` 为 `None`（无主资源）时只有 ADMIN 满足
+pub fn require_owner_or_admin(user: &Account, owner: Option<UserId>) -> AppResult<()> {
+    if user.permissions.contains(Permission::Admin) || owner == Some(user.id) {
+        Ok(())
+    } else {
+        Err(AppError::Forbidden)
+    }
 }
 
 /// 当前请求的用户（未登录、token 无效或用户已删除时为 `None`）

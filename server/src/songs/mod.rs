@@ -11,12 +11,23 @@ use sqlx::types::Json;
 use crate::{
     api::{
         AudioVersion, AudioVersionId, AudioVersionInput, Language, LyricLine, Lyrics, LyricsId, LyricsInput,
-        PlaylistId, PlaylistRef, SongDetail, SongId, SongInput, SongSummary, StaffCredit,
+        PlaylistId, PlaylistRef, SongDetail, SongId, SongInput, SongSummary, StaffCredit, UserId,
     },
     error::{AppError, AppResult},
     media::image_url,
     state::AppState,
 };
+
+/// 歌曲的创建者（`None` 为无主）；歌曲不存在时 404
+pub async fn owner(state: &AppState, id: SongId) -> AppResult<Option<UserId>> {
+    sqlx::query_scalar!(
+        r#"SELECT created_by AS "created_by: UserId" FROM songs WHERE id = $1"#,
+        id as SongId
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or(AppError::NotFound)
+}
 
 /// 数据库里的语种代码 → [`Language`]；写入时已校验，读到未知代码说明数据损坏
 pub fn parse_language(code: &str) -> AppResult<Language> {
