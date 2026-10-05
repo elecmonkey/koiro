@@ -1,7 +1,6 @@
 import { languageName, type SongDetail } from '@koiro/shared';
 import { Chip, Stack, Typography } from '@mui/material';
 import { CoverArt } from '@/components/ui/cover-art';
-import { OwnerLine } from '@/components/ui/owner-line';
 import { AudioControls } from './audio-controls';
 
 /** 歌曲详情顶部：封面、标题、简介、staff、语种与播放 / 下载 */
@@ -30,7 +29,6 @@ export function SongHeader({
           >
             {song.description}
           </Typography>
-          <OwnerLine owner={song.owner} label="上传者" />
         </Stack>
         <Stack
           direction="row"
