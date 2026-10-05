@@ -24,9 +24,35 @@ skill/              Claude Code 的 Agent Skill：koiro-agent，脚本化操作�
 ## 后端（server/）
 
 - axum 处理路由（`src/routes/`），sqlx 连 PostgreSQL，S3 兼容对象存储放音频和封面图片。
-- 鉴权是无状态 JWT（只含 `sub` 和 `exp`），权限用位掩码叠加：`VIEW(1)` `DOWNLOAD(2)` `UPLOAD(4)` `ADMIN(8)`；不用服务端 session，权限查询在进程内缓存。
-- `src/cli/` 是内嵌在同一个二进制里的管理子命令（migrate、建用户、查重、查孤儿对象等），通过 `koiro-server <子命令>` 调用，和根目录的 `pnpm` 脚本是两套东西。
+- 鉴权是无状态 JWT（只含 `sub` 和 `exp`），不用服务端 session，权限查询在进程内缓存。
 - 校验：`cargo clippy --all-targets -- -D warnings && cargo fmt --check`（即 `pnpm --filter @koiro/server check`）。
+
+### 权限系统
+
+用户权限使用位掩码，可叠加：
+
+| 权限       | 值  | 说明           |
+| ---------- | --- | -------------- |
+| `VIEW`     | 1   | 浏览歌曲和歌单 |
+| `DOWNLOAD` | 2   | 下载音频文件   |
+| `UPLOAD`   | 4   | 上传新歌曲     |
+| `ADMIN`    | 8   | 管理员权限     |
+
+例如 `15` = 全部权限，`3` = 浏览+下载。`KOIRO_ALLOW_ANON=true` 时，未登录用户可访问 `VIEW` 级别的内容。
+
+### 内嵌管理命令
+
+`src/cli/` 是内嵌在同一个二进制里的管理子命令，通过 `koiro-server <子命令>` 调用，和根目录的 `pnpm` 脚本是两套东西：
+
+```bash
+koiro-server migrate                  # 数据库迁移
+koiro-server user add                 # 添加用户
+koiro-server user passwd <email>      # 重设密码
+koiro-server songs duplicates         # 查找同名歌曲
+koiro-server songs missing-lyrics     # 查找缺歌词的歌曲
+koiro-server storage backfill         # 补齐对象缓存头
+koiro-server storage orphans          # 列出无引用的对象
+```
 
 ## 前端（web/）
 
@@ -52,6 +78,37 @@ http/  →  api/  →  query/  →  stores/ / pages/ / components/
 - `cli/` 是给终端用户和 `skill/koiro-agent` 脚本用的命令行客户端，直接用 `@koiro/shared` 的类型和 HTTP 调后端，不经过 `web/` 的任何一层。
 - `packages/shared/` 除了生成的接口类型，还有歌词解析（`lyrics.ts`）、语言列表（`languages.ts`）、权限位掩码（`permissions.ts`）等前后端通用逻辑；这些是手写的，和 `generated/` 区分开。
 
+## 环境变量
+
+### 必需
+
+| 变量名                 | 说明                                                              | 示例                                          |
+| ---------------------- | ----------------------------------------------------------------- | --------------------------------------------- |
+| `DATABASE_URL`         | PostgreSQL 数据库连接字符串                                       | `postgresql://user:pass@localhost:5432/koiro` |
+| `AUTH_SECRET`          | JWT 签名密钥，至少 32 字符（可用 `openssl rand -base64 32` 生成） | 随机字符串                                    |
+| `S3_ENDPOINT`          | S3 兼容存储端点                                                   | `https://s3.example.com`                      |
+| `S3_REGION`            | S3 区域                                                           | `us-east-1`                                   |
+| `S3_ACCESS_KEY_ID`     | S3 访问密钥 ID                                                    | -                                             |
+| `S3_SECRET_ACCESS_KEY` | S3 访问密钥                                                       | -                                             |
+| `S3_BUCKET`            | S3 存储桶名称                                                     | `my-bucket`                                   |
+| `S3_PUBLIC_URL`        | 公开读对象（封面图片）的访问前缀，可为绑定到桶的自定义域名        | `https://s3.example.com`                      |
+
+### 可选
+
+| 变量名                | 说明                                                      | 默认值           |
+| --------------------- | --------------------------------------------------------- | ---------------- |
+| `S3_PREFIX`           | S3 对象键前缀                                             | `""`             |
+| `S3_FORCE_PATH_STYLE` | 是否使用 path-style 地址（如 MinIO）                      | `false`          |
+| `KOIRO_ALLOW_ANON`    | 是否开放匿名访问（`1` 或 `true` 开启）                    | `false`          |
+| `KOIRO_BIND`          | 后端监听地址                                              | `127.0.0.1:3721` |
+| `KOIRO_COOKIE_SECURE` | 登录 cookie 是否带 Secure（本地 http 调试时设为 `false`） | `true`           |
+
+### S3 配置说明
+
+- 签名请求（音频上传、播放、下载）走 `S3_ENDPOINT` + `S3_BUCKET`
+- `<S3_PREFIX>img/*` 需设为公开读，封面直接用 `S3_PUBLIC_URL` 拼接地址
+- 音频由浏览器直传，存储桶的 CORS 需允许站点域名的 PUT
+
 ## 常用命令
 
 ```bash
@@ -62,5 +119,3 @@ pnpm exec rs check --type-check   # 前端 lint + 格式 + 类型检查（根目
 pnpm --filter @koiro/server check # 后端 clippy + fmt 检查
 pnpm -r test                      # 跑全部包的测试
 ```
-
-环境变量、权限位掩码细节、S3 配置说明见根目录 `README.md`。
