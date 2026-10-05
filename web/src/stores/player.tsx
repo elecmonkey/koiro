@@ -2,7 +2,6 @@ import type {
   AudioVersionId,
   Lyrics,
   LyricsId,
-  SongDetail,
   SongId,
   SongSummary,
   StaffCredit,
@@ -16,7 +15,9 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { api, audioUrl } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { audioUrl, fetchSong } from '@/api';
+import { queryKeys } from '@/query';
 
 /** 正在播放的一个音频版本 */
 export interface Track {
@@ -96,17 +97,26 @@ interface PlayerProviderProps {
 export function PlayerProvider({ children }: PlayerProviderProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // 歌词随歌曲详情一起加载；返回时若已切到别的版本则丢弃
-  const loadLyrics = useCallback(async (track: Track) => {
-    const song = await api<SongDetail>(`/api/songs/${track.songId}`).catch(
-      () => null,
-    );
-    const lyrics = song?.lyrics.find((item) => item.id === track.lyricsId);
-    if (!lyrics) return;
-    setState((prev) =>
-      prev.track?.versionId === track.versionId ? { ...prev, lyrics } : prev,
-    );
-  }, []);
+  const client = useQueryClient();
+
+  // 歌词随歌曲详情一起取，与详情页共用缓存；返回时若已切到别的版本则丢弃
+  const loadLyrics = useCallback(
+    async (track: Track) => {
+      const song = await client
+        .fetchQuery({
+          queryKey: queryKeys.song(track.songId),
+          queryFn: ({ signal }) => fetchSong(track.songId, { signal }),
+        })
+        .catch(() => null);
+      const lyrics = song?.lyrics.find((item) => item.id === track.lyricsId);
+      if (!lyrics) return;
+      setState((prev) =>
+        prev.track?.versionId === track.versionId ? { ...prev, lyrics } : prev,
+      );
+    },
+    [client],
+  );
+
   const [state, setState] = useState<PlayerState>({
     track: null,
     lyrics: null,
