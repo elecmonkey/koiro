@@ -7,7 +7,7 @@ import { ManagerToolbar } from '@/components/admin/manager-toolbar';
 import { SearchField } from '@/components/admin/search-field';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { PageState } from '@/components/ui/page-state';
-import { useDeletePlaylist, usePlaylists } from '@/query';
+import { useDeletePlaylist, useMyPlaylists } from '@/query';
 import { CreatePlaylistDialog } from './create-playlist-dialog';
 import { EditPlaylistDialog } from './edit-playlist-dialog';
 import { PlaylistRow } from './playlist-row';
@@ -15,7 +15,7 @@ import { PlaylistRow } from './playlist-row';
 export function PlaylistsManager() {
   const [page, setPage] = useState(1);
   const [keyword, setKeyword] = useState('');
-  const { data, isPending, error } = usePlaylists({ q: keyword, page });
+  const { data, isPending, error } = useMyPlaylists({ q: keyword, page });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Playlist | null>(null);

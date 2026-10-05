@@ -16,6 +16,7 @@ import {
   addPlaylistSongs,
   createPlaylist,
   deletePlaylist,
+  fetchMyPlaylists,
   fetchPlaylist,
   fetchPlaylistOptions,
   fetchPlaylists,
@@ -31,6 +32,15 @@ export function usePlaylists(query: PageQuery & PlaylistFilter) {
   return useQuery({
     queryKey: queryKeys.playlistList(query),
     queryFn: ({ signal }) => fetchPlaylists(query, { signal }),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** 「我的」：非 ADMIN 只看自己创建的歌单，ADMIN 看全部 */
+export function useMyPlaylists(query: PageQuery & PlaylistFilter) {
+  return useQuery({
+    queryKey: queryKeys.myPlaylistList(query),
+    queryFn: ({ signal }) => fetchMyPlaylists(query, { signal }),
     placeholderData: keepPreviousData,
   });
 }

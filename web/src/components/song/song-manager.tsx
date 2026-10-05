@@ -8,13 +8,13 @@ import { ManagerToolbar } from '@/components/admin/manager-toolbar';
 import { SearchField } from '@/components/admin/search-field';
 import { ListPagination } from '@/components/ui/list-pagination';
 import { PageState } from '@/components/ui/page-state';
-import { useAdminSongs, useDeleteSong } from '@/query';
+import { useDeleteSong, useMySongs } from '@/query';
 import { SongRow } from './song-row';
 
 export function SongsManager() {
   const [page, setPage] = useState(1);
   const [keyword, setKeyword] = useState('');
-  const { data, isPending, error } = useAdminSongs({ q: keyword, page });
+  const { data, isPending, error } = useMySongs({ q: keyword, page });
 
   const [deleteTarget, setDeleteTarget] = useState<SongSummary | null>(null);
   const deleteSong = useDeleteSong();

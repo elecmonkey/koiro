@@ -36,7 +36,7 @@ export function PlaylistRow({
           </Button>
           <Button
             component={Link}
-            to={`/admin/playlists/${playlist.id}`}
+            to={`/mine/playlists/${playlist.id}`}
             size="small"
             variant="text"
           >

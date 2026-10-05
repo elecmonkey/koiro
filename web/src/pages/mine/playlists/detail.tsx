@@ -6,7 +6,7 @@ import { PageState } from '@/components/ui/page-state';
 import { usePlaylist } from '@/query';
 import { pageTitle } from '@/utils/page-title';
 
-export default function AdminPlaylistDetailPage() {
+export default function MinePlaylistDetailPage() {
   const { id = '' } = useParams();
   const { data: playlist, isPending, error } = usePlaylist(id);
 
@@ -17,9 +17,9 @@ export default function AdminPlaylistDetailPage() {
       </title>
       <Container sx={{ pt: 6 }}>
         <Stack spacing={2}>
-          <Link to="/admin/playlists">
+          <Link to="/mine/playlists">
             <Button startIcon={<ArrowBackIcon />} size="small">
-              返回管理后台
+              返回我的歌单
             </Button>
           </Link>
           <Typography variant="h4">管理播放列表</Typography>

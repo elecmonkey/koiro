@@ -19,6 +19,8 @@ export const queryKeys = {
   songs: ['songs'] as const,
   songList: (query: PageQuery & SongFilter) =>
     ['songs', 'list', query] as const,
+  mySongList: (query: PageQuery & SongFilter) =>
+    ['songs', 'mine', query] as const,
   allSongs: (filter: SongFilter) => ['songs', 'all', filter] as const,
   randomSongs: ['songs', 'random'] as const,
   songOptions: ['songs', 'options'] as const,
@@ -28,6 +30,8 @@ export const queryKeys = {
   playlists: ['playlists'] as const,
   playlistList: (query: PageQuery & PlaylistFilter) =>
     ['playlists', 'list', query] as const,
+  myPlaylistList: (query: PageQuery & PlaylistFilter) =>
+    ['playlists', 'mine', query] as const,
   randomPlaylists: ['playlists', 'random'] as const,
   playlistOptions: ['playlists', 'options'] as const,
   playlist: (id: PlaylistId) => ['playlists', 'detail', id] as const,

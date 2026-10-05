@@ -21,6 +21,12 @@ export const fetchSongs = (
 export const fetchRandomSongs = ({ signal }: Signal = {}) =>
   request<SongSummary[]>('GET', '/songs/random', { signal });
 
+/** 「我的」：非 ADMIN 只返回自己创建的歌曲，ADMIN 返回全部 */
+export const fetchMySongs = (
+  query: PageQuery & SongFilter,
+  { signal }: Signal = {},
+) => request<Page<SongSummary>>('GET', '/songs/mine', { query, signal });
+
 /** 全部歌曲的精简列表 */
 export const fetchSongOptions = ({ signal }: Signal = {}) =>
   request<SongOption[]>('GET', '/songs/options', { signal });

@@ -72,7 +72,7 @@ export const router = createBrowserRouter([
       },
       {
         path: '/songs/:id/edit',
-        lazy: lazyPage(() => import('@/pages/songs/edit'), admin),
+        lazy: lazyPage(() => import('@/pages/songs/edit'), upload),
       },
       {
         path: '/playlists',
@@ -111,20 +111,20 @@ export const router = createBrowserRouter([
         lazy: lazyPage(() => import('@/pages/editor'), upload),
       },
       {
-        path: '/admin/playlists',
-        lazy: lazyPage(() => import('@/pages/admin/playlists'), admin),
+        path: '/mine/songs',
+        lazy: lazyPage(() => import('@/pages/mine/songs'), upload),
       },
       {
-        path: '/admin/songs',
-        lazy: lazyPage(() => import('@/pages/admin/songs'), admin),
+        path: '/mine/playlists',
+        lazy: lazyPage(() => import('@/pages/mine/playlists'), upload),
       },
       {
-        path: '/admin/users',
-        lazy: lazyPage(() => import('@/pages/admin/users'), admin),
+        path: '/mine/playlists/:id',
+        lazy: lazyPage(() => import('@/pages/mine/playlists/detail'), upload),
       },
       {
-        path: '/admin/playlists/:id',
-        lazy: lazyPage(() => import('@/pages/admin/playlists/detail'), admin),
+        path: '/admin',
+        lazy: lazyPage(() => import('@/pages/admin'), admin),
       },
       {
         path: '/auth/cli',

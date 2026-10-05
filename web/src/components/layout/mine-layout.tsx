@@ -2,35 +2,30 @@ import type { ReactNode } from 'react';
 import { Box, ButtonBase, Container, Stack, Typography } from '@mui/material';
 import QueueMusicIcon from '@mui/icons-material/QueueMusic';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import PeopleIcon from '@mui/icons-material/People';
 import { Link } from 'react-router';
 
-type Tab = 'playlists' | 'songs' | 'users';
+type Tab = 'playlists' | 'songs';
 
-interface AdminLayoutProps {
+interface MineLayoutProps {
   children: ReactNode;
   activeTab: Tab;
 }
 
-export function AdminLayout({ children, activeTab }: AdminLayoutProps) {
+/** 「我的」页面的外壳：歌曲/歌单两个 tab。看到的内容按权限自然收窄——
+ * 非 ADMIN 只有自己创建的，ADMIN 是全部，页面本身不用关心这个区别 */
+export function MineLayout({ children, activeTab }: MineLayoutProps) {
   const tabs: { key: Tab; label: string; href: string; icon: ReactNode }[] = [
-    {
-      key: 'playlists',
-      label: '歌单',
-      href: '/admin/playlists',
-      icon: <QueueMusicIcon sx={{ mr: 1, fontSize: 20 }} />,
-    },
     {
       key: 'songs',
       label: '歌曲',
-      href: '/admin/songs',
+      href: '/mine/songs',
       icon: <MusicNoteIcon sx={{ mr: 1, fontSize: 20 }} />,
     },
     {
-      key: 'users',
-      label: '用户',
-      href: '/admin/users',
-      icon: <PeopleIcon sx={{ mr: 1, fontSize: 20 }} />,
+      key: 'playlists',
+      label: '歌单',
+      href: '/mine/playlists',
+      icon: <QueueMusicIcon sx={{ mr: 1, fontSize: 20 }} />,
     },
   ];
 
@@ -38,7 +33,7 @@ export function AdminLayout({ children, activeTab }: AdminLayoutProps) {
     <Box component="main" sx={{ pb: 8 }}>
       <Container maxWidth="lg" sx={{ pt: 6 }}>
         <Typography variant="h4" gutterBottom>
-          管理后台
+          我的
         </Typography>
 
         <Stack direction="row" spacing={1} sx={{ mb: 3 }}>

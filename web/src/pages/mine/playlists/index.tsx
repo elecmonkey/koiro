@@ -1,12 +1,12 @@
 import { pageTitle } from '@/utils/page-title';
-import { AdminLayout } from '@/components/layout/admin-layout';
+import { MineLayout } from '@/components/layout/mine-layout';
 import { PlaylistsManager } from '@/components/playlist/playlist-manager';
 
 export default function Page() {
   return (
-    <AdminLayout activeTab="playlists">
-      <title>{pageTitle('歌单管理')}</title>
+    <MineLayout activeTab="playlists">
+      <title>{pageTitle('我的歌单')}</title>
       <PlaylistsManager />
-    </AdminLayout>
+    </MineLayout>
   );
 }

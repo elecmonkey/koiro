@@ -23,6 +23,12 @@ export const fetchPlaylists = (
 export const fetchRandomPlaylists = ({ signal }: Signal = {}) =>
   request<Playlist[]>('GET', '/playlists/random', { signal });
 
+/** 「我的」：非 ADMIN 只返回自己创建的歌单，ADMIN 返回全部 */
+export const fetchMyPlaylists = (
+  query: PageQuery & PlaylistFilter,
+  { signal }: Signal = {},
+) => request<Page<Playlist>>('GET', '/playlists/mine', { query, signal });
+
 /** 全部歌单的精简列表 */
 export const fetchPlaylistOptions = ({ signal }: Signal = {}) =>
   request<PlaylistOption[]>('GET', '/playlists/options', { signal });
