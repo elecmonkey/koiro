@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT created_by AS \"created_by: UserId\" FROM playlists WHERE id = $1",
+  "query": "SELECT created_by AS \"created_by?: UserId\" FROM playlists WHERE id = $1",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "created_by: UserId",
+        "name": "created_by?: UserId",
         "type_info": "Uuid",
         "origin": {
           "Table": {
@@ -21,8 +21,8 @@
       ]
     },
     "nullable": [
-      true
+      false
     ]
   },
-  "hash": "e80d76d0261e05f0d18291514e9267b6fe1cbcd2f5470594ed2c820eabd12817"
+  "hash": "874f53d6bd0296cd82549c0d870efcec1f359dbbb16a704b81a0997ca7a8f034"
 }

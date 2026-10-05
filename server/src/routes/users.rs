@@ -176,6 +176,22 @@ async fn remove(
     if id == auth.id {
         return Err(AppError::BadRequest("不能删除自己".into()));
     }
+    // songs/playlists 的 created_by 不允许为空，有内容的用户不能删，否则违反这条约束
+    let has_content = sqlx::query_scalar!(
+        r#"SELECT EXISTS(
+               SELECT 1 FROM songs WHERE created_by = $1
+               UNION ALL
+               SELECT 1 FROM playlists WHERE created_by = $1
+           ) AS "exists!""#,
+        id as UserId
+    )
+    .fetch_one(&state.pool)
+    .await?;
+    if has_content {
+        return Err(AppError::Conflict(
+            "该用户还有自己创建的歌曲或歌单，请先转移或删除后再操作".into(),
+        ));
+    }
     let pool = state.pool.clone();
     let mut deleted = false;
     state

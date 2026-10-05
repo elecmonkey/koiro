@@ -41,7 +41,7 @@ pub fn router() -> Router<AppState> {
 /// 歌单的创建者（`None` 为无主）；歌单不存在时 404
 async fn owner(state: &AppState, id: PlaylistId) -> AppResult<Option<UserId>> {
     sqlx::query_scalar!(
-        r#"SELECT created_by AS "created_by: UserId" FROM playlists WHERE id = $1"#,
+        r#"SELECT created_by AS "created_by?: UserId" FROM playlists WHERE id = $1"#,
         id as PlaylistId
     )
     .fetch_optional(&state.pool)
@@ -90,7 +90,7 @@ async fn find(state: &AppState, id: PlaylistId) -> AppResult<Playlist> {
         PlaylistRow,
         r#"SELECT p.id AS "id: PlaylistId", p.name, p.description, p.cover_object_id, p.updated_at,
                   (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!",
-                  p.created_by AS "owner_id: UserId", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id
+                  p.created_by AS "owner_id?: UserId", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id
            FROM playlists p LEFT JOIN users u ON u.id = p.created_by
            WHERE p.id = $1"#,
         id as PlaylistId
@@ -141,7 +141,7 @@ async fn list_filtered(
         PlaylistRow,
         r#"SELECT p.id AS "id: PlaylistId", p.name, p.description, p.cover_object_id, p.updated_at,
                   (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!",
-                  p.created_by AS "owner_id: UserId", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id
+                  p.created_by AS "owner_id?: UserId", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id
            FROM playlists p LEFT JOIN users u ON u.id = p.created_by
            WHERE (p.name ILIKE $1 OR p.description ILIKE $1) AND ($4::uuid IS NULL OR p.created_by = $4)
            ORDER BY p.updated_at DESC, p.id LIMIT $2 OFFSET $3"#,
@@ -161,7 +161,7 @@ async fn random(State(state): State<AppState>, _view: CanView) -> AppResult<Json
         PlaylistRow,
         r#"SELECT p.id AS "id: PlaylistId", p.name, p.description, p.cover_object_id, p.updated_at,
                   (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!",
-                  p.created_by AS "owner_id: UserId", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id
+                  p.created_by AS "owner_id?: UserId", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id
            FROM playlists p LEFT JOIN users u ON u.id = p.created_by
            ORDER BY random() LIMIT $1"#,
         RANDOM_COUNT
@@ -281,7 +281,7 @@ async fn remove(
 /// 锁住歌单行并返回创建者：同一歌单的追加、重排串行执行；歌单不存在时 404
 async fn lock(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, id: PlaylistId) -> AppResult<Option<UserId>> {
     sqlx::query_scalar!(
-        r#"SELECT created_by AS "created_by: UserId" FROM playlists WHERE id = $1 FOR UPDATE"#,
+        r#"SELECT created_by AS "created_by?: UserId" FROM playlists WHERE id = $1 FOR UPDATE"#,
         id as PlaylistId
     )
     .fetch_optional(&mut **tx)

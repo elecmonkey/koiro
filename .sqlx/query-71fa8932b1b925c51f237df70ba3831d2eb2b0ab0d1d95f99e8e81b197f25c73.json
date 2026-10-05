@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS(\n               SELECT 1 FROM songs WHERE created_by = $1\n               UNION ALL\n               SELECT 1 FROM playlists WHERE created_by = $1\n           ) AS \"exists!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "71fa8932b1b925c51f237df70ba3831d2eb2b0ab0d1d95f99e8e81b197f25c73"
+}

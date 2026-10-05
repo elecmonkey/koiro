@@ -1,15 +1,15 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT created_by AS \"created_by: UserId\" FROM playlists WHERE id = $1 FOR UPDATE",
+  "query": "SELECT created_by AS \"created_by?: UserId\" FROM songs WHERE id = $1",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "created_by: UserId",
+        "name": "created_by?: UserId",
         "type_info": "Uuid",
         "origin": {
           "Table": {
-            "table": "playlists",
+            "table": "songs",
             "name": "created_by"
           }
         }
@@ -21,8 +21,8 @@
       ]
     },
     "nullable": [
-      true
+      false
     ]
   },
-  "hash": "539428fa2cc6d4cb3312a1dbc15ab9ebe815c4912c47ec454365cfaca2ea1f5d"
+  "hash": "4b27f1ed06326e2af3ed1defedd67dfa84130ded4f085929e5b987b1a9ad2ce1"
 }

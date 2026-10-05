@@ -21,7 +21,7 @@ use crate::{
 /// 歌曲的创建者（`None` 为无主）；歌曲不存在时 404
 pub async fn owner(state: &AppState, id: SongId) -> AppResult<Option<UserId>> {
     sqlx::query_scalar!(
-        r#"SELECT created_by AS "created_by: UserId" FROM songs WHERE id = $1"#,
+        r#"SELECT created_by AS "created_by?: UserId" FROM songs WHERE id = $1"#,
         id as SongId
     )
     .fetch_optional(&state.pool)
@@ -104,7 +104,7 @@ async fn song_row(state: &AppState, id: SongId) -> AppResult<Option<SongRow>> {
     Ok(sqlx::query_as!(
         SongRow,
         r#"SELECT id AS "id: SongId", title, description, staff AS "staff: Json<Vec<StaffCredit>>",
-                  cover_object_id, created_by AS "created_by: UserId", created_at, updated_at
+                  cover_object_id, created_by AS "created_by?: UserId", created_at, updated_at
            FROM songs WHERE id = $1"#,
         id as SongId
     )

@@ -13,6 +13,8 @@ CREATE TABLE users (
     display_name text NOT NULL,
     password_hash text NOT NULL,
     permissions integer NOT NULL,
+    -- 头像，和歌曲/歌单封面共用 img/ 前缀；NULL 表示没有设置头像
+    avatar_object_id text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -24,6 +26,9 @@ CREATE TABLE songs (
     description text NOT NULL,
     staff jsonb NOT NULL,
     cover_object_id text NOT NULL,
+    -- 创建者，NOT NULL。外键写成 ON DELETE SET NULL 只是为了不卡住删除本身；
+    -- 实际上应用层（删除用户的接口）会拒绝删除还有歌曲/歌单的用户，这条分支不会真的触发
+    created_by uuid NOT NULL REFERENCES users (id) ON DELETE SET NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -33,6 +38,8 @@ CREATE TABLE playlists (
     name text NOT NULL,
     description text NOT NULL,
     cover_object_id text NOT NULL,
+    -- 同上：created_by NOT NULL，ON DELETE SET NULL 不会真的触发
+    created_by uuid NOT NULL REFERENCES users (id) ON DELETE SET NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );

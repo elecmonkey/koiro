@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT p.id AS \"id: PlaylistId\", p.name, p.description, p.cover_object_id, p.updated_at,\n                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS \"song_count!\",\n                  p.created_by AS \"owner_id: UserId\", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id\n           FROM playlists p LEFT JOIN users u ON u.id = p.created_by\n           ORDER BY random() LIMIT $1",
+  "query": "SELECT p.id AS \"id: PlaylistId\", p.name, p.description, p.cover_object_id, p.updated_at,\n                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS \"song_count!\",\n                  p.created_by AS \"owner_id?: UserId\", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id\n           FROM playlists p LEFT JOIN users u ON u.id = p.created_by\n           WHERE p.id = $1",
   "describe": {
     "columns": [
       {
@@ -66,7 +66,7 @@
       },
       {
         "ordinal": 6,
-        "name": "owner_id: UserId",
+        "name": "owner_id?: UserId",
         "type_info": "Uuid",
         "origin": {
           "Table": {
@@ -100,7 +100,7 @@
     ],
     "parameters": {
       "Left": [
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -110,10 +110,10 @@
       false,
       false,
       null,
-      true,
       false,
+      true,
       true
     ]
   },
-  "hash": "54d6dd1aa4daf045a83b70e41b12373d852f650cd32c43507847222ae65b2c45"
+  "hash": "d9ac4706b17df22ce1e2de92968c219726e41c4fc161e6bebac3c67292eeec6a"
 }

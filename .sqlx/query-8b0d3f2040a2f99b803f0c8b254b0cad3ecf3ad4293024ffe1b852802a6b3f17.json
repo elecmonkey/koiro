@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT p.id AS \"id: PlaylistId\", p.name, p.description, p.cover_object_id, p.updated_at,\n                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS \"song_count!\",\n                  p.created_by AS \"owner_id: UserId\", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id\n           FROM playlists p LEFT JOIN users u ON u.id = p.created_by\n           WHERE (p.name ILIKE $1 OR p.description ILIKE $1) AND ($4::uuid IS NULL OR p.created_by = $4)\n           ORDER BY p.updated_at DESC, p.id LIMIT $2 OFFSET $3",
+  "query": "SELECT p.id AS \"id: PlaylistId\", p.name, p.description, p.cover_object_id, p.updated_at,\n                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS \"song_count!\",\n                  p.created_by AS \"owner_id?: UserId\", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id\n           FROM playlists p LEFT JOIN users u ON u.id = p.created_by\n           ORDER BY random() LIMIT $1",
   "describe": {
     "columns": [
       {
@@ -66,7 +66,7 @@
       },
       {
         "ordinal": 6,
-        "name": "owner_id: UserId",
+        "name": "owner_id?: UserId",
         "type_info": "Uuid",
         "origin": {
           "Table": {
@@ -100,10 +100,7 @@
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Int8",
-        "Int8",
-        "Uuid"
+        "Int8"
       ]
     },
     "nullable": [
@@ -113,10 +110,10 @@
       false,
       false,
       null,
-      true,
+      false,
       false,
       true
     ]
   },
-  "hash": "9bfc5370bd951556ddee9322f2ef5edb102e71aaf75a539344b465f2bb354cb2"
+  "hash": "8b0d3f2040a2f99b803f0c8b254b0cad3ecf3ad4293024ffe1b852802a6b3f17"
 }

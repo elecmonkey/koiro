@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id AS \"id: SongId\", title, description, staff AS \"staff: Json<Vec<StaffCredit>>\",\n                  cover_object_id, created_by AS \"created_by: UserId\", created_at, updated_at\n           FROM songs WHERE id = $1",
+  "query": "SELECT id AS \"id: SongId\", title, description, staff AS \"staff: Json<Vec<StaffCredit>>\",\n                  cover_object_id, created_by AS \"created_by?: UserId\", created_at, updated_at\n           FROM songs WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -60,7 +60,7 @@
       },
       {
         "ordinal": 5,
-        "name": "created_by: UserId",
+        "name": "created_by?: UserId",
         "type_info": "Uuid",
         "origin": {
           "Table": {
@@ -103,10 +103,10 @@
       false,
       false,
       false,
-      true,
+      false,
       false,
       false
     ]
   },
-  "hash": "13d88c1abb8ec0729705f141007604a4f5f92db6bb161a3f6f9b13d42592f3f1"
+  "hash": "5e8d161f5af16cc0480c71d2ad10dfbcf81cd7fc938c2af066c3d1c8591a0952"
 }
