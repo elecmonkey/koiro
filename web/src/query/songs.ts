@@ -21,6 +21,7 @@ import {
   fetchSongs,
   replaceSong,
 } from '@/api';
+import { useSearch } from './browse';
 import { invalidateCatalog } from './invalidate';
 import { queryKeys } from './keys';
 
@@ -56,6 +57,23 @@ export function useAllSongs(filter: SongFilter) {
       }
     },
   });
+}
+
+/**
+ * 后台的歌曲列表：有关键字时按标题、staff、歌词搜索，否则列出全部。
+ * 与公开搜索页共享同一份缓存。
+ */
+export function useAdminSongs({ q, page }: { q: string; page: number }) {
+  const list = useSongs({ page }, { enabled: q === '' });
+  const search = useSearch({ q, page });
+  if (q === '') return list;
+  return {
+    ...search,
+    data: search.data && {
+      ...search.data,
+      items: search.data.items.map((hit) => hit.song),
+    },
+  };
 }
 
 export function useRandomSongs() {

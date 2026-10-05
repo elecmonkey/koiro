@@ -10,9 +10,8 @@ import {
   Typography,
 } from '@mui/material';
 import { Link, useSearchParams } from 'react-router';
-import { useCurrentUser } from '@/query';
-import type { CliAuthorization, CliAuthorizeRequest } from '@koiro/shared';
-import { api } from '@/lib/api';
+import type { CliAuthorizeRequest } from '@koiro/shared';
+import { useAuthorizeCli, useCurrentUser } from '@/query';
 import { pageTitle } from '@/utils/page-title';
 
 /** 与后端相同的校验：只接受本机回环地址上的 /callback */
@@ -69,29 +68,22 @@ function validCallback(callbackUrl: string, request: CliAuthorizeRequest) {
 export default function CliLoginPage() {
   const [params] = useSearchParams();
   const user = useCurrentUser();
-  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const request = parseRequest(params);
+  const authorize = useAuthorizeCli();
 
-  const approve = async () => {
+  const approve = () => {
     if (!request) return;
-    setPending(true);
     setError(null);
-    try {
-      const { callbackUrl } = await api<CliAuthorization>(
-        '/api/auth/cli/authorize',
-        { method: 'POST', json: request },
-      );
-      if (!validCallback(callbackUrl, request)) {
-        setError('无法完成命令行登录，请回到命令行重新发起。');
-        setPending(false);
-        return;
-      }
-      window.location.assign(callbackUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '授权失败');
-      setPending(false);
-    }
+    authorize.mutate(request, {
+      onSuccess: ({ callbackUrl }) => {
+        if (!validCallback(callbackUrl, request)) {
+          setError('无法完成命令行登录，请回到命令行重新发起。');
+          return;
+        }
+        window.location.assign(callbackUrl);
+      },
+    });
   };
 
   return (
@@ -109,11 +101,15 @@ export default function CliLoginPage() {
                     ）的身份和权限登录本机的 Koiro 命令行，有效期 30
                     天。仅在你刚刚主动发起登录时继续。
                   </Typography>
-                  {error && <Alert severity="error">{error}</Alert>}
+                  {(error ?? authorize.error) && (
+                    <Alert severity="error">
+                      {error ?? authorize.error?.message}
+                    </Alert>
+                  )}
                   <Stack direction="row" spacing={1.5}>
                     <Button
                       variant="contained"
-                      loading={pending}
+                      loading={authorize.isPending}
                       onClick={approve}
                     >
                       允许命令行登录

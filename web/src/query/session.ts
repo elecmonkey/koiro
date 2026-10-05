@@ -1,6 +1,6 @@
-import type { LoginRequest, Session } from '@koiro/shared';
+import type { CliAuthorizeRequest, LoginRequest, Session } from '@koiro/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchSession, login, logout } from '@/api';
+import { authorizeCli, fetchSession, login, logout } from '@/api';
 import { queryKeys } from './keys';
 
 export function useSession() {
@@ -25,6 +25,13 @@ export function useLogin() {
       client.clear();
       client.setQueryData(queryKeys.session, session);
     },
+  });
+}
+
+/** 已登录的用户确认命令行登录 */
+export function useAuthorizeCli() {
+  return useMutation({
+    mutationFn: (body: CliAuthorizeRequest) => authorizeCli(body),
   });
 }
 
