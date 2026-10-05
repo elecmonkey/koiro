@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { UploadedImage } from '@koiro/shared';
-import { api } from '@/lib/api';
 import {
   Box,
   Button,
@@ -9,6 +7,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { uploadImageFromUrl } from '@/api';
 import { useS3Upload } from './use-upload';
 
 type ImageUploadFieldProps = {
@@ -181,13 +180,7 @@ export function ImageUploadField({
                   setRemoteError(null);
                   setIsFetchingRemote(true);
                   try {
-                    const data = await api<UploadedImage>(
-                      '/api/uploads/images/from-url',
-                      {
-                        method: 'POST',
-                        json: { url },
-                      },
-                    );
+                    const data = await uploadImageFromUrl({ url });
                     onObjectIdChange(data.objectId, data.url);
                     onFilenameChange?.(filenameFromUrl(url));
                     setUploadedPreviewUrl(data.url);
