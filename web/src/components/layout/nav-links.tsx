@@ -16,6 +16,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import { hasPermission, type Permission, type User } from '@koiro/shared';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useLogout } from '@/query';
 
 type NavLinksProps = {
@@ -120,28 +121,32 @@ export function NavLinks({ user }: NavLinksProps) {
         <Box sx={{ p: 2 }}>
           {user ? (
             <Stack spacing={1.5}>
-              <Box>
-                <Typography variant="body2">
+              <Stack
+                direction="row"
+                spacing={1.5}
+                sx={{ alignItems: 'center' }}
+              >
+                <UserAvatar
+                  id={user.id}
+                  displayName={user.displayName}
+                  avatarUrl={user.avatarUrl}
+                />
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" noWrap>
+                    {user.displayName}
+                  </Typography>
                   <Typography
-                    component="span"
                     variant="caption"
+                    noWrap
                     sx={{
                       color: 'text.secondary',
+                      display: 'block',
                     }}
                   >
-                    已登录 - {user.displayName}
+                    {user.email}
                   </Typography>
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: 'text.secondary',
-                    display: 'block',
-                  }}
-                >
-                  {user.email}
-                </Typography>
-              </Box>
+                </Box>
+              </Stack>
               {hasPermission(user, 'upload') && (
                 <Button
                   component={Link}

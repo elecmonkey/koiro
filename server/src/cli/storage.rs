@@ -63,7 +63,8 @@ async fn orphans(storage: &Storage, pool: &PgPool, delete: bool) -> anyhow::Resu
     let referenced: HashSet<String> = sqlx::query_scalar!(
         r#"SELECT cover_object_id AS "key!" FROM songs
            UNION SELECT cover_object_id FROM playlists
-           UNION SELECT object_id FROM audio_versions"#
+           UNION SELECT object_id FROM audio_versions
+           UNION SELECT avatar_object_id FROM users WHERE avatar_object_id IS NOT NULL"#
     )
     .fetch_all(pool)
     .await?

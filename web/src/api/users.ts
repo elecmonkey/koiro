@@ -8,7 +8,7 @@ import type {
   UserInput,
   UserPatch,
 } from '@koiro/shared';
-import { request } from '@/http';
+import { apiUrl, request, sendFile } from '@/http';
 
 type Signal = { signal?: AbortSignal };
 
@@ -31,3 +31,15 @@ export const fetchProfile = ({ signal }: Signal = {}) =>
 
 export const updateProfile = (patch: ProfilePatch) =>
   request<User>('PATCH', '/profile', { body: patch });
+
+/** 上传并设为自己的头像；不要求 UPLOAD 权限 */
+export const uploadAvatar = async (
+  file: Blob,
+  onProgress?: (percent: number) => void,
+): Promise<User> => {
+  const body = await sendFile('POST', apiUrl('/profile/avatar'), file, {
+    headers: { 'Content-Type': 'application/octet-stream' },
+    onProgress,
+  });
+  return JSON.parse(body) as User;
+};

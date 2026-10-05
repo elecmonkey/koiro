@@ -387,7 +387,11 @@ objectId: string, url: string, };
 /**
  * 用户；`permissions` 为空表示账号已停用
  */
-export type User = { id: UserId, email: string, displayName: string, permissions: Array<Permission>, createdAt: string, updatedAt: string, };
+export type User = { id: UserId, email: string, displayName: string, 
+/**
+ * 头像；没有设置时为空
+ */
+avatarUrl: string | null, permissions: Array<Permission>, createdAt: string, updatedAt: string, };
 
 /**
  * 用户列表的筛选条件（查询字符串）

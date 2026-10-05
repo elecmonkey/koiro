@@ -30,6 +30,8 @@ pub struct User {
     pub id: UserId,
     pub email: String,
     pub display_name: String,
+    /// 头像；没有设置时为空
+    pub avatar_url: Option<String>,
     pub permissions: Vec<Permission>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

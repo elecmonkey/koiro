@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE users SET\n                       display_name = COALESCE($2, display_name),\n                       password_hash = COALESCE($3, password_hash)\n                   WHERE id = $1\n                   RETURNING id AS \"id: UserId\", email, display_name, permissions, created_at, updated_at",
+  "query": "SELECT id AS \"id: UserId\", email, display_name, avatar_object_id, permissions, created_at, updated_at\n           FROM users WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -38,6 +38,17 @@
       },
       {
         "ordinal": 3,
+        "name": "avatar_object_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "avatar_object_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
         "name": "permissions",
         "type_info": "Int4",
         "origin": {
@@ -48,7 +59,7 @@
         }
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -59,7 +70,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -72,19 +83,18 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Text",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
       false,
       false,
       false,
+      true,
       false,
       false,
       false
     ]
   },
-  "hash": "df007b8d00ef50b9fbd8d96a5ec3e30b753673d2474b15b79463931aabfb282b"
+  "hash": "50e2954eb116dc8cd992be6869f6af6326b3fd138c396470d1e8eaf4bc6a1967"
 }

@@ -20,6 +20,7 @@ import {
   fetchUsers,
   updateProfile,
   updateUser,
+  uploadAvatar,
 } from '@/api';
 import { queryKeys } from './keys';
 
@@ -68,6 +69,26 @@ export function useUpdateProfile() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (patch: ProfilePatch) => updateProfile(patch),
+    onSuccess: (user) => {
+      client.setQueryData(queryKeys.profile, user);
+      client.setQueryData<Session>(queryKeys.session, (session) =>
+        session ? { ...session, user } : session,
+      );
+    },
+  });
+}
+
+/** 上传并设为自己的头像 */
+export function useUploadAvatar() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      file,
+      onProgress,
+    }: {
+      file: Blob;
+      onProgress?: (percent: number) => void;
+    }) => uploadAvatar(file, onProgress),
     onSuccess: (user) => {
       client.setQueryData(queryKeys.profile, user);
       client.setQueryData<Session>(queryKeys.session, (session) =>

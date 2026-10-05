@@ -12,6 +12,7 @@ import {
   Typography,
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import { UserAvatar } from '@/components/ui/user-avatar';
 
 type NavUserMenuProps = {
   user: User | null;
@@ -43,6 +44,14 @@ export function NavUserMenu({ user }: NavUserMenuProps) {
         }
         size="small"
         color="inherit"
+        startIcon={
+          <UserAvatar
+            id={user.id}
+            displayName={user.displayName}
+            avatarUrl={user.avatarUrl}
+            sx={{ width: 24, height: 24, fontSize: '0.8rem' }}
+          />
+        }
         endIcon={<KeyboardArrowDownIcon fontSize="small" />}
       >
         你好，{user.displayName}
@@ -55,13 +64,33 @@ export function NavUserMenu({ user }: NavUserMenuProps) {
           paper: { sx: { width: anchorEl?.offsetWidth } },
         }}
       >
-        <Box sx={{ px: 2, py: 1 }}>
-          <Typography
-            variant="caption"
-            sx={{ color: 'text.secondary', display: 'block' }}
-          >
-            {user.email}
-          </Typography>
+        <Box
+          sx={{
+            px: 2,
+            py: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+          }}
+        >
+          <UserAvatar
+            id={user.id}
+            displayName={user.displayName}
+            avatarUrl={user.avatarUrl}
+            sx={{ width: 32, height: 32 }}
+          />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="body2" noWrap>
+              {user.displayName}
+            </Typography>
+            <Typography
+              variant="caption"
+              noWrap
+              sx={{ color: 'text.secondary', display: 'block' }}
+            >
+              {user.email}
+            </Typography>
+          </Box>
         </Box>
         <Divider />
         {hasPermission(user, 'upload') && (

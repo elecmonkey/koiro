@@ -155,7 +155,7 @@ async fn exchange(
     Ok(Json(CliToken {
         token: issued.token,
         expires_at: issued.expires_at,
-        user: user.to_api(),
+        user: user.to_api(&state),
     }))
 }
 

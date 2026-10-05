@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id AS \"id: UserId\", email, display_name, permissions, created_at, updated_at FROM users\n           WHERE email ILIKE $1 OR display_name ILIKE $1\n           ORDER BY created_at DESC, id LIMIT $2 OFFSET $3",
+  "query": "UPDATE users SET avatar_object_id = $2 WHERE id = $1\n                   RETURNING id AS \"id: UserId\", email, display_name, avatar_object_id, permissions,\n                             created_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -38,6 +38,17 @@
       },
       {
         "ordinal": 3,
+        "name": "avatar_object_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "avatar_object_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
         "name": "permissions",
         "type_info": "Int4",
         "origin": {
@@ -48,7 +59,7 @@
         }
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -59,7 +70,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -72,19 +83,19 @@
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Int8",
-        "Int8"
+        "Uuid",
+        "Text"
       ]
     },
     "nullable": [
       false,
       false,
       false,
+      true,
       false,
       false,
       false
     ]
   },
-  "hash": "68380f34fbe5c83edcafcf708a79d37410c183dbfca2be803defcd81613cd250"
+  "hash": "5edd6d1468ef852af28cb32f519e9bdd3c39860ac7d9180ebf84ea6fd8da01e5"
 }

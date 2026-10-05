@@ -57,7 +57,7 @@ async fn login(
     Ok((
         jar.add(cookie),
         Json(Session {
-            user: Some(user.to_api()),
+            user: Some(user.to_api(&state)),
             allow_anonymous: state.config.allow_anonymous,
         }),
     ))
@@ -69,7 +69,7 @@ async fn logout(State(state): State<AppState>, jar: CookieJar) -> (CookieJar, St
 
 async fn current_session(State(state): State<AppState>, MaybeUser(user): MaybeUser) -> Json<Session> {
     Json(Session {
-        user: user.map(|user| user.to_api()),
+        user: user.map(|user| user.to_api(&state)),
         allow_anonymous: state.config.allow_anonymous,
     })
 }

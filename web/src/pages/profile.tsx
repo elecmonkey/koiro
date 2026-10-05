@@ -8,6 +8,7 @@ import {
   Typography,
 } from '@mui/material';
 import { AgentSkillCard } from '@/components/profile/agent-skill-card';
+import { AvatarField } from '@/components/profile/avatar-field';
 import { DisplayNameField } from '@/components/profile/display-name-field';
 import { PasswordCard } from '@/components/profile/password-card';
 import { PageHeader } from '@/components/ui/page-header';
@@ -32,6 +33,8 @@ export default function ProfilePage() {
                     基本信息
                   </Typography>
                   <Stack spacing={2}>
+                    <AvatarField user={user} />
+                    <Divider />
                     <Box>
                       <Typography
                         variant="caption"

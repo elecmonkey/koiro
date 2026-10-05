@@ -14,6 +14,8 @@ use crate::{
     api::{User, UserId},
     auth::Permissions,
     error::AppError,
+    media,
+    state::AppState,
 };
 
 /// 用户账号（不含密码）
@@ -22,17 +24,22 @@ pub struct Account {
     pub id: UserId,
     pub email: String,
     pub display_name: String,
+    pub avatar_object_id: Option<String>,
     pub permissions: Permissions,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
 impl Account {
-    pub fn to_api(&self) -> User {
+    pub fn to_api(&self, state: &AppState) -> User {
         User {
             id: self.id,
             email: self.email.clone(),
             display_name: self.display_name.clone(),
+            avatar_url: self
+                .avatar_object_id
+                .as_deref()
+                .map(|key| media::image_url(state, key)),
             permissions: self.permissions.to_list(),
             created_at: self.created_at,
             updated_at: self.updated_at,
@@ -45,6 +52,7 @@ pub struct AccountRow {
     pub id: UserId,
     pub email: String,
     pub display_name: String,
+    pub avatar_object_id: Option<String>,
     pub permissions: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -56,6 +64,7 @@ impl From<AccountRow> for Account {
             id: row.id,
             email: row.email,
             display_name: row.display_name,
+            avatar_object_id: row.avatar_object_id,
             permissions: Permissions::from_bits(row.permissions),
             created_at: row.created_at,
             updated_at: row.updated_at,
@@ -123,7 +132,7 @@ impl UserCache {
 async fn load(pool: &PgPool, id: UserId) -> Result<Option<Account>, AppError> {
     let row = sqlx::query_as!(
         AccountRow,
-        r#"SELECT id AS "id: UserId", email, display_name, permissions, created_at, updated_at
+        r#"SELECT id AS "id: UserId", email, display_name, avatar_object_id, permissions, created_at, updated_at
            FROM users WHERE id = $1"#,
         id as UserId
     )

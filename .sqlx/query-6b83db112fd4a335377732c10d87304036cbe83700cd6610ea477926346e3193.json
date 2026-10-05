@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT cover_object_id AS \"key!\" FROM songs\n           UNION SELECT cover_object_id FROM playlists\n           UNION SELECT object_id FROM audio_versions\n           UNION SELECT avatar_object_id FROM users WHERE avatar_object_id IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "key!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "6b83db112fd4a335377732c10d87304036cbe83700cd6610ea477926346e3193"
+}

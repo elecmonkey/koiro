@@ -1,8 +1,9 @@
 use axum::{
     Router,
-    extract::State,
+    body::Bytes,
+    extract::{DefaultBodyLimit, State},
     http::StatusCode,
-    routing::{get, patch},
+    routing::{get, patch, post},
 };
 
 use super::extract::{Json, Path, Query};
@@ -11,6 +12,8 @@ use crate::{
     auth::{Admin, Auth, LoggedIn, Permissions},
     db::like_pattern,
     error::{AppError, AppResult},
+    images::MAX_IMAGE_BYTES,
+    media::store_image,
     state::AppState,
     users::{Account, AccountRow},
 };
@@ -23,6 +26,10 @@ pub fn router() -> Router<AppState> {
         .route("/users", get(list).post(create))
         .route("/users/{id}", patch(update).delete(remove))
         .route("/profile", get(profile).patch(update_profile))
+        .route(
+            "/profile/avatar",
+            post(upload_avatar).layer(DefaultBodyLimit::max(MAX_IMAGE_BYTES)),
+        )
 }
 
 fn check_password(password: &str) -> AppResult<()> {
@@ -61,7 +68,8 @@ async fn list(
     .await?;
     let rows = sqlx::query_as!(
         AccountRow,
-        r#"SELECT id AS "id: UserId", email, display_name, permissions, created_at, updated_at FROM users
+        r#"SELECT id AS "id: UserId", email, display_name, avatar_object_id, permissions, created_at, updated_at
+           FROM users
            WHERE email ILIKE $1 OR display_name ILIKE $1
            ORDER BY created_at DESC, id LIMIT $2 OFFSET $3"#,
         pattern,
@@ -70,7 +78,10 @@ async fn list(
     )
     .fetch_all(&state.pool)
     .await?;
-    let users = rows.into_iter().map(|row| Account::from(row).to_api()).collect();
+    let users = rows
+        .into_iter()
+        .map(|row| Account::from(row).to_api(&state))
+        .collect();
     Ok(Json(Page::new(users, &page, total)))
 }
 
@@ -91,7 +102,7 @@ async fn create(
         AccountRow,
         r#"INSERT INTO users (email, display_name, password_hash, permissions) VALUES ($1, $2, $3, $4)
            ON CONFLICT (email) DO NOTHING
-           RETURNING id AS "id: UserId", email, display_name, permissions, created_at, updated_at"#,
+           RETURNING id AS "id: UserId", email, display_name, avatar_object_id, permissions, created_at, updated_at"#,
         email,
         display_name,
         password_hash,
@@ -100,7 +111,7 @@ async fn create(
     .fetch_optional(&state.pool)
     .await?
     .ok_or_else(|| AppError::Conflict("该邮箱已被注册".into()))?;
-    Ok((StatusCode::CREATED, Json(Account::from(row).to_api())))
+    Ok((StatusCode::CREATED, Json(Account::from(row).to_api(&state))))
 }
 
 async fn update(
@@ -128,7 +139,7 @@ async fn update(
     // 什么都不改时不写库，避免无意义地刷新 updated_at
     if display_name.is_none() && password_hash.is_none() && permissions.is_none() {
         let user = state.users.get(id).await?.ok_or(AppError::NotFound)?;
-        return Ok(Json(user.to_api()));
+        return Ok(Json(user.to_api(&state)));
     }
     let pool = state.pool.clone();
     let user = state
@@ -141,7 +152,8 @@ async fn update(
                        password_hash = COALESCE($3, password_hash),
                        permissions = COALESCE($4, permissions)
                    WHERE id = $1
-                   RETURNING id AS "id: UserId", email, display_name, permissions, created_at, updated_at"#,
+                   RETURNING id AS "id: UserId", email, display_name, avatar_object_id, permissions,
+                             created_at, updated_at"#,
                 id as UserId,
                 display_name,
                 password_hash,
@@ -153,7 +165,7 @@ async fn update(
         })
         .await?
         .ok_or(AppError::NotFound)?;
-    Ok(Json(user.to_api()))
+    Ok(Json(user.to_api(&state)))
 }
 
 async fn remove(
@@ -183,8 +195,8 @@ async fn remove(
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn profile(auth: Auth<LoggedIn>) -> Json<User> {
-    Json(auth.to_api())
+async fn profile(State(state): State<AppState>, auth: Auth<LoggedIn>) -> Json<User> {
+    Json(auth.to_api(&state))
 }
 
 /// 修改自己的昵称，或验证当前密码后修改密码
@@ -213,7 +225,7 @@ async fn update_profile(
         None => None,
     };
     if display_name.is_none() && password_hash.is_none() {
-        return Ok(Json(auth.to_api()));
+        return Ok(Json(auth.to_api(&state)));
     }
     let pool = state.pool.clone();
     let user = state
@@ -225,7 +237,8 @@ async fn update_profile(
                        display_name = COALESCE($2, display_name),
                        password_hash = COALESCE($3, password_hash)
                    WHERE id = $1
-                   RETURNING id AS "id: UserId", email, display_name, permissions, created_at, updated_at"#,
+                   RETURNING id AS "id: UserId", email, display_name, avatar_object_id, permissions,
+                             created_at, updated_at"#,
                 id as UserId,
                 display_name,
                 password_hash
@@ -236,5 +249,35 @@ async fn update_profile(
         })
         .await?
         .ok_or(AppError::NotFound)?;
-    Ok(Json(user.to_api()))
+    Ok(Json(user.to_api(&state)))
+}
+
+/// 上传并设为自己的头像；请求体即图片原始字节。和歌曲/歌单封面一样存进公开的 img/ 前缀，
+/// 不要求 UPLOAD 权限——头像是个人资料的一部分，任何登录用户都能设置
+async fn upload_avatar(
+    State(state): State<AppState>,
+    auth: Auth<LoggedIn>,
+    body: Bytes,
+) -> AppResult<Json<User>> {
+    let image = store_image(&state, body.to_vec()).await?;
+    let id = auth.id;
+    let pool = state.pool.clone();
+    let user = state
+        .users
+        .write(id, || async move {
+            let row = sqlx::query_as!(
+                AccountRow,
+                r#"UPDATE users SET avatar_object_id = $2 WHERE id = $1
+                   RETURNING id AS "id: UserId", email, display_name, avatar_object_id, permissions,
+                             created_at, updated_at"#,
+                id as UserId,
+                image.object_id,
+            )
+            .fetch_optional(&pool)
+            .await?;
+            Ok(row.map(Account::from))
+        })
+        .await?
+        .ok_or(AppError::NotFound)?;
+    Ok(Json(user.to_api(&state)))
 }
