@@ -35,8 +35,6 @@ const navItems: NavItem[] = [
   { label: '歌曲', href: '/songs', permission: 'view' },
   { label: '歌单', href: '/playlists', permission: 'view' },
   { label: '上传', href: '/upload', permission: 'upload' },
-  { label: '我的', href: '/mine/songs', permission: 'upload' },
-  { label: '管理', href: '/admin', permission: 'admin' },
 ];
 
 export function NavLinks({ user }: NavLinksProps) {
@@ -144,6 +142,30 @@ export function NavLinks({ user }: NavLinksProps) {
                   {user.email}
                 </Typography>
               </Box>
+              {hasPermission(user, 'upload') && (
+                <Button
+                  component={Link}
+                  to="/mine/songs"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  onClick={toggleDrawer(false)}
+                >
+                  我的音乐
+                </Button>
+              )}
+              {hasPermission(user, 'admin') && (
+                <Button
+                  component={Link}
+                  to="/admin"
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  onClick={toggleDrawer(false)}
+                >
+                  用户管理
+                </Button>
+              )}
               <Button
                 component={Link}
                 to="/profile"

@@ -30,7 +30,7 @@ export function AgentSkillCard() {
   };
 
   return (
-    <Card sx={{ mb: 3 }}>
+    <Card>
       <CardContent>
         <Typography variant="h6" gutterBottom>
           Agent Skill

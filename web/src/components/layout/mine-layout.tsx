@@ -3,6 +3,7 @@ import { Box, ButtonBase, Container, Stack, Typography } from '@mui/material';
 import QueueMusicIcon from '@mui/icons-material/QueueMusic';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import { Link } from 'react-router';
+import { PageHeader } from '@/components/ui/page-header';
 
 type Tab = 'playlists' | 'songs';
 
@@ -31,12 +32,8 @@ export function MineLayout({ children, activeTab }: MineLayoutProps) {
 
   return (
     <Box component="main" sx={{ pb: 8 }}>
-      <Container maxWidth="lg" sx={{ pt: 6 }}>
-        <Typography variant="h4" gutterBottom>
-          我的
-        </Typography>
-
-        <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
+      <PageHeader title="我的音乐">
+        <Stack direction="row" spacing={1}>
           {tabs.map((tab) => (
             <ButtonBase
               key={tab.key}
@@ -61,9 +58,8 @@ export function MineLayout({ children, activeTab }: MineLayoutProps) {
             </ButtonBase>
           ))}
         </Stack>
-
-        <Box>{children}</Box>
-      </Container>
+      </PageHeader>
+      <Container sx={{ pt: 4 }}>{children}</Container>
     </Box>
   );
 }
