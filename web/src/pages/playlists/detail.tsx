@@ -50,7 +50,6 @@ export default function PlaylistDetailPage() {
         <Container sx={{ pt: 4 }}>
           <OwnerFooter
             owner={playlist.data.owner}
-            label="创建者"
             canEdit={canEdit}
             editHref={`/mine/playlists/${playlist.data.id}`}
           />

@@ -54,7 +54,6 @@ export default function SongDetailPage() {
         <Container sx={{ pt: 4 }}>
           <OwnerFooter
             owner={song.owner}
-            label="上传者"
             canEdit={canEdit}
             editHref={`/songs/${song.id}/edit`}
           />
