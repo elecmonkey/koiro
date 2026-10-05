@@ -95,6 +95,7 @@ struct SongRow {
     description: String,
     staff: Json<Vec<StaffCredit>>,
     cover_object_id: String,
+    created_by: Option<UserId>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 }
@@ -103,7 +104,7 @@ async fn song_row(state: &AppState, id: SongId) -> AppResult<Option<SongRow>> {
     Ok(sqlx::query_as!(
         SongRow,
         r#"SELECT id AS "id: SongId", title, description, staff AS "staff: Json<Vec<StaffCredit>>",
-                  cover_object_id, created_at, updated_at
+                  cover_object_id, created_by AS "created_by: UserId", created_at, updated_at
            FROM songs WHERE id = $1"#,
         id as SongId
     )
@@ -150,6 +151,7 @@ pub async fn detail(state: &AppState, id: SongId) -> AppResult<Option<SongDetail
     )
     .fetch_all(&state.pool)
     .await?;
+    let owner = crate::users::owner_ref(state, song.created_by).await?;
 
     Ok(Some(SongDetail {
         id: song.id,
@@ -160,6 +162,7 @@ pub async fn detail(state: &AppState, id: SongId) -> AppResult<Option<SongDetail
         versions,
         lyrics,
         playlists,
+        owner,
         created_at: song.created_at,
         updated_at: song.updated_at,
     }))

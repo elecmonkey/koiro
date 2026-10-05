@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{PlaylistId, SongId};
+use super::{OwnerRef, PlaylistId, SongId};
 
 #[derive(Debug, Serialize)]
 #[cfg_attr(test, derive(ts_rs::TS), ts(export, export_to = "api.ts"))]
@@ -12,6 +12,8 @@ pub struct Playlist {
     pub description: String,
     pub cover_url: String,
     pub song_count: i64,
+    /// 创建者；没有创建者信息时为空（历史数据，或创建者账号已删除）
+    pub owner: Option<OwnerRef>,
     pub updated_at: DateTime<Utc>,
 }
 

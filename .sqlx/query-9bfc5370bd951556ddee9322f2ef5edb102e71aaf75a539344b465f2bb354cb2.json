@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT p.id AS \"id: PlaylistId\", p.name, p.description, p.cover_object_id, p.updated_at,\n                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS \"song_count!\"\n           FROM playlists p\n           WHERE (p.name ILIKE $1 OR p.description ILIKE $1) AND ($4::uuid IS NULL OR p.created_by = $4)\n           ORDER BY p.updated_at DESC, p.id LIMIT $2 OFFSET $3",
+  "query": "SELECT p.id AS \"id: PlaylistId\", p.name, p.description, p.cover_object_id, p.updated_at,\n                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS \"song_count!\",\n                  p.created_by AS \"owner_id: UserId\", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id\n           FROM playlists p LEFT JOIN users u ON u.id = p.created_by\n           WHERE (p.name ILIKE $1 OR p.description ILIKE $1) AND ($4::uuid IS NULL OR p.created_by = $4)\n           ORDER BY p.updated_at DESC, p.id LIMIT $2 OFFSET $3",
   "describe": {
     "columns": [
       {
@@ -63,6 +63,39 @@
         "name": "song_count!",
         "type_info": "Int8",
         "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "owner_id: UserId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "created_by"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "owner_display_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "display_name"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "owner_avatar_object_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "avatar_object_id"
+          }
+        }
       }
     ],
     "parameters": {
@@ -79,8 +112,11 @@
       false,
       false,
       false,
-      null
+      null,
+      true,
+      false,
+      true
     ]
   },
-  "hash": "43ef14633d70d7fc51e9f85e127753041dcb9294ca94a8ad39911da7787d908a"
+  "hash": "9bfc5370bd951556ddee9322f2ef5edb102e71aaf75a539344b465f2bb354cb2"
 }

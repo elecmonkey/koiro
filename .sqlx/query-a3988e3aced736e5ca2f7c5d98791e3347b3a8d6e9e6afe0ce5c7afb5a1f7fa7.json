@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT p.id AS \"id: PlaylistId\", p.name, p.description, p.cover_object_id, p.updated_at,\n                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS \"song_count!\"\n           FROM playlists p ORDER BY random() LIMIT $1",
+  "query": "SELECT p.id AS \"id: PlaylistId\", p.name, p.description, p.cover_object_id, p.updated_at,\n                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS \"song_count!\",\n                  p.created_by AS \"owner_id: UserId\", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id\n           FROM playlists p LEFT JOIN users u ON u.id = p.created_by\n           WHERE p.id = $1",
   "describe": {
     "columns": [
       {
@@ -63,11 +63,44 @@
         "name": "song_count!",
         "type_info": "Int8",
         "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "owner_id: UserId",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "playlists",
+            "name": "created_by"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "owner_display_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "display_name"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "owner_avatar_object_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "avatar_object_id"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": [
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -76,8 +109,11 @@
       false,
       false,
       false,
-      null
+      null,
+      true,
+      true,
+      true
     ]
   },
-  "hash": "bd6880853c8aa48d3c34913ff2f4c4b5d41f48d756c5832a906c9983b1b50784"
+  "hash": "a3988e3aced736e5ca2f7c5d98791e3347b3a8d6e9e6afe0ce5c7afb5a1f7fa7"
 }

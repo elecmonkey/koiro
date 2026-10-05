@@ -11,8 +11,8 @@ use chrono::{DateTime, Utc};
 use super::extract::{Json, Path, Query};
 use crate::{
     api::{
-        AddedSongs, Page, PageQuery, Permission, Playlist, PlaylistFilter, PlaylistId, PlaylistInput,
-        PlaylistOption, PlaylistPatch, PlaylistSongs, SongId, UserId,
+        AddedSongs, OwnerRef, Page, PageQuery, Permission, Playlist, PlaylistFilter, PlaylistId,
+        PlaylistInput, PlaylistOption, PlaylistPatch, PlaylistSongs, SongId, UserId,
     },
     auth::{Auth, CanView, Upload, require_owner_or_admin},
     db::like_pattern,
@@ -55,6 +55,9 @@ struct PlaylistRow {
     description: String,
     cover_object_id: String,
     song_count: i64,
+    owner_id: Option<UserId>,
+    owner_display_name: Option<String>,
+    owner_avatar_object_id: Option<String>,
     updated_at: DateTime<Utc>,
 }
 
@@ -66,6 +69,17 @@ impl PlaylistRow {
             description: self.description,
             cover_url: image_url(state, &self.cover_object_id),
             song_count: self.song_count,
+            owner: self
+                .owner_id
+                .zip(self.owner_display_name)
+                .map(|(id, display_name)| OwnerRef {
+                    id,
+                    display_name,
+                    avatar_url: self
+                        .owner_avatar_object_id
+                        .as_deref()
+                        .map(|key| image_url(state, key)),
+                }),
             updated_at: self.updated_at,
         }
     }
@@ -75,8 +89,10 @@ async fn find(state: &AppState, id: PlaylistId) -> AppResult<Playlist> {
     let row = sqlx::query_as!(
         PlaylistRow,
         r#"SELECT p.id AS "id: PlaylistId", p.name, p.description, p.cover_object_id, p.updated_at,
-                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!"
-           FROM playlists p WHERE p.id = $1"#,
+                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!",
+                  p.created_by AS "owner_id: UserId", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id
+           FROM playlists p LEFT JOIN users u ON u.id = p.created_by
+           WHERE p.id = $1"#,
         id as PlaylistId
     )
     .fetch_optional(&state.pool)
@@ -124,8 +140,9 @@ async fn list_filtered(
     let rows = sqlx::query_as!(
         PlaylistRow,
         r#"SELECT p.id AS "id: PlaylistId", p.name, p.description, p.cover_object_id, p.updated_at,
-                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!"
-           FROM playlists p
+                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!",
+                  p.created_by AS "owner_id: UserId", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id
+           FROM playlists p LEFT JOIN users u ON u.id = p.created_by
            WHERE (p.name ILIKE $1 OR p.description ILIKE $1) AND ($4::uuid IS NULL OR p.created_by = $4)
            ORDER BY p.updated_at DESC, p.id LIMIT $2 OFFSET $3"#,
         pattern,
@@ -143,8 +160,10 @@ async fn random(State(state): State<AppState>, _view: CanView) -> AppResult<Json
     let rows = sqlx::query_as!(
         PlaylistRow,
         r#"SELECT p.id AS "id: PlaylistId", p.name, p.description, p.cover_object_id, p.updated_at,
-                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!"
-           FROM playlists p ORDER BY random() LIMIT $1"#,
+                  (SELECT count(*) FROM song_playlists sp WHERE sp.playlist_id = p.id) AS "song_count!",
+                  p.created_by AS "owner_id: UserId", u.display_name AS owner_display_name, u.avatar_object_id AS owner_avatar_object_id
+           FROM playlists p LEFT JOIN users u ON u.id = p.created_by
+           ORDER BY random() LIMIT $1"#,
         RANDOM_COUNT
     )
     .fetch_all(&state.pool)

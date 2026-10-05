@@ -37,6 +37,16 @@ pub struct User {
     pub updated_at: DateTime<Utc>,
 }
 
+/// 资源创建者的公开信息，用于歌曲/歌单详情页展示；不含邮箱等隐私字段
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(test, derive(ts_rs::TS), ts(export, export_to = "api.ts"))]
+#[serde(rename_all = "camelCase")]
+pub struct OwnerRef {
+    pub id: UserId,
+    pub display_name: String,
+    pub avatar_url: Option<String>,
+}
+
 /// 当前会话
 #[derive(Debug, Serialize)]
 #[cfg_attr(test, derive(ts_rs::TS), ts(export, export_to = "api.ts"))]

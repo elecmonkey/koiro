@@ -160,6 +160,11 @@ lines: Array<LyricLine>, };
 export type MatchField = "title" | "staff" | "lyrics";
 
 /**
+ * 资源创建者的公开信息，用于歌曲/歌单详情页展示；不含邮箱等隐私字段
+ */
+export type OwnerRef = { id: UserId, displayName: string, avatarUrl: string | null, };
+
+/**
  * 分页列表
  */
 export type Page<T> = { items: Array<T>, page: number, pageSize: number, total: number, totalPages: number, };
@@ -176,7 +181,11 @@ export type PasswordChange = { current: string, new: string, };
  */
 export type Permission = "view" | "download" | "upload" | "admin";
 
-export type Playlist = { id: PlaylistId, name: string, description: string, coverUrl: string, songCount: number, updatedAt: string, };
+export type Playlist = { id: PlaylistId, name: string, description: string, coverUrl: string, songCount: number, 
+/**
+ * 创建者；没有创建者信息时为空（历史数据，或创建者账号已删除）
+ */
+owner: OwnerRef | null, updatedAt: string, };
 
 /**
  * 歌单列表的筛选条件（查询字符串）
@@ -283,7 +292,11 @@ lyrics: Array<Lyrics>,
 /**
  * 所属歌单，按名称排序
  */
-playlists: Array<PlaylistRef>, createdAt: string, updatedAt: string, };
+playlists: Array<PlaylistRef>, 
+/**
+ * 创建者；没有创建者信息时为空（历史数据，或创建者账号已删除）
+ */
+owner: OwnerRef | null, createdAt: string, updatedAt: string, };
 
 /**
  * 歌曲列表的筛选条件（查询字符串），可组合

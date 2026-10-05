@@ -1,5 +1,6 @@
 import type { Playlist } from '@koiro/shared';
 import { Box, Stack, Typography } from '@mui/material';
+import { OwnerLine } from '@/components/ui/owner-line';
 
 /** 歌单详情顶部：封面、名称、简介与歌曲数 */
 export function PlaylistHeader({ playlist }: { playlist: Playlist }) {
@@ -51,6 +52,7 @@ export function PlaylistHeader({ playlist }: { playlist: Playlist }) {
         >
           {playlist.songCount} 首歌曲
         </Typography>
+        <OwnerLine owner={playlist.owner} label="创建者" />
       </Stack>
     </Stack>
   );

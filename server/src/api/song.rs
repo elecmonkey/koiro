@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::{AudioVersionId, Language, LyricLine, Lyrics, LyricsId, PlaylistId, SongId};
+use super::{AudioVersionId, Language, LyricLine, Lyrics, LyricsId, OwnerRef, PlaylistId, SongId};
 
 /// 一个角色及担任它的人，如 `{ role: "作曲", names: ["甲", "乙"] }`
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -44,6 +44,8 @@ pub struct SongDetail {
     pub lyrics: Vec<Lyrics>,
     /// 所属歌单，按名称排序
     pub playlists: Vec<PlaylistRef>,
+    /// 创建者；没有创建者信息时为空（历史数据，或创建者账号已删除）
+    pub owner: Option<OwnerRef>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

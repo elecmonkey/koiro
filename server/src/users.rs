@@ -11,7 +11,7 @@ use moka::{future::Cache, ops::compute::Op};
 use sqlx::PgPool;
 
 use crate::{
-    api::{User, UserId},
+    api::{OwnerRef, User, UserId},
     auth::Permissions,
     error::AppError,
     media,
@@ -70,6 +70,28 @@ impl From<AccountRow> for Account {
             updated_at: row.updated_at,
         }
     }
+}
+
+/// 资源创建者的公开信息；`owner_id` 为 `None`（无主）时返回 `None`。
+/// 不经由 [`UserCache`]——这里只要展示用的只读信息，不需要缓存那套一致性保证
+pub async fn owner_ref(state: &AppState, owner_id: Option<UserId>) -> Result<Option<OwnerRef>, AppError> {
+    let Some(owner_id) = owner_id else {
+        return Ok(None);
+    };
+    let row = sqlx::query!(
+        "SELECT display_name, avatar_object_id FROM users WHERE id = $1",
+        owner_id as UserId
+    )
+    .fetch_optional(&state.pool)
+    .await?;
+    Ok(row.map(|row| OwnerRef {
+        id: owner_id,
+        display_name: row.display_name,
+        avatar_url: row
+            .avatar_object_id
+            .as_deref()
+            .map(|key| media::image_url(state, key)),
+    }))
 }
 
 #[derive(Clone)]
