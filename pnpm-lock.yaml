@@ -173,16 +173,16 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
-  cli:
+  packages/cli:
     devDependencies:
       '@koiro/shared':
         specifier: workspace:*
-        version: link:../packages/shared
+        version: link:../shared
       '@types/node':
         specifier: ^26.6.4
         version: 26.6.4
 
-  installer:
+  packages/installer:
     devDependencies:
       '@clack/prompts':
         specifier: ^1.8.1

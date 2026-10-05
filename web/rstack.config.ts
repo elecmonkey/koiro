@@ -14,7 +14,7 @@ define.app(async ({ command }) => {
               {
                 from: resolve(
                   import.meta.dirname,
-                  '../installer/dist/koiro-installer.tgz',
+                  '../packages/installer/dist/koiro-installer.tgz',
                 ),
                 to: 'downloads/koiro-installer.tgz',
               },

@@ -4,22 +4,25 @@ Koiro 是一个个人音乐库：后端用 Rust 管理歌曲、歌词、歌单�
 
 ## 仓库结构
 
+顶层只放两个独立部署的服务，其余都是被它们依赖或打包进去的子包，统一放在 `packages/` 下：
+
 ```
-server/            Rust 后端（axum + sqlx + PostgreSQL + S3）
-web/                前端 SPA（React + MUI，Rsbuild 构建）
-cli/                命令行工具 @koiro/cli，面向终端用户和 skill 脚本
-packages/shared/    前后端共享的 TypeScript 类型与工具（含生成代码）
-installer/          把 skill 打包成 .tgz 供 web 端下载安装
-skill/              Claude Code 的 Agent Skill：koiro-agent，脚本化操作用户自己的数据
+server/                Rust 后端（axum + sqlx + PostgreSQL + S3），部署为一个二进制服务
+web/                    前端 SPA（React + MUI，Rsbuild 构建），部署为静态站点
+
+packages/shared/        前后端共享的 TypeScript 类型与工具（含生成代码）
+packages/cli/           命令行工具 @koiro/cli，面向终端用户和 skill 脚本，直接分发给用户
+packages/skill/         Claude Code 的 Agent Skill：koiro-agent，脚本化操作用户自己的数据，直接分发给用户
+packages/installer/     把 packages/skill 连同 packages/cli 的构建产物打包成 .tgz，供 web 端下载安装；本身不单独分发
 ```
 
 `docs.local/` 是本地私人笔记，已在 `.gitignore` 里排除，不代表仓库的权威信息，不要依赖它。
 
 ## 接口契约：唯一来源在 Rust 端
 
-`server/src/api/` 下的类型是前后端交换数据的唯一定义来源。`cargo test` 运行时 ts-rs 会把这些类型导出成 `packages/shared/src/generated/api.ts`，`web/` 和 `cli/` 都从 `@koiro/shared` 引用这些类型，不另行手写或用 zod 之类的库做运行时校验。
+`server/src/api/` 下的类型是前后端交换数据的唯一定义来源。`cargo test` 运行时 ts-rs 会把这些类型导出成 `packages/shared/src/generated/api.ts`，`web/` 和 `packages/cli/` 都从 `@koiro/shared` 引用这些类型，不另行手写或用 zod 之类的库做运行时校验。
 
-改动接口字段的流程固定是：改 `server/src/api/` 里的类型 → `cargo test` 重新生成 → 下游（`web/src/api/`、`cli/`）跟着改。不要手改 `packages/shared/src/generated/api.ts`，它是生成产物。
+改动接口字段的流程固定是：改 `server/src/api/` 里的类型 → `cargo test` 重新生成 → 下游（`web/src/api/`、`packages/cli/`）跟着改。不要手改 `packages/shared/src/generated/api.ts`，它是生成产物。
 
 ## 后端（server/）
 
@@ -73,9 +76,10 @@ http/  →  api/  →  query/  →  stores/ / pages/ / components/
 
 校验：根目录跑 `pnpm exec rs check --type-check`（lint+格式+类型检查都在这一条，必须在仓库根目录跑，`web/` 目录下没有完整的 lint 配置）。
 
-## cli/ 和 packages/shared/
+## packages/ 下的子包
 
-- `cli/` 是给终端用户和 `skill/koiro-agent` 脚本用的命令行客户端，直接用 `@koiro/shared` 的类型和 HTTP 调后端，不经过 `web/` 的任何一层。
+- `packages/cli/` 是给终端用户和 `packages/skill/koiro-agent` 脚本用的命令行客户端，直接用 `@koiro/shared` 的类型和 HTTP 调后端，不经过 `web/` 的任何一层。构建产物（`koiro.mjs`）直接输出到 `packages/skill/koiro-agent/scripts/`，随 skill 一起分发。
+- `packages/skill/` 是 Agent Skill 本体（`SKILL.md` + 上面提到的 CLI 脚本），`packages/installer/` 把它打包成 `.tgz`，`web/` 构建时再把这个 `.tgz` 拷进站点供下载安装。改 `packages/cli/` 或 `packages/skill/` 后要记得跑一遍 `packages/installer` 的 build 才能让下载包更新。
 - `packages/shared/` 除了生成的接口类型，还有歌词解析（`lyrics.ts`）、语言列表（`languages.ts`）、权限位掩码（`permissions.ts`）等前后端通用逻辑；这些是手写的，和 `generated/` 区分开。
 
 ## 环境变量

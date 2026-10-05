@@ -1,9 +1,7 @@
 packages:
   - web
   - server
-  - cli
-  - installer
-  - packages/shared
+  - packages/*
 
 allowBuilds:
   esbuild: true

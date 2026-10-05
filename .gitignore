@@ -21,4 +21,4 @@ target/
 !.vscode/extensions.json
 
 # built CLI, shipped inside the skill
-/skill/koiro-agent/scripts/
+/packages/skill/koiro-agent/scripts/
