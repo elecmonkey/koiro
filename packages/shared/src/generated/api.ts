@@ -379,6 +379,10 @@ export type StaffMember = { name: string,
  */
 songCount: number, 
 /**
+ * 以「演唱」以外的角色参与的歌曲数（同一首歌担任多个幕后角色只算一次）
+ */
+crewSongCount: number, 
+/**
  * 担任过的角色，按歌曲数从多到少
  */
 roles: Array<RoleCount>, };

@@ -1,89 +1,92 @@
-import { useState } from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  Container,
-  Stack,
-  Switch,
-  Typography,
-} from '@mui/material';
+import { SINGER_ROLE, type StaffMember } from '@koiro/shared';
+import { Box, Chip, Container, Stack } from '@mui/material';
+import { CloudSection } from '@/components/staff/cloud-section';
+import { PageHeader } from '@/components/ui/page-header';
 import { PageState } from '@/components/ui/page-state';
-import { TagCloud } from '@/components/ui/tag-cloud';
+import type { TagCloudItem } from '@/components/ui/tag-cloud';
 import { useStaff } from '@/query';
 import { pageTitle } from '@/utils/page-title';
 
-/** 默认只显示参与歌曲数不少于这个数的人 */
-const MIN_SONGS = 3;
 /** 每人显示的角色数 */
 const ROLES_SHOWN = 3;
 
+const memberHref = (member: StaffMember) =>
+  `/staff/${encodeURIComponent(member.name)}`;
+
+/** 唱过歌的人，按唱过的歌曲数 */
+function singerItems(members: readonly StaffMember[]): TagCloudItem[] {
+  return members.flatMap((member) => {
+    const sung = member.roles.find((role) => role.role === SINGER_ROLE);
+    return sung
+      ? [
+          {
+            key: member.name,
+            label: member.name,
+            count: sung.songCount,
+            href: memberHref(member),
+          },
+        ]
+      : [];
+  });
+}
+
+/** 做过演唱以外角色的人，按幕后参与的歌曲数，下方列出这些角色 */
+function crewItems(members: readonly StaffMember[]): TagCloudItem[] {
+  return members.flatMap((member) => {
+    if (member.crewSongCount === 0) return [];
+    const roles = member.roles.filter((role) => role.role !== SINGER_ROLE);
+    return [
+      {
+        key: member.name,
+        label: member.name,
+        count: member.crewSongCount,
+        href: memberHref(member),
+        footer: (
+          <Stack
+            direction="row"
+            spacing={0.5}
+            useFlexGap
+            sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+          >
+            {roles.slice(0, ROLES_SHOWN).map((role) => (
+              <Chip
+                key={role.role}
+                size="small"
+                label={role.role}
+                variant="outlined"
+              />
+            ))}
+          </Stack>
+        ),
+      },
+    ];
+  });
+}
+
 export default function StaffPage() {
   const { data, isPending, error } = useStaff();
-  const [showSingles, setShowSingles] = useState(false);
-  const members = (data ?? []).filter(
-    (member) => showSingles || member.songCount >= MIN_SONGS,
-  );
 
   return (
     <Box component="main" sx={{ pb: 8 }}>
-      <title>{pageTitle('Staff 云')}</title>
-      <Container sx={{ pt: 6 }}>
-        <Stack
-          direction="row"
-          sx={{ alignItems: 'center', justifyContent: 'space-between' }}
-        >
-          <Typography variant="h4">Staff 云</Typography>
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              显示出现 1-2 次
-            </Typography>
-            <Switch
-              size="small"
-              checked={showSingles}
-              onChange={(event) => setShowSingles(event.target.checked)}
-              slotProps={{ input: { 'aria-label': 'show singles' } }}
-            />
-          </Stack>
-        </Stack>
-      </Container>
+      <title>{pageTitle('Staff')}</title>
+      <PageHeader title="Staff" />
       <Container sx={{ pt: 4 }}>
-        <Card variant="outlined">
-          <CardContent>
-            <PageState
-              loading={isPending}
-              error={error}
-              empty={members.length === 0 && '暂无 Staff 数据'}
-            >
-              <TagCloud
-                items={members.map((member) => ({
-                  key: member.name,
-                  label: member.name,
-                  count: member.songCount,
-                  href: `/staff/${encodeURIComponent(member.name)}`,
-                  footer: member.roles.length > 0 && (
-                    <Stack
-                      direction="row"
-                      spacing={0.5}
-                      useFlexGap
-                      sx={{ flexWrap: 'wrap' }}
-                    >
-                      {member.roles.slice(0, ROLES_SHOWN).map((role) => (
-                        <Chip
-                          key={role.role}
-                          size="small"
-                          label={role.role}
-                          variant="outlined"
-                        />
-                      ))}
-                    </Stack>
-                  ),
-                }))}
+        <PageState loading={isPending} error={error}>
+          {data && (
+            <Stack spacing={3}>
+              <CloudSection
+                title="歌手云"
+                items={singerItems(data)}
+                emptyText="暂无歌手数据"
               />
-            </PageState>
-          </CardContent>
-        </Card>
+              <CloudSection
+                title="Staff 云"
+                items={crewItems(data)}
+                emptyText="暂无 Staff 数据"
+              />
+            </Stack>
+          )}
+        </PageState>
       </Container>
     </Box>
   );

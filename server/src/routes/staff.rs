@@ -10,6 +10,9 @@ use crate::{
     state::AppState,
 };
 
+/// 歌手的角色名；前端 `@koiro/shared` 的 `SINGER_ROLE` 与之保持一致
+const SINGER_ROLE: &str = "演唱";
+
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/staff", get(list))
@@ -21,11 +24,13 @@ pub fn router() -> Router<AppState> {
 async fn members(state: &AppState, name: Option<&str>) -> AppResult<Vec<StaffMember>> {
     let rows = sqlx::query!(
         r#"SELECT n AS "name!", x->>'role' AS role, GROUPING(x->>'role') = 1 AS "is_total!",
-                  count(DISTINCT s.id) AS "song_count!"
+                  count(DISTINCT s.id) AS "song_count!",
+                  count(DISTINCT s.id) FILTER (WHERE x->>'role' <> $2) AS "crew_song_count!"
            FROM songs s, jsonb_array_elements(s.staff) x, jsonb_array_elements_text(x->'names') n
            WHERE $1::text IS NULL OR n = $1
            GROUP BY GROUPING SETS ((n), (n, x->>'role'))"#,
-        name
+        name,
+        SINGER_ROLE
     )
     .fetch_all(&state.pool)
     .await?;
@@ -35,10 +40,12 @@ async fn members(state: &AppState, name: Option<&str>) -> AppResult<Vec<StaffMem
         let member = by_name.entry(row.name.clone()).or_insert_with(|| StaffMember {
             name: row.name,
             song_count: 0,
+            crew_song_count: 0,
             roles: Vec::new(),
         });
         if row.is_total {
             member.song_count = row.song_count;
+            member.crew_song_count = row.crew_song_count;
         } else {
             member.roles.push(RoleCount {
                 role: row.role.unwrap_or_default(),

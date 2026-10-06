@@ -16,3 +16,4 @@ export {
   tokensFromSpans,
 } from './lyrics';
 export { PERMISSIONS, hasPermission } from './permissions';
+export { SINGER_ROLE } from './staff';

@@ -70,7 +70,7 @@ http/  →  api/  →  query/  →  stores/ / pages/ / components/
 - **`query/`**：TanStack Query 封装。`keys.ts` 集中管理所有 `queryKey`，查询和失效都从这里取 key；失效一组关联数据统一走 `invalidate.ts` 的 `invalidateCatalog()`，不要各处分别 invalidate。
 - **`stores/`**：纯客户端状态（播放器、上传草稿本地存储），不涉及服务端数据获取。
 - **`pages/`**：一个路由一个文件，目录结构和 URL 路径一一对应。页面只做轻量编排——取 query hook 数据、用 `PageState` 处理 loading/error/empty、把数据传给组件，不内联业务逻辑或大段 JSX。
-- **`components/`**：按业务域分组（`song/`、`playlist/`、`user/`、`admin/`、`song-form/`、`lyrics-editor/`、`upload/`、`player/`、`profile/`、`layout/`、`ui/`）。只通过 `query/` 拿数据，不直接访问 `http/`、`api/`。`ui/` 放不绑定具体业务的通用展示组件。
+- **`components/`**：按业务域分组（`song/`、`playlist/`、`user/`、`admin/`、`song-form/`、`lyrics-editor/`、`upload/`、`player/`、`profile/`、`staff/`、`layout/`、`ui/`）。只通过 `query/` 拿数据，不直接访问 `http/`、`api/`。`ui/` 放不绑定具体业务的通用展示组件。
 
 命名约定：文件名统一 kebab-case；`components/` 下用具名导出（`export function Xxx`）；`pages/` 下保留 `export default`（React Router `lazy()` 要求）。
 

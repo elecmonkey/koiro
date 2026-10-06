@@ -8,6 +8,8 @@ pub struct StaffMember {
     pub name: String,
     /// 参与的歌曲数
     pub song_count: i64,
+    /// 以「演唱」以外的角色参与的歌曲数（同一首歌担任多个幕后角色只算一次）
+    pub crew_song_count: i64,
     /// 担任过的角色，按歌曲数从多到少
     pub roles: Vec<RoleCount>,
 }
