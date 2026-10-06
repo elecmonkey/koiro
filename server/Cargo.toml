@@ -40,3 +40,6 @@ uuid = { version = "1.26.1", features = ["serde", "v4"] }
 [dev-dependencies]
 # 测试时把 crate::api 的类型导出成 TypeScript
 ts-rs = { version = "12.0.1", features = ["chrono-impl", "uuid-impl"] }
+# 集成测试：tower::ServiceExt::oneshot 直接打 Router，http-body-util 收响应体
+http-body-util = "0.1.3"
+tower = { version = "0.5.3", features = ["util"] }

@@ -94,6 +94,22 @@ jobs:
     needs: changes
     if: needs.changes.outputs.server == 'true' || needs.changes.outputs.workflow == 'true'
     timeout-minutes: 30
+    # #[sqlx::test] 集成测试在运行时真的要连这个库，每个测试建一个临时库、跑完自动清理；
+    # 和上面编译期用的 SQLX_OFFLINE 离线缓存是两回事
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: koiro
+          POSTGRES_PASSWORD: koiro
+          POSTGRES_DB: koiro
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       # 使用仓库里的 .sqlx 离线查询数据，编译不需要数据库
       SQLX_OFFLINE: 'true'
@@ -116,6 +132,8 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       - name: Test
+        env:
+          DATABASE_URL: postgres://koiro:koiro@localhost:5432/koiro
         run: cargo test --workspace --locked
 
       # 测试会从 server/src/api 重新导出 TS 类型，结果必须与提交的一致

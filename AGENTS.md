@@ -29,6 +29,7 @@ packages/installer/     把 packages/skill 连同 packages/cli 的构建产物�
 - axum 处理路由（`src/routes/`），sqlx 连 PostgreSQL，S3 兼容对象存储放音频和封面图片。
 - 鉴权是无状态 JWT（只含 `sub` 和 `exp`），不用服务端 session，权限查询在进程内缓存。
 - 校验：`cargo clippy --all-targets -- -D warnings && cargo fmt --check`（即 `pnpm --filter @koiro/server check`）。
+- `server/tests/` 是打路由的集成测试（`#[sqlx::test]` + `tower::oneshot`，`server/src/` 里的 `#[cfg(test)]` 则是不碰数据库的纯函数单测）：`cargo test` 运行时需要 `DATABASE_URL` 指向一个可连接、有建库权限的 Postgres，每个测试会建一个临时库、跑完 `server/migrations/` 再自动清理，和 `.env` 里跑应用用的库必须是两个库——不要把它指向生产库。本地可以用 Docker 起一个一次性的：`docker run -d --name koiro-test-postgres -e POSTGRES_USER=koiro -e POSTGRES_PASSWORD=koiro -e POSTGRES_DB=koiro -p 5433:5432 postgres:17`，然后 `DATABASE_URL=postgres://koiro:koiro@localhost:5433/koiro cargo test`。
 
 ### 权限系统
 
