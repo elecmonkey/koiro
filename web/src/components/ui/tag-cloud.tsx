@@ -54,7 +54,7 @@ export function TagCloud({ items }: { items: readonly TagCloudItem[] }) {
         alignItems: 'center',
         justifyContent: 'center',
         alignContent: 'center',
-        minHeight: { xs: 240, sm: 320 },
+        py: { xs: 1, sm: 2 },
       }}
     >
       {shuffled.map((item) => (
