@@ -34,6 +34,5 @@ export function toFormData(input: SongInput, coverUrl: string): SongFormData {
     coverObjectId: input.coverObjectId,
     coverPreviewUrl: coverUrl,
     coverFilename: null,
-    playlistIds: input.playlistIds,
   };
 }

@@ -1,4 +1,4 @@
-import type { Language, PlaylistId } from '@koiro/shared';
+import type { Language } from '@koiro/shared';
 import type { LineDraft } from '@/components/lyrics-editor/use-lyrics-editor';
 
 /** 表单里的条目都带一个本地 id，供 React 渲染和互相引用 */
@@ -37,5 +37,4 @@ export type SongFormData = {
   /** 封面预览地址（上传后或编辑时） */
   coverPreviewUrl: string | null;
   coverFilename: string | null;
-  playlistIds: PlaylistId[];
 };

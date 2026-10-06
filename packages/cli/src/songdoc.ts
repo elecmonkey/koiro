@@ -3,6 +3,7 @@ import {
   isLanguage,
   parseLrc,
   type AudioUpload,
+  type NewSong,
   type SongInput,
   type UploadedImage,
 } from '@koiro/shared';
@@ -94,12 +95,20 @@ const SONG_FIELDS = {
   staff: [],
   versions: [],
   lyrics: [],
-  playlistIds: [],
 } as const satisfies Record<keyof SongInput, readonly string[]>;
 
+/** 新建时在歌曲内容之外还要给出的字段 */
+const NEW_SONG_FIELDS = {
+  ...SONG_FIELDS,
+  playlistIds: [],
+} as const satisfies Record<keyof NewSong, readonly string[]>;
+
 /** 上传任何文件之前，先确认文档没有缺字段（字段都必填，缺了服务端会拒绝） */
-function checkFields(doc: JsonObject) {
-  const missing = Object.entries(SONG_FIELDS)
+function checkFields(
+  doc: JsonObject,
+  fields: Readonly<Record<string, readonly string[]>>,
+) {
+  const missing = Object.entries(fields)
     .filter(
       ([field, locals]) =>
         ![field, ...locals].some((key) => doc[key] !== undefined),
@@ -128,13 +137,9 @@ function objects(doc: JsonObject, key: string): JsonObject[] {
 }
 
 /**
- * 读取歌曲文档，把其中引用的本地文件、网络图片先上传，得到接口的 SongInput。
- * 文档与 `song export` 的输出（即 SongInput）相同，另外允许：
- * - coverFile / coverUrl 代替 coverObjectId
- * - versions[].audioFile 代替 objectId
- * - lyrics[].lrcFile 代替 lines
- * 相对路径以文档所在目录为基准（文档从 stdin 读入时以 cwd 为基准）。
- * 其余字段原样提交，由服务端校验。
+ * 读取 `song update` 的文档，把其中引用的本地文件、网络图片先上传，得到接口的 SongInput。
+ * 文档与 `song export` 的输出（即 SongInput）相同。所属歌单不在其中，
+ * 写了 `playlistIds` 直接报错，免得以为改了却被忽略。
  */
 export async function songInput(
   api: ApiClient,
@@ -142,6 +147,48 @@ export async function songInput(
   documentPath: string,
   readText: (path: string) => Promise<string>,
 ): Promise<SongInput> {
+  const doc = await readSongDocument(
+    api,
+    cwd,
+    documentPath,
+    readText,
+    'update',
+  );
+  return doc as unknown as SongInput;
+}
+
+/** 读取 `song create` 的文档：歌曲内容，加上创建后要加入的歌单 `playlistIds` */
+export async function newSong(
+  api: ApiClient,
+  cwd: string,
+  documentPath: string,
+  readText: (path: string) => Promise<string>,
+): Promise<NewSong> {
+  const doc = await readSongDocument(
+    api,
+    cwd,
+    documentPath,
+    readText,
+    'create',
+  );
+  return doc as unknown as NewSong;
+}
+
+/**
+ * 读取歌曲文档，把其中引用的本地文件、网络图片先上传。文档里允许：
+ * - coverFile / coverUrl 代替 coverObjectId
+ * - versions[].audioFile 代替 objectId
+ * - lyrics[].lrcFile 代替 lines
+ * 相对路径以文档所在目录为基准（文档从 stdin 读入时以 cwd 为基准）。
+ * 其余字段原样提交，由服务端校验。
+ */
+async function readSongDocument(
+  api: ApiClient,
+  cwd: string,
+  documentPath: string,
+  readText: (path: string) => Promise<string>,
+  kind: 'create' | 'update',
+): Promise<JsonObject> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(await readText(documentPath));
@@ -155,7 +202,11 @@ export async function songInput(
   const local = (path: string) => resolve(base, path);
 
   // 缺字段、语种写错时，在上传任何文件之前就报错
-  checkFields(doc);
+  if (kind === 'update' && doc.playlistIds !== undefined)
+    usage(
+      'A song update does not change which playlists the song is in. Remove "playlistIds" and use `koiro playlist add` / `koiro playlist remove` instead.',
+    );
+  checkFields(doc, kind === 'create' ? NEW_SONG_FIELDS : SONG_FIELDS);
   for (const item of objects(doc, 'lyrics')) {
     const languages = item.languages;
     if (
@@ -204,5 +255,5 @@ export async function songInput(
     }
   }
 
-  return fields as unknown as SongInput;
+  return fields;
 }

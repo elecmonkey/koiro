@@ -1,4 +1,5 @@
 import type {
+  NewSong,
   Page,
   PageQuery,
   SongDetail,
@@ -38,7 +39,7 @@ export const fetchSong = (id: SongId, { signal }: Signal = {}) =>
 export const fetchSongInput = (id: SongId, { signal }: Signal = {}) =>
   request<SongInput>('GET', `/songs/${id}/input`, { signal });
 
-export const createSong = (input: SongInput) =>
+export const createSong = (input: NewSong) =>
   request<SongDetail>('POST', '/songs', { body: input });
 
 export const replaceSong = (id: SongId, input: SongInput) =>

@@ -265,7 +265,6 @@ test('export returns the song input, and update uploads local files then replace
       },
     ],
     lyrics: [{ name: '原文', isDefault: true, languages: ['ja'], lines: [] }],
-    playlistIds: [playlistId],
   };
   let storage = '';
   const fixture = await server((url, request): Reply => {
@@ -346,7 +345,7 @@ test('export returns the song input, and update uploads local files then replace
       { startMs: 1000, endMs: null, spans: [{ type: 'text', text: 'hello' }] },
     ],
   });
-  expect(body.playlistIds).toEqual([playlistId]);
+  expect(body.playlistIds).toBeUndefined();
   expect(body.coverFile).toBeUndefined();
   const storagePut = fixture.received.find(
     (entry) => entry.url.pathname === '/put',
@@ -388,6 +387,29 @@ test('missing fields and unknown languages are rejected before anything is uploa
   expect(await io.call('song', 'create', '--file', 'song.json')).toBe(2);
   expect(io.error().message).toContain('ja 日本語');
   expect(await io.call('language', 'view', 'jp')).toBe(2);
+  expect(fixture.received).toHaveLength(0);
+});
+
+test('an update document that tries to change playlists is rejected before anything is sent', async () => {
+  const fixture = await server(() => ({ status: 500 }));
+  const io = await runtime(fixture.origin);
+  await writeFile(
+    join(io.io.cwd, 'song.json'),
+    JSON.stringify({
+      title: 'x',
+      description: '',
+      coverObjectId: 'img/x.webp',
+      staff: [],
+      versions: [],
+      lyrics: [],
+      playlistIds: [playlistId],
+    }),
+  );
+
+  expect(await io.call('song', 'update', songId, '--file', 'song.json')).toBe(
+    2,
+  );
+  expect(io.error().message).toContain('koiro playlist add');
   expect(fixture.received).toHaveLength(0);
 });
 

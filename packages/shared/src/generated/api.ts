@@ -160,6 +160,27 @@ lines: Array<LyricLine>, };
 export type MatchField = "title" | "staff" | "lyrics";
 
 /**
+ * 新建歌曲：歌曲内容，以及创建后要加入的歌单（排到末尾）
+ */
+export type NewSong = { 
+/**
+ * 非 ADMIN 只能加入自己的歌单
+ */
+playlistIds: Array<PlaylistId>, title: string, description: string, 
+/**
+ * 上传图片得到的对象 ID
+ */
+coverObjectId: string, staff: Array<StaffCredit>, 
+/**
+ * 至少一个，恰好一个 `isDefault`
+ */
+versions: Array<AudioVersionInput>, 
+/**
+ * 可以为空；不为空时恰好一份 `isDefault`
+ */
+lyrics: Array<LyricsInput>, };
+
+/**
  * 资源创建者的公开信息，用于歌曲/歌单详情页展示；不含邮箱等隐私字段
  */
 export type OwnerRef = { id: UserId, displayName: string, avatarUrl: string | null, };
@@ -325,10 +346,10 @@ q?: string, };
 export type SongId = string;
 
 /**
- * 新建或整体替换一首歌的内容；`GET /songs/{id}/input` 返回现有歌曲的这一形式。
+ * 一首歌的内容，整体替换时使用；`GET /songs/{id}/input` 返回现有歌曲的这一形式。
  *
  * 替换时音频版本按 `name`、歌词按 `name` 与现有的对应：名称不变的保留原 ID，
- * 不在其中的被删除。
+ * 不在其中的被删除。所属歌单不在其中：歌曲与歌单的关系属于歌单，在歌单一侧增删
  */
 export type SongInput = { title: string, description: string, 
 /**
@@ -342,7 +363,7 @@ versions: Array<AudioVersionInput>,
 /**
  * 可以为空；不为空时恰好一份 `isDefault`
  */
-lyrics: Array<LyricsInput>, playlistIds: Array<PlaylistId>, };
+lyrics: Array<LyricsInput>, };
 
 /**
  * 选择歌曲用的精简条目

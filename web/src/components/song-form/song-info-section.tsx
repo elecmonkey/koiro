@@ -50,8 +50,12 @@ export function SongInfoSection({ form }: { form: SongFormState }) {
             onObjectIdChange={(value, url) => form.setCover(value, url ?? null)}
             onFilenameChange={form.setCoverFilename}
           />
-          <Divider />
-          <PlaylistPicker form={form} />
+          {form.mode === 'create' && (
+            <>
+              <Divider />
+              <PlaylistPicker form={form} />
+            </>
+          )}
         </Stack>
       </CardContent>
     </Card>

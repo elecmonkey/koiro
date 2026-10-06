@@ -1,4 +1,5 @@
 import type {
+  NewSong,
   PageQuery,
   SongFilter,
   SongId,
@@ -102,7 +103,7 @@ export function useSongInput(id: SongId) {
 export function useCreateSong() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (input: SongInput) => createSong(input),
+    mutationFn: (input: NewSong) => createSong(input),
     onSuccess: () => invalidateCatalog(client),
   });
 }

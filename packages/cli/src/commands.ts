@@ -27,7 +27,7 @@ import {
 import { CliError, usage } from './errors';
 import type { ApiClient } from './http';
 import { languageList } from './languages';
-import { songInput, uploadImage } from './songdoc';
+import { newSong, songInput, uploadImage } from './songdoc';
 import type { Runtime } from './run';
 
 /** `--all` 时每页取的条数（接口上限） */
@@ -179,7 +179,7 @@ async function songCommand(
     }
     case 'create': {
       args.allow(['file'], 2);
-      const input = await songInput(
+      const input = await newSong(
         api,
         runtime.cwd,
         required(args.text('file'), '--file'),

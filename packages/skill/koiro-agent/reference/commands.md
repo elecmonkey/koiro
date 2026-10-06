@@ -152,7 +152,7 @@ koiro song search 夜に駆ける --json
 - 封面和音频以 `coverObjectId`、`objectId` 表示（不是网址）；
 - 歌词行是原始结构（`spans` 文字片段，注音是 `ruby` 片段）；
 - 音频与歌词的绑定以歌词的 `name` 表示（`lyricsName`）；
-- 所属歌单以 ID 数组 `playlistIds` 表示。
+- 不含所属歌单，所属歌单用 `view` 查看、在歌单一侧调整。
 
 ```sh
 koiro song export <SONG> > song.json
@@ -162,7 +162,7 @@ koiro song export <SONG> > song.json
 
 需要 ADMIN（文档里用到本地文件或网络图片时还需要 UPLOAD）。用文档**整体替换**这首歌：先上传文档引用的本地文件，再提交。`FILE` 为 `-` 时从标准输入读，此时文档里的相对路径以当前目录为基准。
 
-整体替换的含义、哪些内容会保留，见 [workflows.md 第 4 节](workflows.md#4-修改歌曲)。
+整体替换的含义、哪些内容会保留，见 [workflows.md 第 4 节](workflows.md#4-修改歌曲)。不改动所属歌单，文档里写了 `playlistIds` 会报错（退出码 `2`）。
 
 输出：`{ok: true, id, url}`。
 

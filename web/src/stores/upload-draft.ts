@@ -2,7 +2,7 @@ import { isLanguage } from '@koiro/shared';
 import type { SongFormData } from '@/components/song-form/form-types';
 
 /** 上传页的草稿：所属歌单不进草稿 */
-export type UploadDraft = Omit<SongFormData, 'playlistIds'>;
+export type UploadDraft = SongFormData;
 
 // 表单结构变化时换一个键，旧草稿自然作废
 const STORAGE_KEY = 'koiro_upload_draft_v2';

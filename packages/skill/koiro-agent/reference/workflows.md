@@ -71,7 +71,7 @@ koiro song search 风 --json
 
 ## 4. 修改歌曲
 
-需要 ADMIN。修改歌曲的任何部分（标题、简介、封面、staff、歌词、音频版本、所属歌单）都走同一个流程：
+需要 ADMIN。修改歌曲的任何部分（标题、简介、封面、staff、歌词、音频版本）都走同一个流程。所属歌单不在这里改，见第 7 节：
 
 1. **导出**当前完整内容：`koiro song export <SONG> > song.json`
 2. **只改需要改的地方**，其余字段原样保留。
@@ -80,9 +80,9 @@ koiro song search 风 --json
 
 `update` 是**整体替换**，务必注意：
 
-- 文档里写的就是这首歌的全部内容：`staff` 写空数组就清空 staff，`lyrics` 少写一份就删除那份歌词，`playlistIds` 去掉某个歌单就把歌曲移出那个歌单。所以必须以 `export` 的输出为基础修改，不能凭记忆拼一份新文档。字段一个都不能少，缺了会直接报错。
+- 文档里写的就是这首歌的全部内容：`staff` 写空数组就清空 staff，`lyrics` 少写一份就删除那份歌词。所以必须以 `export` 的输出为基础修改，不能凭记忆拼一份新文档。字段一个都不能少，缺了会直接报错。
 - 音频版本和歌词都按 `name` 对齐。名字不变的版本会保留（播放器里正在播放的引用不会失效）；改名等于删掉旧的、新建一个；文档里删掉的版本会被删除。
-- 所属歌单：仍在 `playlistIds` 里的歌单保持原来的位置；新加入的歌单排到末尾；从 `playlistIds` 里去掉的歌单会移除这首歌。
+- `update` 不改动所属歌单，文档里也不能写 `playlistIds`。
 
 常见修改：
 
@@ -98,7 +98,7 @@ koiro song search 风 --json
 | 换默认音频版本 / 默认歌词  | 调整各项的 `isDefault`，保证恰好一个为 `true`                             |
 | 加一个音频版本             | 在 `versions` 里加一项，写 `name`、`audioFile`、`isDefault`、`lyricsName` |
 | 替换某个版本的音频文件     | 删掉它的 `objectId`，写 `audioFile`                                       |
-| 调整所属歌单               | 改 `playlistIds`；歌单 ID 用 `playlist list --all` 查                     |
+| 调整所属歌单               | 不改文档，用 `playlist add` / `playlist remove`（第 7 节）                |
 
 **删除歌曲**用 `koiro song delete <SONG>`，不可恢复，执行前向用户确认。
 
@@ -161,7 +161,7 @@ koiro song search 风 --json
 - **排序**：`playlist reorder <PLAYLIST> <SONG>...` 必须传入歌单里**全部**歌曲的新顺序。先用 `playlist view <PLAYLIST> --all` 取得完整列表，调整顺序后整体传回。缺歌、多歌或重复时站点会拒绝（退出码 `8`），歌单保持不变。
 - **删除歌单**：`playlist delete <PLAYLIST>`，不可恢复，执行前向用户确认。
 
-也可以从歌曲一侧调整它属于哪些歌单，见第 4 节的 `playlistIds`。
+歌曲属于哪些歌单只在这里调整，`song update` 不会改动；新建歌曲时可以用 `playlistIds` 顺便加入歌单，见第 5 节。
 
 ## 8. 下载音频
 

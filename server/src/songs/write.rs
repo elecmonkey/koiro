@@ -7,8 +7,8 @@ use sqlx::{Postgres, Transaction, types::Json};
 use super::language_codes;
 use crate::{
     api::{
-        AudioVersionInput, LyricsId, LyricsInput, Permission, PlaylistId, SongId, SongInput, StaffCredit,
-        UserId,
+        AudioVersionInput, LyricsId, LyricsInput, NewSong, Permission, PlaylistId, SongId, SongInput,
+        StaffCredit, UserId,
     },
     error::{AppError, AppResult},
     lyrics,
@@ -102,14 +102,17 @@ fn validate(state: &AppState, mut song: SongInput) -> AppResult<SongInput> {
         }
     }
     exactly_one_default(song.versions.iter().map(|v| v.is_default), "音频版本")?;
-
-    let mut seen = HashSet::new();
-    song.playlist_ids.retain(|id| seen.insert(*id));
     Ok(song)
 }
 
-pub async fn create(state: &AppState, input: SongInput, caller: &Account) -> AppResult<SongId> {
-    let song = validate(state, input)?;
+pub async fn create(state: &AppState, input: NewSong, caller: &Account) -> AppResult<SongId> {
+    let song = validate(state, input.song)?;
+    let mut seen = HashSet::new();
+    let playlist_ids: Vec<PlaylistId> = input
+        .playlist_ids
+        .into_iter()
+        .filter(|id| seen.insert(*id))
+        .collect();
     let mut tx = state.pool.begin().await?;
     let id = sqlx::query_scalar!(
         r#"INSERT INTO songs (title, description, staff, cover_object_id, created_by)
@@ -123,13 +126,14 @@ pub async fn create(state: &AppState, input: SongInput, caller: &Account) -> App
     )
     .fetch_one(&mut *tx)
     .await?;
-    save_children(&mut tx, id, &song, caller).await?;
+    save_children(&mut tx, id, &song).await?;
+    add_to_playlists(&mut tx, id, &playlist_ids, caller).await?;
     tx.commit().await?;
     Ok(id)
 }
 
-/// 整体替换歌曲内容；歌曲不存在时 404。创建者不变
-pub async fn replace(state: &AppState, id: SongId, input: SongInput, caller: &Account) -> AppResult<()> {
+/// 整体替换歌曲内容；歌曲不存在时 404。创建者和所属歌单都不变
+pub async fn replace(state: &AppState, id: SongId, input: SongInput) -> AppResult<()> {
     let song = validate(state, input)?;
     let mut tx = state.pool.begin().await?;
     let updated = sqlx::query!(
@@ -146,7 +150,7 @@ pub async fn replace(state: &AppState, id: SongId, input: SongInput, caller: &Ac
     if updated == 0 {
         return Err(AppError::NotFound);
     }
-    save_children(&mut tx, id, &song, caller).await?;
+    save_children(&mut tx, id, &song).await?;
     tx.commit().await?;
     Ok(())
 }
@@ -155,7 +159,6 @@ async fn save_children(
     tx: &mut Transaction<'_, Postgres>,
     song_id: SongId,
     song: &SongInput,
-    caller: &Account,
 ) -> AppResult<()> {
     // 先清空默认标记，避免逐行写入时与「每首歌至多一个默认」的唯一索引冲突
     sqlx::query!(
@@ -172,8 +175,7 @@ async fn save_children(
     .await?;
 
     let lyrics_ids = save_lyrics(tx, song_id, &song.lyrics).await?;
-    save_versions(tx, song_id, &song.versions, &lyrics_ids).await?;
-    save_playlists(tx, song_id, &song.playlist_ids, caller).await
+    save_versions(tx, song_id, &song.versions, &lyrics_ids).await
 }
 
 /// 按名称对应：名称不变的保留原 ID，不在其中的删除；返回名称 → ID
@@ -250,9 +252,8 @@ async fn save_versions(
     Ok(())
 }
 
-/// 仍选中的歌单里位置不变，新加入的排到末尾，取消选中的移出。
-/// 非 ADMIN 只能把歌曲放进自己的歌单，放别人的歌单视为不存在
-async fn save_playlists(
+/// 把新建的歌曲加到这些歌单的末尾。非 ADMIN 只能放进自己的歌单，放别人的歌单视为不存在
+async fn add_to_playlists(
     tx: &mut Transaction<'_, Postgres>,
     song_id: SongId,
     playlist_ids: &[PlaylistId],
@@ -277,13 +278,6 @@ async fn save_playlists(
             "选择的歌单不存在，或不属于你"
         }));
     }
-    sqlx::query!(
-        "DELETE FROM song_playlists WHERE song_id = $1 AND playlist_id <> ALL($2)",
-        song_id as SongId,
-        playlist_ids as &[PlaylistId]
-    )
-    .execute(&mut **tx)
-    .await?;
     sqlx::query!(
         r#"INSERT INTO song_playlists (song_id, playlist_id, position)
            SELECT $1, p.id,

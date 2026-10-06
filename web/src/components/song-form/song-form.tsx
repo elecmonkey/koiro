@@ -61,7 +61,6 @@ export function SongForm({ songId, initialData, mode }: SongFormProps) {
         languages: l.languages,
         lines: toLyricLines(l.lines),
       })),
-      playlistIds: form.selectedPlaylists.map((p) => p.id),
     };
     submit(payload);
   };
@@ -85,7 +84,13 @@ export function SongForm({ songId, initialData, mode }: SongFormProps) {
     if (mode === 'edit') {
       replaceSong.mutate(payload, { onSuccess, onError });
     } else {
-      createSong.mutate(payload, { onSuccess, onError });
+      createSong.mutate(
+        {
+          ...payload,
+          playlistIds: form.selectedPlaylists.map((p) => p.id),
+        },
+        { onSuccess, onError },
+      );
     }
   };
 

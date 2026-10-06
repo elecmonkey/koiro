@@ -48,7 +48,6 @@ function buildEmptyFormData(): SongFormData {
     coverObjectId: null,
     coverPreviewUrl: null,
     coverFilename: null,
-    playlistIds: [],
   };
 }
 
@@ -95,9 +94,7 @@ export function useSongForm(
     fallback: SongFormData[K],
   ): SongFormData[K] => {
     if (initialData && initialData[key] !== undefined) return initialData[key];
-    if (draftData && draftData[key as keyof typeof draftData] !== undefined) {
-      return draftData[key as keyof typeof draftData] as SongFormData[K];
-    }
+    if (draftData && draftData[key] !== undefined) return draftData[key];
     return fallback;
   };
 
@@ -129,20 +126,11 @@ export function useSongForm(
     () => lyricsVersions[0]?.id ?? '',
   );
 
-  // 所属播放列表：全部选项 + 已选中的（仅用初始数据对齐一次，之后是用户自己的选择）
+  // 新建时要加入的歌单；编辑歌曲不改所属歌单，那在歌单一侧管理
   const allPlaylists = usePlaylistOptions();
   const [selectedPlaylists, setSelectedPlaylists] = useState<PlaylistOption[]>(
     [],
   );
-  const appliedInitialPlaylists = useRef(false);
-  useEffect(() => {
-    if (!initialData || !allPlaylists.data || appliedInitialPlaylists.current)
-      return;
-    appliedInitialPlaylists.current = true;
-    setSelectedPlaylists(
-      allPlaylists.data.filter((p) => initialData.playlistIds.includes(p.id)),
-    );
-  }, [initialData, allPlaylists.data]);
 
   const [lrcText, setLrcText] = useState('');
   const [lrcError, setLrcError] = useState<string | null>(null);

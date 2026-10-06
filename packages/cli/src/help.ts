@@ -39,12 +39,13 @@ SONG / PLAYLIST: a UUID or a site link such as https://<site>/songs/<uuid>.
 NAME / CODE may also be a /staff/<name> or /languages/<code> link.
 DESCRIPTION: --description TEXT | --description-file FILE|-
 
-Song documents (export / update / create) are the API's SongInput; every field
-is required:
+Song documents (export / update) are the API's SongInput; every field is
+required:
   title, description, coverObjectId, staff[{role, names[]}],
   versions[{name, objectId, isDefault, lyricsName}],
-  lyrics[{name, isDefault, languages[], lines[{startMs, endMs, spans[]}]}],
-  playlistIds[]
+  lyrics[{name, isDefault, languages[], lines[{startMs, endMs, spans[]}]}]
+create takes the same fields plus playlistIds[] (playlists to add the new song
+to; may be empty). update never changes playlists: use playlist add / remove.
 spans are {"type": "text", "text"} or {"type": "ruby", "base", "ruby"}.
 Documents may use local inputs instead, resolved relative to the document:
   coverFile or coverUrl for coverObjectId, versions[].audioFile for objectId,

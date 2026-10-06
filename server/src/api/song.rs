@@ -70,10 +70,10 @@ pub struct PlaylistRef {
     pub name: String,
 }
 
-/// 新建或整体替换一首歌的内容；`GET /songs/{id}/input` 返回现有歌曲的这一形式。
+/// 一首歌的内容，整体替换时使用；`GET /songs/{id}/input` 返回现有歌曲的这一形式。
 ///
 /// 替换时音频版本按 `name`、歌词按 `name` 与现有的对应：名称不变的保留原 ID，
-/// 不在其中的被删除。
+/// 不在其中的被删除。所属歌单不在其中：歌曲与歌单的关系属于歌单，在歌单一侧增删
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, derive(ts_rs::TS), ts(export, export_to = "api.ts"))]
 #[serde(rename_all = "camelCase")]
@@ -87,6 +87,17 @@ pub struct SongInput {
     pub versions: Vec<AudioVersionInput>,
     /// 可以为空；不为空时恰好一份 `isDefault`
     pub lyrics: Vec<LyricsInput>,
+}
+
+/// 新建歌曲：歌曲内容，以及创建后要加入的歌单（排到末尾）
+#[derive(Debug, Deserialize)]
+#[cfg_attr(test, derive(ts_rs::TS), ts(export, export_to = "api.ts"))]
+#[serde(rename_all = "camelCase")]
+pub struct NewSong {
+    #[serde(flatten)]
+    #[cfg_attr(test, ts(flatten))]
+    pub song: SongInput,
+    /// 非 ADMIN 只能加入自己的歌单
     pub playlist_ids: Vec<PlaylistId>,
 }
 

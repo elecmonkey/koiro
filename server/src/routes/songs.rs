@@ -3,8 +3,8 @@ use axum::{Router, extract::State, http::StatusCode, routing::get};
 use super::extract::{Json, Path, Query};
 use crate::{
     api::{
-        Page, PageQuery, Permission, PlaylistId, SongDetail, SongFilter, SongId, SongInput, SongOption,
-        SongSummary, UserId,
+        NewSong, Page, PageQuery, Permission, PlaylistId, SongDetail, SongFilter, SongId, SongInput,
+        SongOption, SongSummary, UserId,
     },
     auth::{Auth, CanView, Upload, require_owner_or_admin},
     db::like_pattern,
@@ -161,7 +161,7 @@ async fn input(
 async fn create(
     State(state): State<AppState>,
     auth: Auth<Upload>,
-    Json(input): Json<SongInput>,
+    Json(input): Json<NewSong>,
 ) -> AppResult<(StatusCode, Json<SongDetail>)> {
     let id = write::create(&state, input, &auth.user).await?;
     let song = songs::detail(&state, id).await?.ok_or(AppError::NotFound)?;
@@ -175,7 +175,7 @@ async fn replace(
     Json(input): Json<SongInput>,
 ) -> AppResult<Json<SongDetail>> {
     require_owner_or_admin(&auth.user, songs::owner(&state, id).await?)?;
-    write::replace(&state, id, input, &auth.user).await?;
+    write::replace(&state, id, input).await?;
     Ok(Json(songs::detail(&state, id).await?.ok_or(AppError::NotFound)?))
 }
 

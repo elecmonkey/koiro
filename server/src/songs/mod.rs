@@ -199,14 +199,6 @@ pub async fn input(state: &AppState, id: SongId) -> AppResult<Option<SongInput>>
         })
     })
     .collect::<AppResult<_>>()?;
-    let playlist_ids = sqlx::query_scalar!(
-        r#"SELECT sp.playlist_id AS "id: PlaylistId"
-           FROM song_playlists sp JOIN playlists p ON p.id = sp.playlist_id
-           WHERE sp.song_id = $1 ORDER BY p.name, p.id"#,
-        id as SongId
-    )
-    .fetch_all(&state.pool)
-    .await?;
 
     Ok(Some(SongInput {
         title: song.title,
@@ -215,6 +207,5 @@ pub async fn input(state: &AppState, id: SongId) -> AppResult<Option<SongInput>>
         staff: song.staff.0,
         versions,
         lyrics,
-        playlist_ids,
     }))
 }
