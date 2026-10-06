@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router';
-import { hasPermission } from '@koiro/shared';
+import { canManage } from '@koiro/shared';
 import { Box, Container } from '@mui/material';
 import { PlaylistHeader } from '@/components/playlist/playlist-header';
 import { SongList } from '@/components/song/song-list';
@@ -16,11 +16,7 @@ export default function PlaylistDetailPage() {
   const user = useCurrentUser();
   const playlist = usePlaylist(id);
   const songs = useSongs({ playlist: id, page });
-  const owner = playlist.data?.owner;
-  const canEdit =
-    user !== null &&
-    !!owner &&
-    (hasPermission(user, 'admin') || user.id === owner.id);
+  const canEdit = canManage(user, playlist.data?.owner?.id);
 
   return (
     <Box component="main" sx={{ pb: 8 }}>

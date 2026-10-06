@@ -86,7 +86,7 @@
 
 最多等待 3 分钟。授权必须在运行脚本的同一台机器上的浏览器里完成。网页上未登录时，会先跳到登录页，登录后回到授权页。
 
-输出：`{webUrl, user: {id, email, name, permissions}, expiresAt}`。
+输出：`{webUrl, user, expiresAt}`，`user` 是站点的用户对象：`{id, email, displayName, avatarUrl, permissions, createdAt, updatedAt}`，`avatarUrl` 没有头像时为 `null`，`permissions` 是权限名数组（见 [workflows.md 第 2 节](workflows.md#2-权限)）。
 
 只有在其他命令以退出码 `3` 失败时才需要运行。
 
@@ -96,7 +96,7 @@
 
 ### `koiro auth status`
 
-向站点确认当前登录。输出：`{webUrl, user: {id, email, name, permissions}}`。未登录、登录过期或账号已删除时退出码 `3`。
+向站点确认当前登录。输出：`{webUrl, user}`，`user` 同 `login`。未登录、登录过期或账号已删除时退出码 `3`。
 
 用于开始写操作前确认权限，`permissions` 的含义见 [workflows.md 第 2 节](workflows.md#2-权限)。
 
@@ -142,6 +142,7 @@ koiro song search 夜に駆ける --json
 | `lyrics[]`                                                                         | 歌词：`id`、`name`、`isDefault`、`languages`、`lines[]`                      |
 | `lyrics[].lines[]`                                                                 | `{startMs, endMs, text}`；`text` 里有注音的词写成 `基字(读音)`               |
 | `playlists[]`                                                                      | 所属歌单：`id`、`name`                                                       |
+| `owner`                                                                            | 创建者：`id`、`displayName`、`avatarUrl`                                     |
 
 这是给人读的形式。要修改歌曲时不要用它当底稿，改用 `song export`。
 
@@ -192,11 +193,11 @@ koiro song export <SONG> > song.json
 
 ### `koiro playlist list [--page N | --all]`
 
-需要 VIEW。按更新时间从新到旧列出歌单，每页 20 个：每项 `{id, name, description, coverUrl, songCount, updatedAt, url}`。
+需要 VIEW。按更新时间从新到旧列出歌单，每页 20 个：每项 `{id, name, description, coverUrl, songCount, owner, updatedAt, url}`，`owner` 是创建者 `{id, displayName, avatarUrl}`。
 
 ### `koiro playlist view PLAYLIST [--page N | --all]`
 
-需要 VIEW。输出 `{playlist: {id, name, description, coverUrl, songCount, updatedAt, url}, songs: <分页的歌曲摘要>}`，歌曲按歌单中的顺序排列。
+需要 VIEW。输出 `{playlist: {id, name, description, coverUrl, songCount, owner, updatedAt, url}, songs: <分页的歌曲摘要>}`，歌曲按歌单中的顺序排列。
 
 ### `koiro playlist create --name NAME (--cover-file FILE | --cover-url URL) [--description TEXT | --description-file FILE]`
 
@@ -243,11 +244,11 @@ koiro playlist reorder <PLAYLIST> <ID3> <ID1> <ID2> …
 
 ### `koiro staff list`
 
-需要 VIEW。所有参与者，按参与的歌曲数从多到少：`{items: [{name, songCount, roles: [{role, songCount}]}]}`。
+需要 VIEW。所有参与者，按参与的歌曲数从多到少：`{items: [{name, songCount, crewSongCount, roles: [{role, songCount}]}]}`。`crewSongCount` 是以「演唱」以外的角色参与的歌曲数（同一首歌担任多个这样的角色只算一次）；唱过几首看 `roles` 里「演唱」的 `songCount`。
 
 ### `koiro staff view NAME [--page N | --all]`
 
-需要 VIEW。输出 `{staff: {name, songCount, roles}, songs: <分页的歌曲摘要>}`。名字按精确写法匹配，不存在时退出码 `5`。
+需要 VIEW。输出 `{staff: {name, songCount, crewSongCount, roles}, songs: <分页的歌曲摘要>}`。名字按精确写法匹配，不存在时退出码 `5`。
 
 ### `koiro language list`
 

@@ -15,5 +15,5 @@ export {
   spansText,
   tokensFromSpans,
 } from './lyrics';
-export { PERMISSIONS, hasPermission } from './permissions';
+export { PERMISSIONS, canManage, hasPermission } from './permissions';
 export { SINGER_ROLE } from './staff';

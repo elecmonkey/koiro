@@ -1,5 +1,5 @@
 import { useParams } from 'react-router';
-import { hasPermission } from '@koiro/shared';
+import { canManage, hasPermission } from '@koiro/shared';
 import { Box, Container } from '@mui/material';
 import { LyricsCard } from '@/components/song/lyrics-card';
 import { SongHeader } from '@/components/song/song-header';
@@ -15,10 +15,7 @@ export default function SongDetailPage() {
   const user = useCurrentUser();
   const { data: song, isPending, error } = useSong(id);
   const notFound = error instanceof ApiError && error.status === 404;
-  const canEdit =
-    user !== null &&
-    !!song?.owner &&
-    (hasPermission(user, 'admin') || user.id === song.owner.id);
+  const canEdit = canManage(user, song?.owner?.id);
 
   return (
     <Box component="main" sx={{ pb: 8 }}>
