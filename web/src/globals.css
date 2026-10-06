@@ -8,6 +8,7 @@
   /* 原先的 Shippori Mincho 只作为 Zen Kaku 之后的备用字体、实际不会生效，已移除 */
   --font-jp-serif: 'Noto Serif SC Variable';
   --font-jp-display: 'Noto Serif JP Variable';
+  --font-lyrics-en: 'Source Serif 4 Variable';
 }
 
 body {
