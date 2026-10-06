@@ -28,6 +28,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/playlists", get(list).post(create))
         .route("/playlists/mine", get(list_mine))
+        .route("/playlists/mine/options", get(options_mine))
         .route("/playlists/random", get(random))
         .route("/playlists/options", get(options))
         .route("/playlists/{id}", get(detail).patch(update).delete(remove))
@@ -177,6 +178,25 @@ async fn options(State(state): State<AppState>, _view: CanView) -> AppResult<Jso
         sqlx::query_as!(
             PlaylistOption,
             r#"SELECT id AS "id: PlaylistId", name FROM playlists ORDER BY name, id"#
+        )
+        .fetch_all(&state.pool)
+        .await?,
+    ))
+}
+
+/// 能往里加歌的歌单的精简列表（新建歌曲时选择用）：非 ADMIN 只有自己创建的，ADMIN 是全部；按名称排序
+async fn options_mine(
+    State(state): State<AppState>,
+    auth: Auth<Upload>,
+) -> AppResult<Json<Vec<PlaylistOption>>> {
+    let owner = (!auth.user.permissions.contains(Permission::Admin)).then_some(auth.user.id);
+    Ok(Json(
+        sqlx::query_as!(
+            PlaylistOption,
+            r#"SELECT id AS "id: PlaylistId", name FROM playlists
+               WHERE $1::uuid IS NULL OR created_by = $1
+               ORDER BY name, id"#,
+            owner as Option<UserId>
         )
         .fetch_all(&state.pool)
         .await?,

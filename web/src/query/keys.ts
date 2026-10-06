@@ -33,7 +33,7 @@ export const queryKeys = {
   myPlaylistList: (query: PageQuery & PlaylistFilter) =>
     ['playlists', 'mine', query] as const,
   randomPlaylists: ['playlists', 'random'] as const,
-  playlistOptions: ['playlists', 'options'] as const,
+  myPlaylistOptions: ['playlists', 'mine', 'options'] as const,
   playlist: (id: PlaylistId) => ['playlists', 'detail', id] as const,
 
   staff: ['staff'] as const,

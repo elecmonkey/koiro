@@ -3,7 +3,7 @@ import { parseLrc } from '@koiro/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LineDraft } from '@/components/lyrics-editor/use-lyrics-editor';
 import { toLineDrafts } from '@/components/lyrics-editor/lines';
-import { usePlaylistOptions } from '@/query';
+import { useMyPlaylistOptions } from '@/query';
 import { clearDraft, loadDraft, saveDraft } from '@/stores/upload-draft';
 import type {
   LyricsItem,
@@ -126,8 +126,8 @@ export function useSongForm(
     () => lyricsVersions[0]?.id ?? '',
   );
 
-  // 新建时要加入的歌单；编辑歌曲不改所属歌单，那在歌单一侧管理
-  const allPlaylists = usePlaylistOptions();
+  // 新建时要加入的歌单，只列能往里加歌的；编辑歌曲不改所属歌单，那在歌单一侧管理
+  const allPlaylists = useMyPlaylistOptions({ enabled: mode === 'create' });
   const [selectedPlaylists, setSelectedPlaylists] = useState<PlaylistOption[]>(
     [],
   );

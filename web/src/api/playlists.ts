@@ -29,9 +29,9 @@ export const fetchMyPlaylists = (
   { signal }: Signal = {},
 ) => request<Page<Playlist>>('GET', '/playlists/mine', { query, signal });
 
-/** 全部歌单的精简列表 */
-export const fetchPlaylistOptions = ({ signal }: Signal = {}) =>
-  request<PlaylistOption[]>('GET', '/playlists/options', { signal });
+/** 能往里加歌的歌单（自己的；ADMIN 是全部）的精简列表 */
+export const fetchMyPlaylistOptions = ({ signal }: Signal = {}) =>
+  request<PlaylistOption[]>('GET', '/playlists/mine/options', { signal });
 
 /** 歌单里的歌曲用 fetchSongs({ playlist }) 获取 */
 export const fetchPlaylist = (id: PlaylistId, { signal }: Signal = {}) =>

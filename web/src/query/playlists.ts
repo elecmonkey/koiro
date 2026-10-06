@@ -18,7 +18,7 @@ import {
   deletePlaylist,
   fetchMyPlaylists,
   fetchPlaylist,
-  fetchPlaylistOptions,
+  fetchMyPlaylistOptions,
   fetchPlaylists,
   fetchRandomPlaylists,
   removePlaylistSong,
@@ -52,10 +52,14 @@ export function useRandomPlaylists() {
   });
 }
 
-export function usePlaylistOptions() {
+/** 能往里加歌的歌单：自己的，ADMIN 是全部 */
+export function useMyPlaylistOptions({
+  enabled = true,
+}: { enabled?: boolean } = {}) {
   return useQuery({
-    queryKey: queryKeys.playlistOptions,
-    queryFn: ({ signal }) => fetchPlaylistOptions({ signal }),
+    queryKey: queryKeys.myPlaylistOptions,
+    queryFn: ({ signal }) => fetchMyPlaylistOptions({ signal }),
+    enabled,
   });
 }
 
