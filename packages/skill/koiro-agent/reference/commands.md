@@ -112,15 +112,15 @@
 
 ### `koiro song list [--page N | --all]`
 
-需要 VIEW。按更新时间从新到旧列出全部歌曲，每页 20 首。返回歌曲摘要列表。
+需要 `view`。按更新时间从新到旧列出全部歌曲，每页 20 首。返回歌曲摘要列表。
 
 ### `koiro song random`
 
-需要 VIEW。随机返回 5 首歌曲：`{items}`。
+需要 `view`。随机返回 5 首歌曲：`{items}`。
 
 ### `koiro song search QUERY [--page N | --all]`
 
-需要 VIEW。在标题、staff 姓名、歌词正文中搜索 `QUERY`，按相关度排序，每页 20 条。每一项是歌曲摘要，另外有：
+需要 `view`。在标题、staff 姓名、歌词正文中搜索 `QUERY`，按相关度排序，每页 20 条。每一项是歌曲摘要，另外有：
 
 | 字段            | 含义                                                      |
 | --------------- | --------------------------------------------------------- |
@@ -133,7 +133,7 @@ koiro song search 夜に駆ける --json
 
 ### `koiro song view SONG`
 
-需要 VIEW。返回一首歌的完整信息：
+需要 `view`。返回一首歌的完整信息：
 
 | 字段                                                                               | 含义                                                                         |
 | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -148,7 +148,7 @@ koiro song search 夜に駆ける --json
 
 ### `koiro song export SONG`
 
-需要 ADMIN。输出可以直接编辑、再交给 `song update` 的歌曲文档，字段见 [song-document.md](song-document.md)。和 `view` 的区别：
+需要 `upload`，并且是这首歌的创建者（有 `admin` 时不限）。输出可以直接编辑、再交给 `song update` 的歌曲文档，字段见 [song-document.md](song-document.md)。和 `view` 的区别：
 
 - 封面和音频以 `coverObjectId`、`objectId` 表示（不是网址）；
 - 歌词行是原始结构（`spans` 文字片段，注音是 `ruby` 片段）；
@@ -161,7 +161,7 @@ koiro song export <SONG> > song.json
 
 ### `koiro song update SONG --file FILE`
 
-需要 ADMIN（文档里用到本地文件或网络图片时还需要 UPLOAD）。用文档**整体替换**这首歌：先上传文档引用的本地文件，再提交。`FILE` 为 `-` 时从标准输入读，此时文档里的相对路径以当前目录为基准。
+需要 `upload`，并且是这首歌的创建者（有 `admin` 时不限）。用文档**整体替换**这首歌：先上传文档引用的本地文件，再提交。`FILE` 为 `-` 时从标准输入读，此时文档里的相对路径以当前目录为基准。
 
 整体替换的含义、哪些内容会保留，见 [workflows.md 第 4 节](workflows.md#4-修改歌曲)。不改动所属歌单，文档里写了 `playlistIds` 会报错（退出码 `2`）。
 
@@ -169,17 +169,17 @@ koiro song export <SONG> > song.json
 
 ### `koiro song create --file FILE`
 
-需要 UPLOAD。用文档新建一首歌，先上传文档引用的封面和音频，再创建。文档必须写全所有字段，见 [song-document.md](song-document.md)；缺字段时在上传前就报错（退出码 `2`）。输出：`{ok: true, id, url}`。
+需要 `upload`。用文档新建一首歌，先上传文档引用的封面和音频，再创建。文档必须写全所有字段，见 [song-document.md](song-document.md)；缺字段时在上传前就报错（退出码 `2`）。输出：`{ok: true, id, url}`。
 
 退出码 `7` 时歌曲可能已经创建，先搜索确认再决定是否重试。
 
 ### `koiro song delete SONG`
 
-需要 ADMIN。删除歌曲及其全部音频版本、歌词，并把它移出所有歌单。不可恢复。输出：`{ok: true, id}`。
+需要 `upload`，并且是这首歌的创建者（有 `admin` 时不限）。删除歌曲及其全部音频版本、歌词，并把它移出所有歌单。不可恢复。输出：`{ok: true, id}`。
 
 ### `koiro song download SONG --out FILE [--version NAME] [--force]`
 
-需要 DOWNLOAD。下载一个音频版本的原始文件。
+需要 `download`。下载一个音频版本的原始文件。
 
 | 选项             | 含义                                                                                       |
 | ---------------- | ------------------------------------------------------------------------------------------ |
@@ -193,15 +193,15 @@ koiro song export <SONG> > song.json
 
 ### `koiro playlist list [--page N | --all]`
 
-需要 VIEW。按更新时间从新到旧列出歌单，每页 20 个：每项 `{id, name, description, coverUrl, songCount, owner, updatedAt, url}`，`owner` 是创建者 `{id, displayName, avatarUrl}`。
+需要 `view`。按更新时间从新到旧列出歌单，每页 20 个：每项 `{id, name, description, coverUrl, songCount, owner, updatedAt, url}`，`owner` 是创建者 `{id, displayName, avatarUrl}`。
 
 ### `koiro playlist view PLAYLIST [--page N | --all]`
 
-需要 VIEW。输出 `{playlist: {id, name, description, coverUrl, songCount, owner, updatedAt, url}, songs: <分页的歌曲摘要>}`，歌曲按歌单中的顺序排列。
+需要 `view`。输出 `{playlist: {id, name, description, coverUrl, songCount, owner, updatedAt, url}, songs: <分页的歌曲摘要>}`，歌曲按歌单中的顺序排列。
 
 ### `koiro playlist create --name NAME (--cover-file FILE | --cover-url URL) [--description TEXT | --description-file FILE]`
 
-需要 ADMIN 和 UPLOAD（上传封面）。
+需要 `upload`。新歌单的创建者就是当前用户。
 
 | 选项                                   | 含义                                             |
 | -------------------------------------- | ------------------------------------------------ |
@@ -213,15 +213,15 @@ koiro song export <SONG> > song.json
 
 ### `koiro playlist edit PLAYLIST [--name NAME] [--cover-file FILE | --cover-url URL] [--description TEXT | --description-file FILE]`
 
-需要 ADMIN（换封面时还需要 UPLOAD）。只修改传入的项，至少传一项。`--description ''` 清空简介。输出：`{ok: true, id}`。
+需要 `upload`，并且是这个歌单的创建者（有 `admin` 时不限）。只修改传入的项，至少传一项。`--description ''` 清空简介。输出：`{ok: true, id}`。
 
 ### `koiro playlist delete PLAYLIST`
 
-需要 ADMIN。删除歌单，其中的歌曲不受影响。不可恢复。输出：`{ok: true, id}`。
+需要 `upload`，并且是这个歌单的创建者（有 `admin` 时不限）。删除歌单，其中的歌曲不受影响。不可恢复。输出：`{ok: true, id}`。
 
 ### `koiro playlist add PLAYLIST SONG...`
 
-需要 ADMIN。按给出的顺序把歌曲追加到歌单末尾。已在歌单里的、不存在的、重复给出的歌曲会跳过。输出：`{ok: true, added, skipped}`。
+需要 `upload`，并且是这个歌单的创建者（有 `admin` 时不限）；加的歌不必是自己创建的。按给出的顺序把歌曲追加到歌单末尾。已在歌单里的、不存在的、重复给出的歌曲会跳过。输出：`{ok: true, added, skipped}`。
 
 ```sh
 koiro playlist add <PLAYLIST> <SONG1> <SONG2> https://<站点>/songs/<UUID3>
@@ -229,11 +229,11 @@ koiro playlist add <PLAYLIST> <SONG1> <SONG2> https://<站点>/songs/<UUID3>
 
 ### `koiro playlist remove PLAYLIST SONG`
 
-需要 ADMIN。把一首歌移出歌单（不删除歌曲）。歌曲不在歌单里时退出码 `5`。输出：`{ok: true}`。
+需要 `upload`，并且是这个歌单的创建者（有 `admin` 时不限）。把一首歌移出歌单（不删除歌曲）。歌曲不在歌单里时退出码 `5`。输出：`{ok: true}`。
 
 ### `koiro playlist reorder PLAYLIST SONG...`
 
-需要 ADMIN。按给出的顺序重排歌单。必须**恰好**列出歌单里的每一首歌各一次，否则站点拒绝（退出码 `8`），歌单保持不变。输出：`{ok: true}`。
+需要 `upload`，并且是这个歌单的创建者（有 `admin` 时不限）。按给出的顺序重排歌单。必须**恰好**列出歌单里的每一首歌各一次，否则站点拒绝（退出码 `8`），歌单保持不变。输出：`{ok: true}`。
 
 ```sh
 koiro playlist view <PLAYLIST> --all --json   # 取得当前全部歌曲
@@ -244,19 +244,19 @@ koiro playlist reorder <PLAYLIST> <ID3> <ID1> <ID2> …
 
 ### `koiro staff list`
 
-需要 VIEW。所有参与者，按参与的歌曲数从多到少：`{items: [{name, songCount, crewSongCount, roles: [{role, songCount}]}]}`。`crewSongCount` 是以「演唱」以外的角色参与的歌曲数（同一首歌担任多个这样的角色只算一次）；唱过几首看 `roles` 里「演唱」的 `songCount`。
+需要 `view`。所有参与者，按参与的歌曲数从多到少：`{items: [{name, songCount, crewSongCount, roles: [{role, songCount}]}]}`。`crewSongCount` 是以「演唱」以外的角色参与的歌曲数（同一首歌担任多个这样的角色只算一次）；唱过几首看 `roles` 里「演唱」的 `songCount`。
 
 ### `koiro staff view NAME [--page N | --all]`
 
-需要 VIEW。输出 `{staff: {name, songCount, crewSongCount, roles}, songs: <分页的歌曲摘要>}`。名字按精确写法匹配，不存在时退出码 `5`。
+需要 `view`。输出 `{staff: {name, songCount, crewSongCount, roles}, songs: <分页的歌曲摘要>}`。名字按精确写法匹配，不存在时退出码 `5`。
 
 ### `koiro language list`
 
-需要 VIEW。`{items: [{language, songCount}]}`：每个语种代码，及有歌词标注了该语种的歌曲数。
+需要 `view`。`{items: [{language, songCount}]}`：每个语种代码，及有歌词标注了该语种的歌曲数。
 
 ### `koiro language view CODE [--page N | --all]`
 
-需要 VIEW。输出 `{language, songs: <分页的歌曲摘要>}`，歌曲总数见 `songs.total`。`CODE` 不是站点定义的语种时退出码 `2`，`details.languages` 列出可选代码。
+需要 `view`。输出 `{language, songs: <分页的歌曲摘要>}`，歌曲总数见 `songs.total`。`CODE` 不是站点定义的语种时退出码 `2`，`details.languages` 列出可选代码。
 
 ## 本地工具
 

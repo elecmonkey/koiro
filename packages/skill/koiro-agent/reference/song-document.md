@@ -69,7 +69,7 @@
 | `versions`      | 数组   | 至少一项，见下                                                          |
 | `lyrics`        | 数组   | 可以为空，见下                                                          |
 
-**所属歌单不在文档里。** 歌曲在哪些歌单里由歌单一侧管理（`playlist add` / `playlist remove`），`song update` 不会改动；`update` 的文档里写了 `playlistIds` 会直接报错。只有 `song create` 多一个必填字段 `playlistIds`：创建后要加入的歌单 ID 数组，追加到这些歌单末尾，不加入任何歌单写 `[]`；只能加入自己的歌单（ADMIN 不限）。
+**所属歌单不在文档里。** 歌曲在哪些歌单里由歌单一侧管理（`playlist add` / `playlist remove`），`song update` 不会改动；`update` 的文档里写了 `playlistIds` 会直接报错。只有 `song create` 多一个必填字段 `playlistIds`：创建后要加入的歌单 ID 数组，追加到这些歌单末尾，不加入任何歌单写 `[]`；只能加入自己创建的歌单（有 `admin` 时不限）。
 
 封面可以不写 `coverObjectId`，改写 `coverFile`（本地图片）或 `coverUrl`（网络图片，由站点下载），提交前自动上传。
 
