@@ -1,4 +1,4 @@
-import type { SongId, SongInput } from '@koiro/shared';
+import type { SongDetail, SongId, SongInput } from '@koiro/shared';
 import { useState } from 'react';
 import { Box, Container, Snackbar, Stack, Typography } from '@mui/material';
 import { useNavigate } from 'react-router';
@@ -69,17 +69,17 @@ export function SongForm({ songId, initialData, mode }: SongFormProps) {
     const onError = (err: unknown) => {
       setSubmitError(err instanceof Error ? err.message : '提交失败');
     };
-    const onSuccess = () => {
+    const onSuccess = (song: SongDetail) => {
       setSubmitError(null);
       setSubmitSuccess(true);
       if (mode === 'create') {
         form.clearDraftAndReset();
-      } else {
-        setTimeout(
-          () => void navigate(`/songs/${songId}`),
-          SAVED_REDIRECT_DELAY_MS,
-        );
       }
+      // 提交成功后统一跳回详情页：新建的刚好是 song.id，编辑的是原本的 songId
+      setTimeout(
+        () => void navigate(`/songs/${mode === 'create' ? song.id : songId}`),
+        SAVED_REDIRECT_DELAY_MS,
+      );
     };
     if (mode === 'edit') {
       replaceSong.mutate(payload, { onSuccess, onError });

@@ -61,7 +61,10 @@ export function UsersManager() {
               onEditPermissions={() => setEditTarget(user)}
               onEditDisplayName={() => setEditNameTarget(user)}
               onResetPassword={() => setResetTarget(user)}
-              onDelete={() => setDeleteTarget(user)}
+              onDelete={() => {
+                deleteUser.reset();
+                setDeleteTarget(user);
+              }}
             />
           ))}
           <ListPagination
@@ -99,10 +102,17 @@ export function UsersManager() {
         open={deleteTarget !== null}
         title="确认删除"
         message={
-          <Typography>
-            确定要删除用户「{deleteTarget?.displayName}」（{deleteTarget?.email}
-            ）吗？此操作不可撤销。
-          </Typography>
+          <>
+            <Typography>
+              确定要删除用户「{deleteTarget?.displayName}」（
+              {deleteTarget?.email}）吗？此操作不可撤销。
+            </Typography>
+            {deleteUser.error && (
+              <Typography color="error" sx={{ mt: 1 }}>
+                {deleteUser.error.message}
+              </Typography>
+            )}
+          </>
         }
         pending={deleteUser.isPending}
         onConfirm={() => {
@@ -111,7 +121,10 @@ export function UsersManager() {
             onSuccess: () => setDeleteTarget(null),
           });
         }}
-        onClose={() => setDeleteTarget(null)}
+        onClose={() => {
+          deleteUser.reset();
+          setDeleteTarget(null);
+        }}
       />
       <Snackbar
         open={resetDone}
