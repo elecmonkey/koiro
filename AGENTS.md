@@ -14,6 +14,7 @@ packages/shared/        前后端共享的 TypeScript 类型与工具（含生�
 packages/cli/           命令行工具 @koiro/cli，面向终端用户和 skill 脚本，直接分发给用户
 packages/skill/         Claude Code 的 Agent Skill：koiro-agent，脚本化操作用户自己的数据，直接分发给用户
 packages/installer/     把 packages/skill 连同 packages/cli 的构建产物打包成 .tgz，供 web 端下载安装；本身不单独分发
+packages/e2e/           Midscene + Playwright 的端到端用例，走真实浏览器/后端/数据库，只手动本地跑，不进 CI
 ```
 
 `docs.local/` 是本地私人笔记，已在 `.gitignore` 里排除，不代表仓库的权威信息，不要依赖它。
@@ -82,6 +83,7 @@ http/  →  api/  →  query/  →  stores/ / pages/ / components/
 - `packages/cli/` 是给终端用户和 `packages/skill/koiro-agent` 脚本用的命令行客户端，直接用 `@koiro/shared` 的类型和 HTTP 调后端，不经过 `web/` 的任何一层。构建产物（`koiro.mjs`）直接输出到 `packages/skill/koiro-agent/scripts/`，随 skill 一起分发。
 - `packages/skill/` 是 Agent Skill 本体（`SKILL.md` + 上面提到的 CLI 脚本），`packages/installer/` 把它打包成 `.tgz`，`web/` 构建时再把这个 `.tgz` 拷进站点供下载安装。改 `packages/cli/` 或 `packages/skill/` 后要记得跑一遍 `packages/installer` 的 build 才能让下载包更新。
 - `packages/shared/` 除了生成的接口类型，还有歌词解析（`lyrics.ts`）、语言列表（`languages.ts`）、权限位掩码（`permissions.ts`）等前后端通用逻辑；这些是手写的，和 `generated/` 区分开。
+- `packages/e2e/` 是 Midscene + Playwright 的端到端用例，走真实浏览器点完整的用户路径（登录、上传、建歌单等），断言用自然语言描述 UI 状态，而不查 DOM 选择器。需要手动起一套独立的 Postgres + LocalStack（S3 模拟，见该目录的 `docker-compose.yml` 和 `README.md`），不进 CI，只在怀疑某次改动影响了真实用户操作时手动跑。
 
 ## 环境变量
 

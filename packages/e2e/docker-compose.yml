@@ -1,0 +1,43 @@
+# 仅供本地手动跑 E2E 用的一次性依赖：和生产、开发都无关。
+# docker compose up -d
+#
+# 对象存储用 LocalStack 的 S3 模拟（不用 MinIO：minio/minio 这个镜像仓库已经从
+# Docker Hub 下架，quay.io 上的版本也需要登录才能拉，不是一个能稳定拉到的公共镜像了）。
+# 固定在 3.8：:latest 这个标签已经要求 LOCALSTACK_AUTH_TOKEN 才能启动（社区版 S3
+# 服务本身不该需要，但新镜像的免费 tier 校验目前会卡住），3.x 这代还不受影响。
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: koiro
+      POSTGRES_PASSWORD: koiro
+      POSTGRES_DB: koiro
+    ports:
+      - '5434:5432'
+
+  localstack:
+    image: localstack/localstack:3.8
+    environment:
+      SERVICES: s3
+      DEFAULT_REGION: us-east-1
+    ports:
+      - '9090:4566'
+
+  # 起一次性把 koiro-e2e 这个桶建好、设成公开读（img/ 需要）、开 CORS（上传音频是
+  # 浏览器直接 PUT 到这个桶，没有 CORS 配置会被浏览器拦下来，报"网络错误"），然后退出
+  createbucket:
+    image: amazon/aws-cli
+    depends_on:
+      - localstack
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: >
+      /bin/sh -c "
+      until aws --endpoint-url=http://localstack:4566 s3 ls >/dev/null 2>&1; do sleep 1; done;
+      aws --endpoint-url=http://localstack:4566 s3 mb s3://koiro-e2e;
+      aws --endpoint-url=http://localstack:4566 s3api put-bucket-policy --bucket koiro-e2e --policy '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::koiro-e2e/*\"}]}';
+      aws --endpoint-url=http://localstack:4566 s3api put-bucket-cors --bucket koiro-e2e --cors-configuration '{\"CORSRules\":[{\"AllowedOrigins\":[\"*\"],\"AllowedMethods\":[\"GET\",\"PUT\",\"POST\",\"HEAD\"],\"AllowedHeaders\":[\"*\"]}]}';
+      exit 0;
+      "

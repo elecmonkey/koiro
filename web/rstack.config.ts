@@ -27,9 +27,11 @@ define.app(async ({ command }) => {
       favicon: './public/icon.svg',
     },
     server: {
-      port: 3720,
+      // 默认 3720 代理到 3721，和 AGENTS.md 文档一致；只有 packages/e2e 需要在
+      // 不打断这组默认端口的前提下另起一份指向别的后端时，才会覆盖这两个变量
+      port: Number(process.env.KOIRO_WEB_PORT ?? 3720),
       proxy: {
-        '/api': 'http://127.0.0.1:3721',
+        '/api': process.env.KOIRO_API_PROXY ?? 'http://127.0.0.1:3721',
       },
     },
   };

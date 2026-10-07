@@ -1,0 +1,13 @@
+{
+  "name": "@koiro/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed": "node scripts/seed.ts",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@midscene/web": "^1.14.0",
+    "@playwright/test": "^1.63.0"
+  }
+}

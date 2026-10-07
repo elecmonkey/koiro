@@ -8,6 +8,7 @@ target/
 # env files
 .env*
 !.env.example
+!.env.server.example
 
 # misc
 .DS_Store
@@ -22,3 +23,8 @@ target/
 
 # built CLI, shipped inside the skill
 /packages/skill/koiro-agent/scripts/
+
+# packages/e2e run output (Playwright + Midscene reports/traces, regenerated locally each run)
+/packages/e2e/test-results/
+/packages/e2e/playwright-report/
+/packages/e2e/midscene_run/
